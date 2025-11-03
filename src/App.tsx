@@ -20,6 +20,7 @@ import Booking from "./pages/Booking";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
 import Planning from "./pages/Planning";
+import Devices from "./pages/Devices";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ function App() {
               <Route path="employees" element={<Employees />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="planning" element={<Planning />} />
+              <Route path="devices" element={<Devices />} />
             </Route>
 
             <Route path="login" element={<Login />} />

@@ -5,6 +5,7 @@ import {
   HiOutlineCog6Tooth,
   HiOutlineUserGroup,
   HiOutlineClipboardDocumentCheck,
+  HiDevicePhoneMobile,
   // Optional alt for Attendance:
   // HiOutlineFingerPrint,
 } from "react-icons/hi2";
@@ -74,6 +75,12 @@ function MainNav() {
           <StyledNavLink to="/planning">
             <HiOutlineCalendarDays />
             <span> Planning</span>
+          </StyledNavLink>
+        </li>
+        <li>
+          <StyledNavLink to="/devices">
+            <HiDevicePhoneMobile />
+            <span> Devices</span>
           </StyledNavLink>
         </li>
         <li>
