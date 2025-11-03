@@ -110,14 +110,17 @@ function Window({ children, name }: WindowProps) {
 
   // Inline outside-click handler (replaces custom hook)
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handleMouseDown(e: MouseEvent) {
       const target = e.target as Node | null;
       if (ref.current && target && !ref.current.contains(target)) {
         close();
       }
     }
-    document.addEventListener("click", handleClick, false);
-    return () => document.removeEventListener("click", handleClick, false);
+
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
   }, [close]);
 
   if (name !== openName) return null;

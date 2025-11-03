@@ -17,6 +17,9 @@ import Cabins from "./pages/Cabins";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Booking from "./pages/Booking";
+import Employees from "./pages/Employees";
+import Attendance from "./pages/Attendance";
+import Planning from "./pages/Planning";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +45,9 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="account" element={<Account />} />
               <Route path="users" element={<Users />} />
+              <Route path="employees" element={<Employees />} />
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="planning" element={<Planning />} />
             </Route>
 
             <Route path="login" element={<Login />} />
