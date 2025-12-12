@@ -18,6 +18,7 @@ import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
 import Planning from "./pages/Planning";
 import Reports from "./pages/Reports";
+import Devices from "./pages/Devices";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +51,7 @@ function App() {
               <Route path="attendance" element={<Attendance />} />
               <Route path="planning" element={<Planning />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="devices" element={<Devices />} />
             </Route>
 
             <Route path="login" element={<Login />} />
