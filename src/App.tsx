@@ -4,7 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "react-hot-toast";
 
 import AppLayout from "./ui/AppLayout";
-/* import ProtectedRoute from "./ui/ProtectedRoute";  */
+import ProtectedRoute from "./ui/ProtectedRoute";
 
 import { DarkModeProvider } from "./context/DarkModeContext";
 import { GlobalStyles } from "./styles/GlobalStyles";
@@ -12,14 +12,12 @@ import PageNotFound from "./pages/PageNotFound";
 import Login from "./pages/Login";
 import Account from "./pages/Account";
 import Settings from "./pages/Settings";
-import Bookings from "./pages/Bookings";
-import Cabins from "./pages/Cabins";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
-import Booking from "./pages/Booking";
 import Employees from "./pages/Employees";
 import Attendance from "./pages/Attendance";
 import Planning from "./pages/Planning";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,18 +34,22 @@ function App() {
 
         <BrowserRouter>
           <Routes>
-            <Route element={<AppLayout />}>
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate replace to="dashboard" />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="bookings/" element={<Bookings />} />{" "}
-              <Route path="bookings/:bookingId" element={<Booking />} />{" "}
-              <Route path="cabins" element={<Cabins />} />{" "}
+              <Route path="users" element={<Users />} />
               <Route path="settings" element={<Settings />} />
               <Route path="account" element={<Account />} />
-              <Route path="users" element={<Users />} />
               <Route path="employees" element={<Employees />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="planning" element={<Planning />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
 
             <Route path="login" element={<Login />} />

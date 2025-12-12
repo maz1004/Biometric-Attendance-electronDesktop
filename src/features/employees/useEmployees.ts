@@ -1,78 +1,86 @@
 // src/features/employees/useEmployees.ts
-import { useState } from "react";
-import { Employee } from "./EmployeeTypes";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getEmployees,
+  createEmployee,
+  updateEmployee,
+  deleteEmployee,
+  type CreateEmployeeRequest,
+  type UpdateUserRequest,
+} from "../../services";
+import toast from "react-hot-toast";
 
-export function useEmployees() {
-  // fake loading state
-  const [isLoading] = useState<boolean>(false);
+// Filter type for employees query
+export interface EmployeeFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: 'active' | 'inactive';
+}
 
-  // mock data
-  const [employees] = useState<Employee[]>([
-    {
-      id: "EMP-001",
-      firstName: "Ahmed",
-      lastName: "B.",
-      department: "Production",
-      role: "employee",
-      enrolled: true,
-      status: "active",
-      createdAt: "2025-09-12T09:21:00Z",
-      avatar: "https://api.dicebear.com/7.x/thumbs/svg?seed=Ahmed",
-      stats: {
-        presenceRatePct: 96,
-        lateCount30d: 1,
-        absenceCount30d: 0,
-      },
-    },
-    {
-      id: "EMP-002",
-      firstName: "Sofia",
-      lastName: "K.",
-      department: "QA",
-      role: "manager",
-      enrolled: true,
-      status: "active",
-      createdAt: "2025-09-18T10:05:00Z",
-      avatar: "https://api.dicebear.com/7.x/thumbs/svg?seed=Sofia",
-      stats: {
-        presenceRatePct: 91,
-        lateCount30d: 3,
-        absenceCount30d: 1,
-      },
-    },
-    {
-      id: "EMP-003",
-      firstName: "Yacine",
-      lastName: "R.",
-      department: "Maintenance",
-      role: "employee",
-      enrolled: false,
-      status: "active",
-      createdAt: "2025-10-01T07:44:00Z",
-      avatar: "https://api.dicebear.com/7.x/thumbs/svg?seed=Yacine",
-      stats: {
-        presenceRatePct: 0,
-        lateCount30d: 0,
-        absenceCount30d: 0,
-      },
-    },
-    {
-      id: "EMP-004",
-      firstName: "Lina",
-      lastName: "M.",
-      department: "HR",
-      role: "manager",
-      enrolled: true,
-      status: "inactive",
-      createdAt: "2025-07-22T14:12:00Z",
-      avatar: "https://api.dicebear.com/7.x/thumbs/svg?seed=Lina",
-      stats: {
-        presenceRatePct: 88,
-        lateCount30d: 4,
-        absenceCount30d: 2,
-      },
-    },
-  ]);
+export function useEmployees(filters?: EmployeeFilters) {
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["employees", filters],
+    queryFn: () => getEmployees(filters),
+  });
 
-  return { isLoading, employees };
+  // Backend returns GetUsersResponse directly: { users: UserResponse[], total: number, page: number, limit: number }
+  return {
+    isLoading,
+    employees: data?.users || [],
+    count: data?.total || 0,
+    error
+  };
+}
+
+export function useCreateEmployee() {
+  const queryClient = useQueryClient();
+
+  const { mutate: createEmployeeFn, isPending: isCreating } = useMutation({
+    mutationFn: (data: CreateEmployeeRequest) => createEmployee(data),
+    onSuccess: () => {
+      toast.success("Employé créé avec succès");
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erreur lors de la création");
+    },
+  });
+
+  return { createEmployee: createEmployeeFn, isCreating };
+}
+
+export function useUpdateEmployee() {
+  const queryClient = useQueryClient();
+
+  const { mutate: updateEmployeeFn, isPending: isUpdating } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
+      updateEmployee(id, data),
+    onSuccess: () => {
+      toast.success("Employé mis à jour avec succès");
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erreur lors de la mise à jour");
+    },
+  });
+
+  return { updateEmployee: updateEmployeeFn, isUpdating };
+}
+
+export function useDeleteEmployee() {
+  const queryClient = useQueryClient();
+
+  const { mutate: deleteEmployeeFn, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => deleteEmployee(id),
+    onSuccess: () => {
+      toast.success("Employé supprimé avec succès");
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erreur lors de la suppression");
+    },
+  });
+
+  return { deleteEmployee: deleteEmployeeFn, isDeleting };
 }

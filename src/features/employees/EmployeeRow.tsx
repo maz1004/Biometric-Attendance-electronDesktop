@@ -4,21 +4,6 @@ import Table from "../../ui/Table";
 import Modal from "../../ui/Modal";
 import Menus from "../../ui/Menus";
 import ConfirmDelete from "../../ui/ConfirmDelete";
-import { HiPencil, HiTrash, HiUserPlus } from "react-icons/hi2";
-import { Employee } from "./EmployeeTypes";
-import CreateEmployeeForm from "./CreateEmployeeForm";
-import EnrollFaceModal from "./EnrollFaceModal";
-
-const AvatarImg = styled.img`
-  display: block;
-  width: 4.8rem;
-  height: 4.8rem;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: center;
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--color-toolbar-input-border);
-`;
 
 const NameBlock = styled.div`
   font-size: 1.4rem;
@@ -99,11 +84,30 @@ const StatsGrid = styled.div`
   }
 `;
 
+const AvatarImg = styled.img`
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-grey-200);
+`;
+
 type EmployeeRowProps = {
   employee: Employee;
 };
 
+import { HiPencil, HiTrash, HiUserPlus, HiEye } from "react-icons/hi2";
+import { Employee } from "./EmployeeTypes";
+import CreateEmployeeForm from "./CreateEmployeeForm";
+import EnrollFaceModal from "./EnrollFaceModal";
+import EmployeeProfileModal from "./EmployeeProfileModal";
+import { useDeleteEmployee } from "./useEmployees";
+
+// ... (styled components remain unchanged)
+
 function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
+  const { deleteEmployee, isDeleting } = useDeleteEmployee();
+
   const {
     id,
     firstName,
@@ -117,13 +121,13 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
     avatar,
   } = employee;
 
-  const presence = stats.presenceRatePct;
-  const late = stats.lateCount30d;
-  const absent = stats.absenceCount30d;
+  const presence = stats?.presenceRatePct ?? 0;
+  const late = stats?.lateCount30d ?? 0;
+  const absent = stats?.absenceCount30d ?? 0;
 
   return (
     <Table.Row>
-      <AvatarImg src={avatar} alt={`${firstName} ${lastName}`} />
+      <AvatarImg src={avatar || "/default-user.jpg"} alt={`${firstName} ${lastName}`} />
 
       <NameBlock>
         <div className="empName">
@@ -186,6 +190,10 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
               <Menus.Toggle id={id} />
 
               <Menus.List id={id}>
+                <Modal.Open opens="view-profile">
+                  <Menus.Button icon={<HiEye />}>View Profile</Menus.Button>
+                </Modal.Open>
+
                 {!enrolled && (
                   <Modal.Open opens="enroll-face">
                     <Menus.Button icon={<HiUserPlus />}>
@@ -204,17 +212,21 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
               </Menus.List>
             </Menus.Menu>
 
+            <Modal.Window name="view-profile">
+              <EmployeeProfileModal employee={employee} />
+            </Modal.Window>
+
             <Modal.Window name="edit-employee">
               <CreateEmployeeForm employeeToEdit={employee} />
             </Modal.Window>
 
             <Modal.Window name="delete-employee">
               <ConfirmDelete
-                onCloseModal={() => {}}
+                onCloseModal={() => { }}
                 resourceName="employee"
-                disabled={false}
+                disabled={isDeleting}
                 onConfirm={() => {
-                  console.log("Delete employee", id);
+                  deleteEmployee(id);
                 }}
               />
             </Modal.Window>

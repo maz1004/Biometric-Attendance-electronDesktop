@@ -1,4 +1,18 @@
 import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getPlanningDashboard,
+  createShift as apiCreateShift,
+  updateShift as apiUpdateShift,
+  deleteShift as apiDeleteShift,
+  createTeam as apiCreateTeam,
+  updateTeam as apiUpdateTeam,
+  deleteTeam as apiDeleteTeam,
+  assignUserToShift as apiAssignUserToShift,
+  type UpdateShiftCommand,
+  type UpdateTeamCommand,
+} from "../../services";
+import toast from "react-hot-toast";
 import {
   DayKey,
   EmployeeMini,
@@ -22,167 +36,153 @@ function iso(d: Date) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
-function uid(p: string) {
-  return `${p}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/* ---------- seed 500 employees ---------- */
-function makeEmployees(n = 500): Record<string, EmployeeMini> {
-  const depts = ["R&D", "Operations", "Design", "QA", "HR", "Support", "Sales"];
-  const out: Record<string, EmployeeMini> = {};
-  for (let i = 1; i <= n; i++) {
-    const id = `emp-${i}`;
-    out[id] = {
-      id,
-      name: `User ${String(i).padStart(3, "0")}`,
-      department: depts[i % depts.length],
-    };
-  }
-  return out;
-}
-
-/* ---------- initial state ---------- */
-const INIT: PlanningState = {
-  week: iso(mondayOf(new Date())) as WeekKey,
-  employees: makeEmployees(500),
-  teams: {
-    "team-alpha": {
-      id: "team-alpha",
-      name: "Alpha",
-      memberIds: ["emp-1", "emp-2", "emp-3", "emp-4"],
-    },
-    "team-beta": {
-      id: "team-beta",
-      name: "Beta",
-      memberIds: ["emp-5", "emp-6", "emp-7"],
-    },
-  },
-  shifts: {
-    "shift-1": {
-      id: "shift-1",
-      name: "Morning",
-      start: "08:00",
-      end: "16:00",
-      daysActive: [0, 1, 2, 3, 4],
-      teamIds: ["team-alpha"],
-      extraMemberIds: [],
-    },
-    "shift-2": {
-      id: "shift-2",
-      name: "Evening",
-      start: "12:00",
-      end: "20:00",
-      daysActive: [0, 1, 2, 3, 4],
-      teamIds: ["team-beta"],
-      extraMemberIds: ["emp-10"],
-    },
-  },
-};
 
 export function usePlanning() {
-  const [state, setState] = useState<PlanningState>(INIT);
+  const queryClient = useQueryClient();
+  const [week, setWeekState] = useState<WeekKey>(iso(mondayOf(new Date())));
+
+  /* ===== QUERY ===== */
+  const { data: planningData, isLoading } = useQuery({
+    queryKey: ["planning", week],
+    queryFn: () => getPlanningDashboard(),
+  });
+
+  // Transform API data to internal state format
+  const state: PlanningState = useMemo(() => {
+    if (!planningData || !planningData.active_shifts) {
+      return {
+        week,
+        employees: {},
+        teams: {},
+        shifts: {},
+      };
+    }
+
+    const { active_shifts } = planningData;
+
+    // Transform shifts array to records
+    const shiftsRecord: Record<string, Shift> = {};
+    if (Array.isArray(active_shifts)) {
+      active_shifts.forEach((s: any) => {
+        // Map backend ShiftResponse to local Shift type
+        shiftsRecord[s.id] = {
+          id: s.id,
+          name: s.name,
+          start: s.start_time, // May need time formatting
+          end: s.end_time,
+          daysActive: s.days_of_week as DayKey[],
+          teamIds: s.team_id ? [s.team_id] : [],
+          extraMemberIds: [],
+        };
+      });
+    }
+
+    // For now, teams and employees are empty - would need separate API calls
+    const teamsRecord: Record<string, Team> = {};
+    const employeesRecord: Record<string, EmployeeMini> = {};
+
+    return {
+      week,
+      employees: employeesRecord,
+      teams: teamsRecord,
+      shifts: shiftsRecord,
+    };
+  }, [planningData, week]);
 
   /* ===== week nav ===== */
   function setWeek(newWeek: WeekKey) {
-    setState((s) => ({ ...s, week: newWeek }));
+    setWeekState(newWeek);
   }
   function gotoPrevWeek() {
-    const d = new Date(state.week);
+    const d = new Date(week);
     d.setDate(d.getDate() - 7);
     setWeek(iso(d) as WeekKey);
   }
   function gotoNextWeek() {
-    const d = new Date(state.week);
+    const d = new Date(week);
     d.setDate(d.getDate() + 7);
     setWeek(iso(d) as WeekKey);
   }
   function copyWeekForward() {
+    // Implement copy week logic if backend supports it, or just nav
     gotoNextWeek();
+    toast("Week copied (simulation)");
   }
 
-  /* ===== TEAMS CRUD ===== */
-  function createTeam(input: Omit<Team, "id">) {
-    const id = uid("team");
-    const t: Team = {
-      id,
-      name: input.name,
-      memberIds: [...new Set(input.memberIds)],
-    };
-    setState((s) => ({ ...s, teams: { ...s.teams, [id]: t } }));
-    return id;
-  }
-  function updateTeam(input: Team) {
-    setState((s) => ({
-      ...s,
-      teams: {
-        ...s.teams,
-        [input.id]: { ...input, memberIds: [...new Set(input.memberIds)] },
-      },
-    }));
-  }
-  function deleteTeam(id: string) {
-    setState((s) => {
-      const nextTeams = { ...s.teams };
-      delete nextTeams[id];
-      const nextShifts: Record<string, Shift> = {};
-      Object.values(s.shifts).forEach((sh) => {
-        nextShifts[sh.id] = {
-          ...sh,
-          teamIds: sh.teamIds.filter((tid) => tid !== id),
-        };
-      });
-      return { ...s, teams: nextTeams, shifts: nextShifts };
-    });
-  }
+  /* ===== MUTATIONS ===== */
+  const { mutate: createTeam } = useMutation({
+    mutationFn: apiCreateTeam,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Team created");
+    },
+    onError: () => toast.error("Failed to create team"),
+  });
 
-  /* ===== SHIFTS CRUD ===== */
-  function createShift(input: Omit<Shift, "id">) {
-    const id = uid("shift");
-    const sh: Shift = {
-      id,
-      name: input.name,
-      start: input.start,
-      end: input.end,
-      daysActive: [...input.daysActive].sort(),
-      teamIds: [...new Set(input.teamIds)],
-      extraMemberIds: [...new Set(input.extraMemberIds)],
-    };
-    setState((s) => ({ ...s, shifts: { ...s.shifts, [id]: sh } }));
-    return id;
-  }
-  function updateShift(input: Shift) {
-    setState((s) => ({
-      ...s,
-      shifts: {
-        ...s.shifts,
-        [input.id]: {
-          ...input,
-          daysActive: [...input.daysActive].sort(),
-          teamIds: [...new Set(input.teamIds)],
-          extraMemberIds: [...new Set(input.extraMemberIds)],
-        },
-      },
-    }));
-  }
-  function duplicateShift(id: string) {
-    const sh = state.shifts[id];
-    if (!sh) return;
-    createShift({ ...sh, name: `${sh.name} (copy)` });
-  }
-  function deleteShift(id: string) {
-    setState((s) => {
-      const next = { ...s.shifts };
-      delete next[id];
-      return { ...s, shifts: next };
-    });
-  }
+  const { mutate: updateTeam } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateTeamCommand }) =>
+      apiUpdateTeam(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Team updated");
+    },
+    onError: () => toast.error("Failed to update team"),
+  });
+
+  const { mutate: deleteTeam } = useMutation({
+    mutationFn: apiDeleteTeam,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Team deleted");
+    },
+    onError: () => toast.error("Failed to delete team"),
+  });
+
+  const { mutate: createShift } = useMutation({
+    mutationFn: apiCreateShift,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Shift created");
+    },
+    onError: () => toast.error("Failed to create shift"),
+  });
+
+  const { mutate: updateShift } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateShiftCommand }) =>
+      apiUpdateShift(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Shift updated");
+    },
+    onError: () => toast.error("Failed to update shift"),
+  });
+
+  const { mutate: deleteShift } = useMutation({
+    mutationFn: apiDeleteShift,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("Shift deleted");
+    },
+    onError: () => toast.error("Failed to delete shift"),
+  });
+
+  const { mutate: assignUserToShift } = useMutation({
+    mutationFn: apiAssignUserToShift,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["planning"] });
+      toast.success("User assigned to shift");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to assign user");
+    },
+  });
 
   /* ===== helpers ===== */
   const employees = state.employees;
   const teams = state.teams;
   const shifts = state.shifts;
 
-  // For counts / grid rendering we don’t expand all names. We compute counts per cell.
+  // For counts / grid rendering we don't expand all names. We compute counts per cell.
   function expandShiftMembers(sh: Shift): string[] {
     const fromTeams = sh.teamIds.flatMap((tid) => teams[tid]?.memberIds ?? []);
     return [...new Set([...fromTeams, ...sh.extraMemberIds])];
@@ -237,10 +237,11 @@ export function usePlanning() {
     // shifts
     createShift,
     updateShift,
-    duplicateShift,
     deleteShift,
+    assignUserToShift,
     // helpers
     expandShiftMembers,
     dayConflicts,
+    isLoading,
   };
 }

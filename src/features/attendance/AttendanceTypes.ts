@@ -14,6 +14,15 @@ export type AttendanceRecord = {
   deviceId?: string;
 };
 
+// Alias for AttendanceRecord
+export type AttendanceRow = AttendanceRecord;
+
+// For heatmap
+export type DayAgg = {
+  dateISO: string;
+  presentCount: number;
+};
+
 export type SortByOption =
   | "date-desc"
   | "date-asc"

@@ -1,4 +1,7 @@
 import { useMemo, useState } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { validateAnomaly, getAttendance } from "../../services/attendance";
+import toast from "react-hot-toast";
 import {
   AttendanceRecord,
   PeriodFilter,
@@ -6,48 +9,8 @@ import {
   StatusType,
 } from "./AttendanceTypes";
 
-const NAMES = [
-  ["Cherrati", "Nour El Houda"],
-  ["Bouzaghti", "Dounia Malak"],
-  ["Benyamina", "Yacine"],
-  ["Bensaid", "Merouane"],
-  ["Aimeur", "Zahra"],
-  ["Saidani", "Khaled"],
-  ["Kadi", "Hiba"],
-];
-const DEPTS = ["R&D", "Operations", "Design", "QA", "HR"];
-
 function pad(n: number) {
   return String(n).padStart(2, "0");
-}
-
-function makeFakeRow(d: Date, idx: number): AttendanceRecord {
-  const [ln, fn] = NAMES[idx % NAMES.length];
-  const statusPool: StatusType[] = ["present", "late", "absent", "left-early"];
-  const status = statusPool[(idx + d.getDate()) % statusPool.length];
-  const dateISO = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
-    d.getDate()
-  )}`;
-
-  let checkIn: string | undefined;
-  let checkOut: string | undefined;
-  if (status !== "absent") {
-    const inH = status === "late" ? 9 + (idx % 3) : 8 + (idx % 2);
-    const outH = status === "left-early" ? 16 : 17;
-    checkIn = `${pad(inH)}:${pad((idx * 7) % 60)}`;
-    checkOut = `${pad(outH)}:${pad((idx * 11) % 60)}`;
-  }
-  return {
-    id: `att-${dateISO}-${idx}`,
-    employeeId: `emp-${(idx % 40) + 1}`,
-    fullName: `${fn} ${ln}`,
-    department: DEPTS[idx % DEPTS.length],
-    dateISO,
-    checkIn,
-    checkOut,
-    status,
-    deviceId: `DEV-${(idx % 3) + 1}`,
-  };
 }
 
 function dateRange(
@@ -80,6 +43,25 @@ function formatISO(date: Date) {
   )}`;
 }
 
+export function useValidateAnomaly() {
+  const queryClient = useQueryClient();
+
+  const { mutate: validate, isPending: isValidating } = useMutation({
+    mutationFn: ({ id, validated, justification }: { id: string; validated: boolean; justification?: string }) =>
+      validateAnomaly(id, validated, justification),
+    onSuccess: () => {
+      toast.success("Anomaly validated successfully");
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+    },
+    onError: (err) => {
+      toast.error("Failed to validate anomaly");
+      console.error(err);
+    },
+  });
+
+  return { validate, isValidating };
+}
+
 export function useAttendance() {
   // state
   const [period, setPeriod] = useState<PeriodFilter>("day");
@@ -90,70 +72,45 @@ export function useAttendance() {
   const [sortBy, setSortBy] = useState<SortByOption>("date-desc");
   const [page, setPage] = useState<number>(1);
 
-  // fake data for current month (enough to paginate)
-  const FAKE = useMemo(() => {
-    const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const monthEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
-    const rows: AttendanceRecord[] = [];
-    let idx = 0;
-    for (
-      let d = new Date(monthStart);
-      d < monthEnd;
-      d.setDate(d.getDate() + 1)
-    ) {
-      for (let i = 0; i < 30; i++) rows.push(makeFakeRow(new Date(d), idx++));
-    }
-    return rows;
-  }, [anchor]);
-
-  // filter by selected period window
+  // Calculate date window
   const { start, end } = useMemo(
     () => dateRange(period, anchor),
     [period, anchor]
   );
-  const filtered = useMemo(() => {
-    const sISO = formatISO(start);
-    const eISO = formatISO(new Date(end.getTime() - 1)); // inclusive end day
-    return FAKE.filter((r) => r.dateISO >= sISO && r.dateISO <= eISO)
-      .filter((r) =>
-        !search
-          ? true
-          : r.fullName.toLowerCase().includes(search.toLowerCase()) ||
-            r.employeeId.toLowerCase().includes(search.toLowerCase()) ||
-            r.department.toLowerCase().includes(search.toLowerCase())
-      )
-      .filter((r) =>
-        department === "all" ? true : r.department === department
-      )
-      .filter((r) => (status === "all" ? true : r.status === status));
-  }, [FAKE, start, end, search, department, status]);
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    arr.sort((a, b) => {
-      switch (sortBy) {
-        case "date-desc":
-          return a.dateISO < b.dateISO ? 1 : -1;
-        case "date-asc":
-          return a.dateISO > b.dateISO ? 1 : -1;
-        case "name-asc":
-          return a.fullName.localeCompare(b.fullName);
-        case "name-desc":
-          return b.fullName.localeCompare(a.fullName);
-        case "status-asc":
-          return a.status.localeCompare(b.status);
-        case "status-desc":
-          return b.status.localeCompare(a.status);
-      }
-    });
-    return arr;
-  }, [filtered, sortBy]);
+  // Query
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["attendance", period, anchor, search, department, status, sortBy, page],
+    queryFn: () =>
+      getAttendance({
+        page,
+        limit: 12,
+        search,
+        department: department === "all" ? undefined : department,
+        status: status === "all" ? undefined : status as any,
+        sortBy,
+        startDate: formatISO(start),
+        endDate: formatISO(new Date(end.getTime() - 1)),
+      }),
+  });
 
-  // pagination
-  const PAGE_SIZE = 12;
-  const total = sorted.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const current = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const rawList = data?.data?.records || [];
+  const total = data?.data?.total || 0;
+  const totalPages = Math.ceil(total / 12) || 1;
+
+  // Transform to local type
+  const list: AttendanceRecord[] = rawList.map((r: any) => ({
+    id: r.id,
+    employeeId: r.user_id,
+    fullName: r.user_name || r.user_id, // Backend should provide user_name ideally
+    department: r.department || "General",
+    dateISO: r.check_in_time ? r.check_in_time.split('T')[0] : "",
+    checkIn: r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    checkOut: r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    status: r.status as StatusType,
+    justification: r.notes,
+    deviceId: r.device_id
+  }));
 
   function gotoPrev() {
     setPage((p) => Math.max(1, p - 1));
@@ -163,8 +120,8 @@ export function useAttendance() {
   }
 
   return {
-    list: current, // current page
-    allInWindow: sorted, // <-- add this
+    list,
+    allInWindow: list, // For now, export current page. Ideally export endpoint handles filtering.
     total,
     page,
     totalPages,
@@ -184,5 +141,7 @@ export function useAttendance() {
     setSortBy,
     windowStart: start,
     windowEnd: end,
+    isLoading,
+    error,
   };
 }

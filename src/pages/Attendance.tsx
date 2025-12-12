@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { useAttendance } from "../features/attendance/useAttendance";
+import { AttendanceRow, DayAgg } from "../features/attendance/AttendanceTypes";
 import AttendanceHeaderBar from "../features/attendance/AttendanceHeaderBar";
 import AttendanceTable from "../features/attendance/AttendanceTable";
 import Button from "../ui/Button";
@@ -46,11 +47,11 @@ export default function Attendance(): JSX.Element {
   const at = useAttendance();
 
   // simple day aggregations for heatmap (present count only)
-  const dayAgg = Array.from(new Set(at.list.map((r) => r.dateISO))).map(
-    (dateISO) => ({
+  const dayAgg: DayAgg[] = Array.from(new Set(at.list.map((r: AttendanceRow) => r.dateISO))).map(
+    (dateISO: string) => ({
       dateISO,
       presentCount: at.list.filter(
-        (r) => r.dateISO === dateISO && r.status === "present"
+        (r: AttendanceRow) => r.dateISO === dateISO && r.status === "present"
       ).length,
     })
   );
@@ -107,8 +108,8 @@ export default function Attendance(): JSX.Element {
                     Window: `${at.windowStart
                       .toISOString()
                       .slice(0, 10)} → ${at.windowEnd
-                      .toISOString()
-                      .slice(0, 10)}`,
+                        .toISOString()
+                        .slice(0, 10)}`,
                     Department: at.department,
                     Status: String(at.status),
                     Generated: new Date().toLocaleString(),
@@ -131,8 +132,8 @@ export default function Attendance(): JSX.Element {
                     Window: `${at.windowStart
                       .toISOString()
                       .slice(0, 10)} → ${at.windowEnd
-                      .toISOString()
-                      .slice(0, 10)}`,
+                        .toISOString()
+                        .slice(0, 10)}`,
                     Department: at.department,
                     Status: String(at.status),
                     Generated: new Date().toLocaleString(),

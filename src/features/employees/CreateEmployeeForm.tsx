@@ -7,6 +7,8 @@ import FileInput from "../../ui/FileInput";
 import Button from "../../ui/Button";
 import { CreateEmployeeFormProps, EmployeeFormValues } from "./EmployeeTypes";
 import ButtonGroup from "../../ui/ButtonGroup";
+import { useCreateEmployee, useUpdateEmployee } from "./useEmployees";
+import type { CreateEmployeeRequest, UpdateUserRequest } from "../../services";
 
 function CreateEmployeeForm({
   employeeToEdit,
@@ -19,40 +21,66 @@ function CreateEmployeeForm({
     useForm<EmployeeFormValues>({
       defaultValues: isEditSession
         ? {
-            firstName: employeeToEdit?.firstName ?? "",
-            lastName: employeeToEdit?.lastName ?? "",
-            department: employeeToEdit?.department ?? "",
-            role: employeeToEdit?.role ?? "employee",
-            status: employeeToEdit?.status ?? "active",
-            // avatar cannot be pre-filled safely as FileList
-            avatar: "" as unknown as FileList,
-          }
+          firstName: employeeToEdit?.firstName ?? "",
+          lastName: employeeToEdit?.lastName ?? "",
+          department: employeeToEdit?.department ?? "",
+          role: employeeToEdit?.role ?? "employee",
+          status: employeeToEdit?.status ?? "active",
+          avatar: "" as unknown as FileList,
+        }
         : {
-            firstName: "",
-            lastName: "",
-            department: "",
-            role: "employee",
-            status: "active",
-            avatar: "" as unknown as FileList,
-          },
+          firstName: "",
+          lastName: "",
+          department: "",
+          role: "employee",
+          status: "active",
+          avatar: "" as unknown as FileList,
+        },
     });
 
   const { errors } = formState;
-  const isWorking = false; // until we wire mutations
+  const { createEmployee, isCreating } = useCreateEmployee();
+  const { updateEmployee, isUpdating } = useUpdateEmployee();
+  const isWorking = isCreating || isUpdating;
 
   const onSubmit: SubmitHandler<EmployeeFormValues> = (data) => {
-    const rawAvatar = data.avatar;
-    const avatarFileOrUrl =
-      typeof rawAvatar === "string" ? rawAvatar : rawAvatar?.[0];
+    if (isEditSession) {
+      // Map to UpdateUserRequest
+      const updateData: UpdateUserRequest = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        department: data.department,
+        is_active: data.status === "active",
+        // Note: role 'manager' is not supported by backend, map to 'employee'
+        role: data.role === "manager" ? "employee" : "employee",
+      };
 
-    console.log("SUBMIT EMPLOYEE FORM", {
-      ...data,
-      avatar: avatarFileOrUrl,
-      editId,
-    });
+      updateEmployee(
+        { id: editId!, data: updateData },
+        {
+          onSuccess: () => {
+            reset();
+            onCloseModal?.();
+          },
+        }
+      );
+    } else {
+      // Map to CreateEmployeeRequest
+      const createData: CreateEmployeeRequest = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@company.com`, // Generate email
+        department: data.department,
+        is_active: data.status === "active",
+      };
 
-    reset();
-    onCloseModal?.();
+      createEmployee(createData, {
+        onSuccess: () => {
+          reset();
+          onCloseModal?.();
+        },
+      });
+    }
   };
 
   const onError: SubmitErrorHandler<EmployeeFormValues> = (err) => {

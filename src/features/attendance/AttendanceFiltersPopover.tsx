@@ -1,9 +1,6 @@
 import styled from "styled-components";
 import {
   HiXMark,
-  HiArrowPath,
-  HiCheckCircle,
-  HiXCircle,
 } from "react-icons/hi2";
 import { StatusType } from "./AttendanceTypes";
 import { useState } from "react";

@@ -5,6 +5,7 @@ import Menus from "../../ui/Menus";
 import { HiCheck, HiInformationCircle, HiPencil } from "react-icons/hi2";
 import { AttendanceRecord } from "./AttendanceTypes";
 import ValidateAnomalyModal from "./ValidateAnomalyModal";
+import { useValidateAnomaly } from "./useAttendance";
 
 const Badge = styled.span<{ $type: string }>`
   padding: 0.35rem 0.7rem;
@@ -26,6 +27,8 @@ const Badge = styled.span<{ $type: string }>`
 `;
 
 export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
+  const { validate } = useValidateAnomaly();
+
   return (
     <Table.Row>
       <div style={{ fontWeight: 600, color: "var(--color-text-strong)" }}>
@@ -59,9 +62,13 @@ export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
             <Modal.Window name="validate">
               <ValidateAnomalyModal
                 record={row}
-                onCloseModal={() => {}}
+                onCloseModal={() => { }}
                 onValidate={(payload) => {
-                  console.log("VALIDATE", payload);
+                  validate({
+                    id: payload.id,
+                    validated: true,
+                    justification: payload.justification,
+                  });
                 }}
               />
             </Modal.Window>

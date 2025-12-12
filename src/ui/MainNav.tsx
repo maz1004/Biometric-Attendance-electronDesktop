@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import styled from "styled-components";
 import {
+  HiOutlineHome,
   HiOutlineCalendarDays,
   HiOutlineCog6Tooth,
   HiOutlineUserGroup,
@@ -58,10 +59,16 @@ function MainNav() {
     <nav>
       <NavList>
         <li>
+          <StyledNavLink to="/dashboard">
+            <HiOutlineHome />
+            <span>Dashboard</span>
+          </StyledNavLink>
+        </li>
+        <li>
           <StyledNavLink to="/attendance">
             <HiOutlineClipboardDocumentCheck />
             {/* Or <HiOutlineFingerPrint /> */}
-            <span> Attendance</span>
+            <span>Attendance</span>
           </StyledNavLink>
         </li>
         <li>

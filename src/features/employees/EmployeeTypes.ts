@@ -18,8 +18,8 @@ export type Employee = {
   enrolled: boolean;
   status: EmployeeStatus;
   createdAt: string; // ISO string
-  avatar: string; // URL
-  stats: EmployeeStats;
+  avatar?: string; // URL
+  stats?: EmployeeStats;
 };
 
 // form input structure for create / edit

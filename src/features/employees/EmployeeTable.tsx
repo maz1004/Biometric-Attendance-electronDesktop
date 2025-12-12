@@ -5,83 +5,56 @@ import Empty from "../../ui/Empty";
 import EmployeeRow from "./EmployeeRow";
 import { useEmployees } from "./useEmployees";
 import { Employee } from "./EmployeeTypes";
-import {
-  RoleFilter,
-  EnrolledFilter,
-  StatusFilter,
-  SortByOption,
-} from "./EmployeesHeaderBar";
+import type { UserResponse } from "../../services";
 
 export type EmployeeTableProps = {
   search: string;
-  role: RoleFilter;
-  enrolled: EnrolledFilter;
-  status: StatusFilter;
-  sortBy: SortByOption;
+  role: string;
+  enrolled: string;
+  status: string;
+  sortBy: string;
 };
+
+// Helper to map backend UserResponse to UI Employee type
+function mapUserToEmployee(user: UserResponse): Employee {
+  return {
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    department: "N/A", // Backend UserResponse doesn't have department field
+    role: "employee", // Backend doesn't have manager role
+    enrolled: false, // Backend doesn't have biometric_enrolled field yet
+    status: user.is_active ? "active" : "inactive",
+    createdAt: user.created_at,
+    avatar: undefined, // Backend doesn't have avatar_url field yet
+    stats: {
+      presenceRatePct: 0, // Backend doesn't have punctuality_score in UserResponse
+      lateCount30d: 0,
+      absenceCount30d: 0,
+    },
+  };
+}
 
 export default function EmployeeTable({
   search,
-  role,
-  enrolled,
   status,
-  sortBy,
 }: EmployeeTableProps) {
-  const { isLoading, employees } = useEmployees();
+  // Map status filter: 'all' is not supported by backend, so pass undefined
+  const apiStatus = status === "all" ? undefined : status;
+
+  const { isLoading, employees: backendEmployees } = useEmployees({
+    search,
+    status: apiStatus as 'active' | 'inactive' | undefined,
+  });
 
   if (isLoading) return <Spinner />;
+
+  // Map backend users to UI employees
+  const employees = backendEmployees.map(mapUserToEmployee);
+
   if (!employees || employees.length === 0)
     return <Empty resourceName="employees" />;
 
-  // 1. filter
-  const filtered: Employee[] = employees.filter((emp) => {
-    const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
-    const matchesSearch =
-      search.trim() === "" ||
-      fullName.includes(search.toLowerCase()) ||
-      emp.id.toLowerCase().includes(search.toLowerCase()) ||
-      emp.department.toLowerCase().includes(search.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (role !== "all" && emp.role !== role) return false;
-
-    if (enrolled === "enrolled" && !emp.enrolled) return false;
-    if (enrolled === "not" && emp.enrolled) return false;
-
-    if (status !== "all" && emp.status !== status) return false;
-
-    return true;
-  });
-
-  // 2. sort
-  const [field, direction] = sortBy.split("-") as [
-    "createdAt" | "name" | "presenceRate",
-    "asc" | "desc"
-  ];
-  const modifier = direction === "asc" ? 1 : -1;
-
-  const sorted: Employee[] = [...filtered].sort((a, b) => {
-    if (field === "name") {
-      const an = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const bn = `${b.firstName} ${b.lastName}`.toLowerCase();
-      if (an < bn) return -1 * modifier;
-      if (an > bn) return 1 * modifier;
-      return 0;
-    }
-
-    if (field === "presenceRate") {
-      return (a.stats.presenceRatePct - b.stats.presenceRatePct) * modifier;
-    }
-
-    // default createdAt:
-    return (
-      (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) *
-      modifier
-    );
-  });
-
-  // 3. render
   return (
     <Table columns="0.8fr 1.6fr 1fr 1fr 1fr 1fr 1fr">
       <Table.Header>
@@ -95,7 +68,7 @@ export default function EmployeeTable({
       </Table.Header>
 
       <Table.Body<Employee>
-        data={sorted}
+        data={employees}
         render={(emp) => <EmployeeRow employee={emp} key={emp.id} />}
       />
     </Table>
