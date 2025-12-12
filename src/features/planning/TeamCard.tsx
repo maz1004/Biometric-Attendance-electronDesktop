@@ -9,16 +9,19 @@ const Card = styled.div`
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-card);
   border-radius: var(--border-radius-md);
-  padding: 1.2rem;
+  padding: 1.6rem;
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
   transition: all 0.2s;
   position: relative;
+  cursor: pointer;
+  height: 100%;
 
   &:hover {
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
+    border-color: var(--color-brand-200);
   }
 `;
 

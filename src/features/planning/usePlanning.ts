@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getPlanningDashboard,
+  getTeams,
+  getUsers,
   createShift as apiCreateShift,
   updateShift as apiUpdateShift,
   deleteShift as apiDeleteShift,
@@ -42,44 +44,66 @@ export function usePlanning() {
   const [week, setWeekState] = useState<WeekKey>(iso(mondayOf(new Date())));
 
   /* ===== QUERY ===== */
-  const { data: planningData, isLoading } = useQuery({
+  const { data: planningData, isLoading: isLoadingPlanning } = useQuery({
     queryKey: ["planning", week],
     queryFn: () => getPlanningDashboard(),
   });
 
+  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
+    queryKey: ["teams"],
+    queryFn: getTeams,
+  });
+
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ["users", "employee"],
+    queryFn: () => getUsers({ role: "employee", limit: 100 }),
+  });
+
+  const isLoading = isLoadingPlanning || isLoadingTeams || isLoadingUsers;
+
   // Transform API data to internal state format
   const state: PlanningState = useMemo(() => {
-    if (!planningData || !planningData.active_shifts) {
-      return {
-        week,
-        employees: {},
-        teams: {},
-        shifts: {},
-      };
-    }
-
-    const { active_shifts } = planningData;
-
     // Transform shifts array to records
     const shiftsRecord: Record<string, Shift> = {};
-    if (Array.isArray(active_shifts)) {
-      active_shifts.forEach((s: any) => {
-        // Map backend ShiftResponse to local Shift type
+    if (planningData?.active_shifts && Array.isArray(planningData.active_shifts)) {
+      planningData.active_shifts.forEach((s: any) => {
         shiftsRecord[s.id] = {
           id: s.id,
           name: s.name,
-          start: s.start_time, // May need time formatting
+          start: s.start_time,
           end: s.end_time,
           daysActive: s.days_of_week as DayKey[],
           teamIds: s.team_id ? [s.team_id] : [],
-          extraMemberIds: [],
+          extraMemberIds: [], // Backend doesn't support individual assignments on shift object yet
         };
       });
     }
 
-    // For now, teams and employees are empty - would need separate API calls
+    // Transform teams
     const teamsRecord: Record<string, Team> = {};
+    if (teamsData?.teams) {
+      teamsData.teams.forEach((t: any) => {
+        teamsRecord[t.id] = {
+          id: t.id,
+          name: t.name,
+          color: "var(--color-brand-500)", // Default color
+          memberIds: [], // We would need to fetch members for each team or map from users
+        };
+      });
+    }
+
+    // Transform employees
     const employeesRecord: Record<string, EmployeeMini> = {};
+    if (usersData?.users) {
+      usersData.users.forEach((u: any) => {
+        employeesRecord[u.id] = {
+          id: u.id,
+          name: `${u.first_name} ${u.last_name}`,
+          avatar: `https://ui-avatars.com/api/?name=${u.first_name}+${u.last_name}&background=random`,
+          department: u.department,
+        };
+      });
+    }
 
     return {
       week,
@@ -87,7 +111,7 @@ export function usePlanning() {
       teams: teamsRecord,
       shifts: shiftsRecord,
     };
-  }, [planningData, week]);
+  }, [planningData, teamsData, usersData, week]);
 
   /* ===== week nav ===== */
   function setWeek(newWeek: WeekKey) {

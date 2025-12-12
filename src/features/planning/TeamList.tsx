@@ -3,13 +3,13 @@ import { EmployeeMini, Team } from "./PlanningTypes";
 import TeamCard from "./TeamCard";
 
 const Container = styled.div`
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.2rem;
-  padding: 1rem;
-  background: var(--color-bg-elevated);
-  border-left: 1px solid var(--color-border-card);
-  min-width: 250px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  width: 100%;
 `;
 
 const Title = styled.h3`
@@ -17,6 +17,7 @@ const Title = styled.h3`
   font-weight: 600;
   color: var(--color-text-strong);
   margin-bottom: 0.8rem;
+  grid-column: 1 / -1;
 `;
 
 export default function TeamList({
@@ -28,7 +29,7 @@ export default function TeamList({
 }) {
     return (
         <Container>
-            <Title>Teams</Title>
+            <Title>Équipes</Title>
             {Object.values(teams).map((team) => (
                 <TeamCard key={team.id} team={team} employees={employees} />
             ))}

@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import UserAvatar from "../features/authentication/UserAvatar";
 import HeaderMenu from "./HeaderMenu";
+import ValidationBell from "../features/validation/ValidationBell";
 
 const StyledHeader = styled.header`
   background-color: var(--color-grey-0);
@@ -14,6 +15,7 @@ const StyledHeader = styled.header`
 function Header() {
   return (
     <StyledHeader>
+      <ValidationBell />
       <UserAvatar />
       <HeaderMenu />
     </StyledHeader>

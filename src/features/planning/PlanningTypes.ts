@@ -4,12 +4,14 @@ export type DayKey = 0 | 1 | 2 | 3 | 4 | 5 | 6; // Mon..Sun
 export type EmployeeMini = {
   id: string;
   name: string;
-  department: string;
+  department?: string;
+  avatar?: string;
 };
 
 export type Team = {
   id: string;
   name: string;
+  color?: string;
   memberIds: string[]; // users in the team
 };
 

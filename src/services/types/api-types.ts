@@ -81,9 +81,10 @@ export interface UpdateUserRequest {
     email?: string;
     role?: 'admin' | 'rh' | 'employee';
     department?: string;
-    phone_number?: string;
-    hire_date?: string;
     is_active?: boolean;
+    permissions?: string[];
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface UserStatus {
@@ -525,4 +526,28 @@ export interface WebSocketMessage {
     type: 'notification' | 'update' | 'ping';
     data: any;
     timestamp: string;
+}
+
+// ============================================================================
+// MANUAL VALIDATION
+// ============================================================================
+
+export interface ManualValidationRequest {
+    id: string;
+    employee_id: string | null;
+    photo_url: string;
+    timestamp: string;
+    status: 'pending' | 'validated' | 'rejected';
+    recognized_name?: string; // For display purposes if recognition had a partial match
+}
+
+export interface GetValidationQueueResponse {
+    requests: ManualValidationRequest[];
+    count: number;
+}
+
+export interface ValidateRequest {
+    request_id: string;
+    employee_id: string; // The employee this scan belongs to
+    action: 'validate' | 'reject';
 }
