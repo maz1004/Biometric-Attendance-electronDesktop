@@ -7,6 +7,7 @@ import AppLayout from "./ui/AppLayout";
 import ProtectedRoute from "./ui/ProtectedRoute";
 
 import { DarkModeProvider } from "./context/DarkModeContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { GlobalStyles } from "./styles/GlobalStyles";
 import PageNotFound from "./pages/PageNotFound";
 import Login from "./pages/Login";
@@ -33,31 +34,33 @@ function App() {
         <ReactQueryDevtools initialIsOpen={false} />
         <GlobalStyles />
 
-        <BrowserRouter>
-          <Routes>
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate replace to="dashboard" />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="users" element={<Users />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="account" element={<Account />} />
-              <Route path="employees" element={<Employees />} />
-              <Route path="attendance" element={<Attendance />} />
-              <Route path="planning" element={<Planning />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="devices" element={<Devices />} />
-            </Route>
+        <NotificationProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Navigate replace to="dashboard" />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="users" element={<Users />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="account" element={<Account />} />
+                <Route path="employees" element={<Employees />} />
+                <Route path="attendance" element={<Attendance />} />
+                <Route path="planning" element={<Planning />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="devices" element={<Devices />} />
+              </Route>
 
-            <Route path="login" element={<Login />} />
-            <Route path="*" element={<PageNotFound />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="login" element={<Login />} />
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </NotificationProvider>
 
         <Toaster
           position="top-center"
