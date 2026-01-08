@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
-import { HiBell, HiCheck, HiX } from "react-icons/hi";
+import { HiBell } from "react-icons/hi";
 import { useNotifications } from "../../context/NotificationContext";
-import { useNavigate } from "react-router-dom";
+
 import ValidationQueueModal from "../validation/ValidationQueueModal";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -140,85 +140,84 @@ const EmptyState = styled.div`
 `;
 
 export default function NotificationCenter() {
-    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-    const [isOpen, setIsOpen] = useState(false);
-    const [showValidationModal, setShowValidationModal] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const [isOpen, setIsOpen] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
-    const handleNotificationClick = async (notification: any) => {
-        if (!notification.is_read) {
-            await markAsRead(notification.id);
-        }
+  const handleNotificationClick = async (notification: any) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
 
-        // Handle specific notification types
-        if (notification.type === "validation_request") {
-            setShowValidationModal(true);
-            setIsOpen(false);
-        } else if (notification.type === "system_alert") {
-            // Maybe navigate to logs or settings
-        }
-    };
+    // Handle specific notification types
+    if (notification.type === "validation_request") {
+      setShowValidationModal(true);
+      setIsOpen(false);
+    } else if (notification.type === "system_alert") {
+      // Maybe navigate to logs or settings
+    }
+  };
 
-    return (
-        <Container ref={containerRef}>
-            <BellButton onClick={() => setIsOpen(!isOpen)}>
-                <HiBell />
-                {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
-            </BellButton>
+  return (
+    <Container ref={containerRef}>
+      <BellButton onClick={() => setIsOpen(!isOpen)}>
+        <HiBell />
+        {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
+      </BellButton>
 
-            {isOpen && (
-                <Dropdown>
-                    <Header>
-                        <Title>Notifications</Title>
-                        {unreadCount > 0 && (
-                            <MarkReadButton onClick={() => markAllAsRead()}>
-                                Tout marquer comme lu
-                            </MarkReadButton>
-                        )}
-                    </Header>
-
-                    <NotificationList>
-                        {notifications.length === 0 ? (
-                            <EmptyState>Aucune notification</EmptyState>
-                        ) : (
-                            notifications.map((notification) => (
-                                <NotificationItem
-                                    key={notification.id}
-                                    $read={notification.is_read}
-                                    onClick={() => handleNotificationClick(notification)}
-                                >
-                                    <ItemHeader>
-                                        <ItemTitle>{notification.title}</ItemTitle>
-                                        <ItemTime>
-                                            {formatDistanceToNow(new Date(notification.created_at), {
-                                                addSuffix: true,
-                                                locale: fr,
-                                            })}
-                                        </ItemTime>
-                                    </ItemHeader>
-                                    <ItemMessage>{notification.message}</ItemMessage>
-                                </NotificationItem>
-                            ))
-                        )}
-                    </NotificationList>
-                </Dropdown>
+      {isOpen && (
+        <Dropdown>
+          <Header>
+            <Title>Notifications</Title>
+            {unreadCount > 0 && (
+              <MarkReadButton onClick={() => markAllAsRead()}>
+                Tout marquer comme lu
+              </MarkReadButton>
             )}
+          </Header>
 
-            {showValidationModal && (
-                <ValidationQueueModal onClose={() => setShowValidationModal(false)} />
+          <NotificationList>
+            {notifications.length === 0 ? (
+              <EmptyState>Aucune notification</EmptyState>
+            ) : (
+              notifications.map((notification) => (
+                <NotificationItem
+                  key={notification.id}
+                  $read={notification.is_read}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <ItemHeader>
+                    <ItemTitle>{notification.title}</ItemTitle>
+                    <ItemTime>
+                      {formatDistanceToNow(new Date(notification.created_at), {
+                        addSuffix: true,
+                        locale: fr,
+                      })}
+                    </ItemTime>
+                  </ItemHeader>
+                  <ItemMessage>{notification.message}</ItemMessage>
+                </NotificationItem>
+              ))
             )}
-        </Container>
-    );
+          </NotificationList>
+        </Dropdown>
+      )}
+
+      {showValidationModal && (
+        <ValidationQueueModal onClose={() => setShowValidationModal(false)} />
+      )}
+    </Container>
+  );
 }

@@ -1,185 +1,234 @@
-// Service de planification (planning - teams & shifts)
-import { apiClient } from './api';
-import type {
-  TeamsListResponse,
-  TeamResponse,
-  TeamMembersResponse,
-  ShiftsListResponse,
-  ShiftResponse,
-  UserShiftsResponse,
-  PlanningDashboardResponse,
-  CreateShiftCommand,
-  UpdateShiftCommand,
-  AssignUserToShiftCommand,
-  UnassignUserFromShiftCommand,
-  CreateTeamCommand,
-  UpdateTeamCommand,
-} from './types/api-types';
-import type { SuccessResponse } from './types';
+import axios from "axios";
+import { CreateShiftDTO, UpdateShiftCommand, UpdateTeamCommand, CreateTeamCommand, Shift, Team, UserShift } from "../features/planning/PlanningTypes";
 
-// ============================================================================
-// PLANNING - TEAMS API
-// ============================================================================
+const API_URL = "http://localhost:8080/api/v1/planning";
 
-/**
- * Get all teams
- * GET /api/v1/planning/teams
- */
-export const getTeams = async (): Promise<TeamsListResponse> => {
-  const response = await apiClient.get<TeamsListResponse>('/planning/teams');
-  return response.data;
-};
+// --- FUNCTIONS ---
 
-/**
- * Get single team by ID
- * GET /api/v1/planning/teams/:id
- */
-export const getTeam = async (id: string): Promise<TeamResponse> => {
-  const response = await apiClient.get<TeamResponse>(`/planning/teams/${id}`);
-  return response.data;
-};
+// SHIFTS
+export async function getShifts(): Promise<Shift[]> {
+  const res = await axios.get(`${API_URL}/shifts`);
+  // Map snake_case to camelCase
+  return res.data.map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    description: s.description,
+    isActive: s.is_active,
+    teamId: s.team_id,
+    daysOfWeek: s.days_of_week || [],
+    maxMembers: s.max_members,
+    color: s.color
+  }));
+}
 
-/**
- * Get team members
- * GET /api/v1/planning/teams/:id/members
- */
-export const getTeamMembers = async (id: string): Promise<TeamMembersResponse> => {
-  const response = await apiClient.get<TeamMembersResponse>(`/planning/teams/${id}/members`);
-  return response.data;
-};
+export async function getShift(id: string): Promise<Shift> {
+  const res = await axios.get(`${API_URL}/shifts/${id}`);
+  const s = res.data;
+  return {
+    id: s.id,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    description: s.description,
+    isActive: s.is_active,
+    teamId: s.team_id,
+    daysOfWeek: s.days_of_week || [],
+    maxMembers: s.max_members,
+    color: s.color
+  };
+}
 
-/**
- * Create new team (admin only)
- * POST /api/v1/admin/planning/teams
- */
-export const createTeam = async (data: CreateTeamCommand): Promise<SuccessResponse<TeamResponse>> => {
-  const response = await apiClient.post<SuccessResponse<TeamResponse>>('/admin/planning/teams', data);
-  return response.data;
-};
+export async function createShift(data: CreateShiftDTO): Promise<Shift> {
+  // Convert DTO camel to snake if needed? Backend usually expects JSON snake_case or we use `json:"tag"` in Go.
+  // My Go structs usually use snake_case json tags.
+  // Yes, UpdateShiftDTO in Go has `json:"start_time"`.
+  // So I need to map REQUEST data to snake_case too.
+  const payload = {
+    name: data.name,
+    description: data.description,
+    start_time: data.start_time, // Wait, DTO in PlanningTypes matches snake?
+    end_time: data.end_time,
+    team_id: data.team_id,
+    days_of_week: data.days_of_week,
+    max_members: data.max_members
+  };
+  const res = await axios.post(`${API_URL}/shifts`, payload);
+  // Return mapped
+  const s = res.data;
+  return {
+    id: s.id,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    description: s.description,
+    isActive: s.is_active,
+    teamId: s.team_id,
+    daysOfWeek: s.days_of_week || [],
+    maxMembers: s.max_members,
+    color: s.color
+  };
+}
 
-/**
- * Update team (admin only)
- * PUT /api/v1/admin/planning/teams/:id
- */
-export const updateTeam = async (id: string, data: UpdateTeamCommand): Promise<SuccessResponse<TeamResponse>> => {
-  const response = await apiClient.put<SuccessResponse<TeamResponse>>(`/admin/planning/teams/${id}`, data);
-  return response.data;
-};
+export async function updateShift(id: string, data: UpdateShiftCommand): Promise<Shift> {
+  const payload = {
+    name: data.name,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    days_of_week: data.days_of_week,
+    max_members: data.max_members
+  };
+  const res = await axios.put(`${API_URL}/shifts/${id}`, payload);
+  const s = res.data;
+  return {
+    id: s.id,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    description: s.description,
+    isActive: s.is_active,
+    teamId: s.team_id,
+    daysOfWeek: s.days_of_week || [],
+    maxMembers: s.max_members,
+    color: s.color
+  };
+}
 
-/**
- * Delete team (admin only)
- * DELETE /api/v1/admin/planning/teams/:id
- */
-export const deleteTeam = async (id: string): Promise<SuccessResponse<void>> => {
-  const response = await apiClient.delete<SuccessResponse<void>>(`/admin/planning/teams/${id}`);
-  return response.data;
-};
+export async function deleteShift(id: string): Promise<void> {
+  await axios.delete(`${API_URL}/shifts/${id}`);
+}
 
-// ============================================================================
-// PLANNING - SHIFTS API
-// ============================================================================
+// TEAMS
+export async function getTeams(): Promise<{ teams: Team[] }> {
+  const res = await axios.get(`${API_URL}/teams`);
+  // res.data might be array.
+  const rawList = Array.isArray(res.data) ? res.data : (res.data.teams || []);
+  const teams = rawList.map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    department: t.department,
+    managerId: t.manager_id,
+    memberIds: [] // Default empty until backend provides members
+  }));
+  return { teams };
+}
 
-/**
- * Get all shifts
- * GET /api/v1/planning/shifts
- */
-export const getShifts = async (): Promise<ShiftsListResponse> => {
-  const response = await apiClient.get<ShiftsListResponse>('/planning/shifts');
-  return response.data;
-};
+export async function getTeam(id: string): Promise<Team> {
+  const res = await axios.get(`${API_URL}/teams/${id}`);
+  const t = res.data;
+  return {
+    id: t.id,
+    name: t.name,
+    department: t.department,
+    managerId: t.manager_id,
+    memberIds: []
+  };
+}
 
-/**
- * Get single shift by ID
- * GET /api/v1/planning/shifts/:id
- */
-export const getShift = async (id: string): Promise<ShiftResponse> => {
-  const response = await apiClient.get<ShiftResponse>(`/planning/shifts/${id}`);
-  return response.data;
-};
+export async function createTeam(data: CreateTeamCommand): Promise<Team> {
+  const payload = {
+    name: data.name,
+    department: data.department,
+    manager_id: data.manager_id
+  };
+  const res = await axios.post(`${API_URL}/teams`, payload);
+  const t = res.data;
+  return {
+    id: t.id,
+    name: t.name,
+    department: t.department,
+    managerId: t.manager_id,
+    memberIds: []
+  };
+}
 
-/**
- * Get user's assigned shifts
- * GET /api/v1/planning/users/:id/shifts
- */
-export const getUserShifts = async (userId: string): Promise<UserShiftsResponse> => {
-  const response = await apiClient.get<UserShiftsResponse>(`/planning/users/${userId}/shifts`);
-  return response.data;
-};
+export async function updateTeam(id: string, data: UpdateTeamCommand): Promise<Team> {
+  const res = await axios.put(`${API_URL}/teams/${id}`, data);
+  const t = res.data;
+  return {
+    id: t.id,
+    name: t.name,
+    department: t.department,
+    managerId: t.manager_id,
+    memberIds: []
+  };
+}
 
-/**
- * Create new shift (admin only)
- * POST /api/v1/admin/planning/shifts
- */
-export const createShift = async (data: CreateShiftCommand): Promise<SuccessResponse<ShiftResponse>> => {
-  const response = await apiClient.post<SuccessResponse<ShiftResponse>>('/admin/planning/shifts', data);
-  return response.data;
-};
+export async function deleteTeam(id: string): Promise<void> {
+  await axios.delete(`${API_URL}/teams/${id}`);
+}
 
-/**
- * Update shift (admin only)
- * PUT /api/v1/admin/planning/shifts/:id
- */
-export const updateShift = async (id: string, data: UpdateShiftCommand): Promise<SuccessResponse<ShiftResponse>> => {
-  const response = await apiClient.put<SuccessResponse<ShiftResponse>>(`/admin/planning/shifts/${id}`, data);
-  return response.data;
-};
+export async function getTeamMembers(id: string): Promise<any[]> {
+  const res = await axios.get(`${API_URL}/teams/${id}/members`);
+  return res.data;
+}
 
-/**
- * Delete shift (admin only)
- * DELETE /api/v1/admin/planning/shifts/:id
- */
-export const deleteShift = async (id: string): Promise<SuccessResponse<void>> => {
-  const response = await apiClient.delete<SuccessResponse<void>>(`/admin/planning/shifts/${id}`);
-  return response.data;
-};
+// ASSIGNMENTS
+export async function assignUserToShift(data: { user_id: string; shift_id: string; notes?: string; assigned_at?: string }): Promise<UserShift> {
+  const res = await axios.post(`${API_URL}/shifts/assign`, data);
+  const u = res.data;
+  return {
+    id: u.id,
+    userId: u.user_id,
+    shiftId: u.shift_id,
+    assignedAt: u.assigned_at,
+    isActive: u.is_active,
+    notes: u.notes
+  };
+}
 
-/**
- * Assign user to shift (admin only)
- * POST /api/v1/admin/planning/shifts/assign
- */
-export const assignUserToShift = async (data: AssignUserToShiftCommand): Promise<SuccessResponse<void>> => {
-  const response = await apiClient.post<SuccessResponse<void>>('/admin/planning/shifts/assign', data);
-  return response.data;
-};
+export async function unassignUserFromShift(data: { user_id: string; shift_id: string }): Promise<void> {
+  await axios.delete(`${API_URL}/shifts/unassign`, { data });
+}
 
-/**
- * Unassign user from shift (admin only)
- * DELETE /api/v1/admin/planning/shifts/unassign
- */
-export const unassignUserFromShift = async (data: UnassignUserFromShiftCommand): Promise<SuccessResponse<void>> => {
-  const response = await apiClient.delete<SuccessResponse<void>>('/admin/planning/shifts/unassign', { data });
-  return response.data;
-};
+export async function getUserShifts(userId: string): Promise<UserShift[]> {
+  const res = await axios.get(`${API_URL}/users/${userId}/shifts`);
+  return res.data.map((u: any) => ({
+    id: u.id,
+    userId: u.user_id,
+    shiftId: u.shift_id,
+    assignedAt: u.assigned_at,
+    isActive: u.is_active,
+    notes: u.notes
+  }));
+}
 
-// ============================================================================
-// PLANNING - DASHBOARD API
-// ============================================================================
+// New: Global Assignments
+export async function getAssignments(startDate: string, endDate: string): Promise<{ data: UserShift[] }> {
+  const res = await axios.get(`${API_URL}/assignments`, {
+    params: { start_date: startDate, end_date: endDate }
+  });
+  // raw data is array of UserShiftResponse
+  const raw = res.data.data || [];
+  const mapped = raw.map((u: any) => ({
+    id: u.id,
+    userId: u.user_id,
+    shiftId: u.shift_id,
+    assignedAt: u.assigned_at,
+    isActive: u.is_active,
+    notes: u.notes
+  }));
 
-/**
- * Get planning dashboard with stats and overview
- * GET /api/v1/planning/dashboard
- */
-export const getDashboard = async (): Promise<PlanningDashboardResponse> => {
-  const response = await apiClient.get<PlanningDashboardResponse>('/planning/dashboard');
-  return response.data;
-};
+  return { data: mapped };
+}
 
-// ============================================================================
-// TYPE EXPORTS
-// ============================================================================
+export async function getDashboard(): Promise<any> {
+  const res = await axios.get(`${API_URL}/stats`);
+  return res.data;
+}
 
-export type {
-  TeamsListResponse,
-  TeamResponse,
-  TeamMembersResponse,
-  ShiftsListResponse,
-  ShiftResponse,
-  UserShiftsResponse,
-  PlanningDashboardResponse,
-  CreateShiftCommand,
-  UpdateShiftCommand,
-  AssignUserToShiftCommand,
-  UnassignUserFromShiftCommand,
-  CreateTeamCommand,
-  UpdateTeamCommand,
+export const PlanningService = {
+  getShifts,
+  createShift,
+  updateShift,
+  deleteShift,
+  assignUserToShift,
+  getUserShifts,
+  unassignUserFromShift,
+  getTeams,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  getAssignments
 };

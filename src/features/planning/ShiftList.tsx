@@ -6,6 +6,54 @@ import { EmployeeMini, Shift, Team } from "./PlanningTypes";
 import ShiftFormModal from "./ShiftFormModal";
 import TeamFormModal from "./TeamFormModal";
 import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+
+function DraggableShiftRow({ shift, dow, onDuplicateShift, onDeleteShift, onUpdateShift, employees, teams }: any) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `shift-source-${shift.id}`,
+    data: { type: "shift-source", shiftId: shift.id }
+  });
+
+  const style = transform ? {
+    transform: CSS.Translate.toString(transform),
+    cursor: 'grab',
+    backgroundColor: 'var(--color-bg-base)',
+    zIndex: 999,
+  } : undefined;
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <Table.Row>
+        <div style={{ fontWeight: 600 }}>{shift.name}</div>
+        <div>{shift.startTime}</div>
+        <div>{shift.endTime}</div>
+        <div style={{ color: "var(--color-text-dim)" }}>{dow}</div>
+        <div style={{ display: "flex", gap: ".6rem", justifyContent: "flex-end" }}>
+          {/* Must stop propagation so clicking buttons doesn't drag */}
+          <div onPointerDown={(e) => e.stopPropagation()}>
+            <Modal.Open opens={`edit-${shift.id}`}>
+              <Button size="small">Edit</Button>
+            </Modal.Open>
+            <Button variation="secondary" size="small" onClick={() => onDuplicateShift(shift.id)}>Dup</Button>
+            <Button variation="danger" size="small" onClick={() => onDeleteShift(shift.id)}>Del</Button>
+
+            <Modal.Window name={`edit-${shift.id}`}>
+              <ShiftFormModal
+                initial={shift}
+                employees={employees}
+                teams={teams}
+                onCloseModal={() => { }}
+                onSave={(data: any) => onUpdateShift({ id: shift.id, ...data })}
+              />
+            </Modal.Window>
+          </div>
+        </div>
+      </Table.Row>
+    </div>
+  );
+}
+
 
 const HeaderBar = styled.div`
   display: flex;
@@ -76,59 +124,11 @@ export default function ShiftList(props: {
             <div>Attached</div>
             <div>Actions</div>
           </Table.Header>
-
           <Table.Body
             data={rows}
             render={(r) => {
-              const teamCount = r.teamIds.length;
-              const extra = r.extraMemberIds.length;
-              return (
-                <Table.Row key={r.id}>
-                  <div style={{ fontWeight: 600 }}>{r.name}</div>
-                  <div>{r.start}</div>
-                  <div>{r.end}</div>
-                  <div style={{ color: "var(--color-text-dim)" }}>
-                    {teamCount} team(s) • {extra} extra
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: ".6rem",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <Modal.Open opens={`edit-${r.id}`}>
-                      <Button size="small">Edit</Button>
-                    </Modal.Open>
-                    <Button
-                      variation="secondary"
-                      size="small"
-                      onClick={() => props.onDuplicateShift(r.id)}
-                    >
-                      Duplicate
-                    </Button>
-                    <Button
-                      variation="danger"
-                      size="small"
-                      onClick={() => props.onDeleteShift(r.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-
-                  <Modal.Window name={`edit-${r.id}`}>
-                    <ShiftFormModal
-                      initial={r}
-                      employees={props.employees}
-                      teams={props.teams}
-                      onCloseModal={() => {}}
-                      onSave={(data) =>
-                        props.onUpdateShift({ id: r.id, ...data })
-                      }
-                    />
-                  </Modal.Window>
-                </Table.Row>
-              );
+              const dow = r.daysOfWeek?.join(", ") || "All";
+              return <DraggableShiftRow key={r.id} shift={r} dow={dow} {...props} />;
             }}
           />
 
@@ -139,7 +139,7 @@ export default function ShiftList(props: {
           <ShiftFormModal
             employees={props.employees}
             teams={props.teams}
-            onCloseModal={() => {}}
+            onCloseModal={() => { }}
             onSave={(data) => props.onCreateShift(data)}
           />
         </Modal.Window>
@@ -147,11 +147,11 @@ export default function ShiftList(props: {
         <Modal.Window name="create-team">
           <TeamFormModal
             employees={props.employees}
-            onCloseModal={() => {}}
+            onCloseModal={() => { }}
             onSave={(data) => props.onCreateTeam(data)}
           />
         </Modal.Window>
-      </Modal>
-    </div>
+      </Modal >
+    </div >
   );
 }

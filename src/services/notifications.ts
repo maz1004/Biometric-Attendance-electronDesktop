@@ -1,5 +1,5 @@
 import { apiClient as api } from "./api";
-import { API_BASE_URL } from "./config/api";
+import { API_BASE_URL, API_VERSION } from "./config/api";
 import { Notification, NotificationsResponse, UnreadCountResponse } from "./types/api-types";
 
 // HTTP Endpoints
@@ -34,7 +34,7 @@ export const connectWebSocket = (token: string) => {
     if (ws) return;
 
     // Adjust WS URL based on API_BASE_URL (replace http with ws)
-    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + "/notifications/ws";
+    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + API_VERSION + "/notifications/ws";
 
     // Append token as query param if needed, or send in header (WS standard usually query param)
     // The requirement says "Auth : Token JWT dans query param ou header."

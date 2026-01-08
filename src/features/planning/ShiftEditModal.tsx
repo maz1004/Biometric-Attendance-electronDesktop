@@ -144,18 +144,18 @@ interface ShiftEditModalProps {
 
 export default function ShiftEditModal({ shift, onClose, onSave, onDelete, teams }: ShiftEditModalProps) {
   const [name, setName] = useState(shift.name);
-  const [start, setStart] = useState(shift.start);
-  const [end, setEnd] = useState(shift.end);
-  const [teamId, setTeamId] = useState(shift.teamIds[0] || "");
+  const [start, setStart] = useState(shift.startTime);
+  const [end, setEnd] = useState(shift.endTime);
+  const [teamId, setTeamId] = useState(shift.teamId || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       ...shift,
       name,
-      start,
-      end,
-      teamIds: teamId ? [teamId] : [],
+      startTime: start,
+      endTime: end,
+      teamId: teamId || undefined,
     });
     onClose();
   };

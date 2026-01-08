@@ -1,61 +1,16 @@
 import { useMemo, useState } from "react";
-import { Capture, Device, DevicesFilters, QueueFilters } from "./DeviceTypes";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Capture, Device as UIDevice, DevicesFilters, QueueFilters } from "./DeviceTypes";
+import {
+  getDevices,
+  getPendingEnrollments,
+  validateEnrollment,
+  Device as APIDevice
+} from "../../services/apiDevices";
 
-function nowMinus(min: number) {
-  const d = new Date(Date.now() - min * 60_000);
-  return d.toISOString();
-}
-
-const SEED_DEVICES: Device[] = [
-  {
-    id: "dev-1",
-    name: "Front Gate Tablet",
-    location: "Main Entrance",
-    status: "online",
-    lastSyncISO: nowMinus(2),
-    ip: "192.168.0.21",
-    version: "1.4.0",
-  },
-  {
-    id: "dev-2",
-    name: "R&D Floor Kiosk",
-    location: "2nd Floor",
-    status: "offline",
-    lastSyncISO: nowMinus(78),
-    ip: "192.168.0.44",
-    version: "1.3.7",
-  },
-  {
-    id: "dev-3",
-    name: "Warehouse Cam",
-    location: "Dock 3",
-    status: "error",
-    lastSyncISO: nowMinus(15),
-    ip: "192.168.0.31",
-    version: "1.4.0",
-  },
-];
 
 const PLACEHOLDER =
   "https://images.unsplash.com/photo-1544006659-f0b21884ce1d?w=640&q=60&auto=format&fit=crop";
-
-const SEED_CAPTURES: Capture[] = Array.from({ length: 24 }).map((_, i) => {
-  const deviceId = i % 3 === 0 ? "dev-1" : i % 3 === 1 ? "dev-2" : "dev-3";
-  const score = +(0.45 + (i % 10) * 0.045).toFixed(2);
-  const liveness: Capture["liveness"] =
-    i % 5 === 0 ? "fail" : i % 2 === 0 ? "pass" : "unknown";
-  return {
-    id: `cap-${i + 1}`,
-    deviceId,
-    tsISO: new Date(Date.now() - i * 5 * 60_000).toISOString(),
-    employeeNameGuess:
-      i % 4 === 0 ? "User 017" : i % 4 === 1 ? "User 112" : undefined,
-    score,
-    liveness,
-    status: "pending",
-    imageUrl: PLACEHOLDER,
-  };
-});
 
 const INIT_DEV_FILTERS: DevicesFilters = {
   q: "",
@@ -70,14 +25,61 @@ const INIT_Q_FILTERS: QueueFilters = {
 };
 
 export function useDevices() {
-  const [devices] = useState<Device[]>(SEED_DEVICES);
-  const [captures, setCaptures] = useState<Capture[]>(SEED_CAPTURES);
-
-  const [devFilters, setDevFilters] =
-    useState<DevicesFilters>(INIT_DEV_FILTERS);
+  const queryClient = useQueryClient();
+  const [devFilters, setDevFilters] = useState<DevicesFilters>(INIT_DEV_FILTERS);
   const [qFilters, setQFilters] = useState<QueueFilters>(INIT_Q_FILTERS);
 
-  // Devices list
+  // 1. Fetch Devices
+  const { data: apiDevices = [] } = useQuery({
+    queryKey: ['devices'],
+    queryFn: async () => {
+      const res = await getDevices();
+      // Backend returns { success: true, data: { devices: [...], count: X } }
+      return (res.data as any)?.devices || [];
+    },
+    // Refresh every 30s
+    refetchInterval: 30000,
+  });
+
+  // Map APIDevice to UIDevice
+  const devices: UIDevice[] = useMemo(() => {
+    return Array.isArray(apiDevices) ? apiDevices.map((d: APIDevice) => ({
+      id: d.device_id,
+      name: d.device_name,
+      location: d.location || "Unknown Location",
+      status: d.is_active ? "online" : "offline",
+      lastSyncISO: d.last_seen || new Date().toISOString(),
+      ip: d.ip_address,
+      version: "1.0.0" // Not currently returned by GetConnectedDevices
+    })) : [];
+  }, [apiDevices]);
+
+  // 2. Fetch Enrollments (Queue)
+  const { data: apiEnrollments = [] } = useQuery({
+    queryKey: ['enrollments', 'pending'],
+    queryFn: async () => {
+      const res = await getPendingEnrollments();
+      // Backend returns { success: true, data: { enrollments: [...], count: X } }
+      return (res.data as any)?.enrollments || [];
+    },
+    refetchInterval: 15000,
+  });
+
+  // Map PendingEnrollment to Capture
+  const captures: Capture[] = useMemo(() => {
+    return Array.isArray(apiEnrollments) ? apiEnrollments.map((e: any) => ({
+      id: e.id,
+      deviceId: e.device_id || "unknown",
+      tsISO: e.created_at,
+      employeeNameGuess: e.user_name || "Unknown User",
+      score: e.quality_score || 1.0,
+      liveness: "pass", // Assume pass for manual enrollment
+      status: e.status || "pending",
+      imageUrl: e.face_image || PLACEHOLDER
+    })) : [];
+  }, [apiEnrollments]);
+
+  // Devices list filtering
   const filteredDevices = useMemo(() => {
     const rows = devices.filter((d) => {
       if (devFilters.status !== "all" && d.status !== devFilters.status)
@@ -104,7 +106,7 @@ export function useDevices() {
     return rows;
   }, [devices, devFilters]);
 
-  // Validation queue
+  // Validation queue filtering
   const queue = useMemo(() => {
     return captures.filter((c) => {
       if (qFilters.device !== "all" && c.deviceId !== qFilters.device)
@@ -122,12 +124,21 @@ export function useDevices() {
     });
   }, [captures, qFilters]);
 
-  // Static actions (just mutate local state for demo)
+  // Mutations
+  const { mutate: validateMutation } = useMutation({
+    mutationFn: ({ id, approved }: { id: string; approved: boolean }) =>
+      validateEnrollment(id, approved),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enrollments'] });
+    }
+  });
+
   function setCaptureStatus(id: string, status: "accepted" | "rejected") {
-    setCaptures((list) =>
-      list.map((c) => (c.id === id ? { ...c, status } : c))
-    );
+    // Optimistic update could be done here, but simple invalidate is safer for now
+    validateMutation({ id, approved: status === "accepted" });
   }
+
+  // TODO: Add activate/deactivate mutations if UI supports it
 
   return {
     // state

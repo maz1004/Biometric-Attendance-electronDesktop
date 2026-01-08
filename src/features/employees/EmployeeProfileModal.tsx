@@ -1,7 +1,11 @@
 import styled from "styled-components";
 import { Employee } from "./EmployeeTypes";
 import Heading from "../../ui/Heading";
-import { HiOutlineBriefcase, HiOutlineUserCircle } from "react-icons/hi";
+import Button from "../../ui/Button";
+import { HiOutlineBriefcase, HiOutlineUserCircle, HiCamera, HiDocumentText } from "react-icons/hi2";
+import { useUserUpload } from "../../hooks/useUserUpload";
+import { useRef } from "react";
+import EfficiencyBadge from "./components/EfficiencyBadge";
 
 const StyledProfile = styled.div`
   display: grid;
@@ -17,12 +21,38 @@ const AvatarSection = styled.div`
   gap: 1.6rem;
 `;
 
-const Avatar = styled.img`
+const AvatarContainer = styled.div`
+  position: relative;
   width: 16rem;
   height: 16rem;
+`;
+
+const Avatar = styled.img`
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
   border: 4px solid var(--color-brand-100);
+`;
+
+const UploadOverlay = styled.div`
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--color-brand-600);
+  color: white;
+  padding: 0.8rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    background: var(--color-brand-700);
+    transform: scale(1.1);
+  }
 `;
 
 const InfoSection = styled.div`
@@ -77,59 +107,111 @@ const StatLabel = styled.span`
   font-weight: 600;
 `;
 
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 1.2rem;
+  margin-top: 1.2rem;
+`;
+
 type EmployeeProfileModalProps = {
-    employee: Employee;
-    onClose?: () => void;
+  employee: Employee;
+  onClose?: () => void;
 };
 
 function EmployeeProfileModal({ employee }: EmployeeProfileModalProps) {
-    const { firstName, lastName, department, role, avatar, stats } = employee;
+  const { firstName, lastName, department, role, avatar, stats, id } = employee;
+  const { uploadPhoto, uploadCV, uploading } = useUserUpload();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const cvInputRef = useRef<HTMLInputElement>(null);
 
-    return (
-        <div style={{ minWidth: "60rem" }}>
-            <Heading as="h2">Profil Employé</Heading>
-            <StyledProfile>
-                <AvatarSection>
-                    <Avatar
-                        src={avatar || "/default-user.jpg"}
-                        alt={`${firstName} ${lastName}`}
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/default-user.jpg";
-                        }}
-                    />
-                    <Heading as="h3">{`${firstName} ${lastName}`}</Heading>
-                </AvatarSection>
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      uploadPhoto(id, e.target.files[0]);
+    }
+  };
 
-                <InfoSection>
-                    <InfoRow>
-                        <HiOutlineBriefcase />
-                        <span>
-                            {department} - {role}
-                        </span>
-                    </InfoRow>
-                    <InfoRow>
-                        <HiOutlineUserCircle />
-                        <span>{employee.status === "active" ? "Actif" : "Inactif"}</span>
-                    </InfoRow>
+  const handleCVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      uploadCV(id, e.target.files[0]);
+    }
+  };
 
-                    <StatsGrid>
-                        <StatItem>
-                            <StatValue>{stats?.presenceRatePct ?? 0}%</StatValue>
-                            <StatLabel>Présence</StatLabel>
-                        </StatItem>
-                        <StatItem>
-                            <StatValue>{stats?.lateCount30d ?? 0}</StatValue>
-                            <StatLabel>Retards (30j)</StatLabel>
-                        </StatItem>
-                        <StatItem>
-                            <StatValue>{stats?.absenceCount30d ?? 0}</StatValue>
-                            <StatLabel>Absences (30j)</StatLabel>
-                        </StatItem>
-                    </StatsGrid>
-                </InfoSection>
-            </StyledProfile>
-        </div>
-    );
+  return (
+    <div style={{ minWidth: "60rem" }}>
+      <Heading as="h2">Profil Employé</Heading>
+      <StyledProfile>
+        <AvatarSection>
+          <AvatarContainer>
+            <Avatar
+              src={avatar || "/default-user.jpg"}
+              alt={`${firstName} ${lastName}`}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/default-user.jpg";
+              }}
+            />
+            <UploadOverlay onClick={() => photoInputRef.current?.click()}>
+              <HiCamera />
+            </UploadOverlay>
+          </AvatarContainer>
+          <input
+            type="file"
+            ref={photoInputRef}
+            style={{ display: 'none' }}
+            accept="image/*"
+            onChange={handlePhotoChange}
+          />
+          <Heading as="h3">{`${firstName} ${lastName}`}</Heading>
+          <EfficiencyBadge score={stats?.efficiencyScore ?? 0} />
+        </AvatarSection>
+
+        <InfoSection>
+          <InfoRow>
+            <HiOutlineBriefcase />
+            <span>
+              {department} - {role}
+            </span>
+          </InfoRow>
+          <InfoRow>
+            <HiOutlineUserCircle />
+            <span>{employee.status === "active" ? "Actif" : "Inactif"}</span>
+          </InfoRow>
+
+          <ActionButtons>
+            <Button
+              variation="secondary"
+              size="small"
+              onClick={() => cvInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <HiDocumentText /> Upload CV
+            </Button>
+            <input
+              type="file"
+              ref={cvInputRef}
+              style={{ display: 'none' }}
+              accept=".pdf,.doc,.docx"
+              onChange={handleCVChange}
+            />
+          </ActionButtons>
+
+          <StatsGrid>
+            <StatItem>
+              <StatValue>{stats?.presenceRatePct ?? 0}%</StatValue>
+              <StatLabel>Présence</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>{stats?.lateCount30d ?? 0}</StatValue>
+              <StatLabel>Retards (30j)</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>{stats?.absenceCount30d ?? 0}</StatValue>
+              <StatLabel>Absences (30j)</StatLabel>
+            </StatItem>
+          </StatsGrid>
+        </InfoSection>
+      </StyledProfile>
+    </div>
+  );
 }
 
 export default EmployeeProfileModal;

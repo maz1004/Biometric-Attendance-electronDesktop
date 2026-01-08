@@ -1,13 +1,20 @@
 import { useState } from "react";
 import styled from "styled-components";
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  DragEndEvent
+} from "@dnd-kit/core";
 import { usePlanning } from "../features/planning/usePlanning";
 import PlanningHeaderBar from "../features/planning/PlanningHeaderBar";
-import WeeklyTimesheet from "../features/planning/WeeklyTimesheet";
+import TimetableGrid from "../features/planning/TimetableGrid";
 import TeamList from "../features/planning/TeamList";
 import ShiftList from "../features/planning/ShiftList";
 import ShiftEditModal from "../features/planning/ShiftEditModal";
 import Spinner from "../ui/Spinner";
-import { DayKey } from "../features/planning/PlanningTypes";
 
 const Section = styled.section`
   background: var(--color-bg-elevated);
@@ -20,17 +27,61 @@ const Section = styled.section`
   gap: 1.6rem;
 `;
 
-
-
 export default function Planning(): JSX.Element {
   const p = usePlanning();
-
   const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  function handleDragStart(event: any) {
+    setActiveDragId(event.active.id);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (!over) return;
+
+    // active.id = shiftId (from ShiftList)
+    // over.id = "cell-employeeId#YYYY-MM-DD"
+
+    const shiftId = String(active.id);
+    const overId = String(over.id);
+
+    if (overId.startsWith("cell-")) {
+      // Remove "cell-" prefix
+      const content = overId.substring(5);
+      if (content.includes("#")) {
+        const [employeeId, dateStr] = content.split("#");
+
+        p.assignUserToShift({
+          shift_id: shiftId,
+          user_id: employeeId,
+          notes: `Assigned via Drag-n-Drop for ${dateStr}`,
+          assigned_at: dateStr, // Pass the specific date
+        });
+      }
+    }
+  }
 
   if (p.isLoading) return <Spinner />;
 
+  const activeShift = activeDragId ? p.shifts[activeDragId] : null;
+
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <Section>
         <PlanningHeaderBar
           weekISO={p.state.week}
@@ -44,22 +95,11 @@ export default function Planning(): JSX.Element {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.4rem' }}>
           <TeamList teams={p.teams} employees={p.employees} />
 
-          <WeeklyTimesheet
-            shifts={Object.values(p.shifts)}
-            employees={p.employees}
-            teams={p.teams}
-            weekStart={new Date(p.state.week)}
-            onShiftMove={(shiftId: string, newDay: DayKey, newStart: string, newEnd: string) => {
-              p.updateShift({
-                id: shiftId,
-                data: {
-                  days_of_week: [newDay],
-                  start_time: newStart,
-                  end_time: newEnd
-                }
-              });
-            }}
-            onShiftClick={(id: string) => setEditingShiftId(id)}
+          <TimetableGrid
+            employees={Object.values(p.employees)}
+            userShifts={p.userShifts}
+            weekStartDate={new Date(p.state.week)}
+            allShifts={p.shifts}
           />
 
           <ShiftList
@@ -68,19 +108,19 @@ export default function Planning(): JSX.Element {
             shifts={p.shifts}
             onCreateShift={(s) => p.createShift({
               name: s.name,
-              start_time: s.start,
-              end_time: s.end,
-              days_of_week: s.daysActive,
-              team_id: s.teamIds[0] || "",
+              start_time: s.startTime,
+              end_time: s.endTime,
+              days_of_week: s.daysOfWeek,
+              team_id: s.teamId || "",
               max_members: 10,
             })}
             onUpdateShift={(s) => p.updateShift({
               id: s.id,
               data: {
                 name: s.name,
-                start_time: s.start,
-                end_time: s.end,
-                days_of_week: s.daysActive,
+                start_time: s.startTime,
+                end_time: s.endTime,
+                days_of_week: s.daysOfWeek,
               }
             })}
             onDuplicateShift={(id) => {
@@ -101,6 +141,14 @@ export default function Planning(): JSX.Element {
         </div>
       </Section>
 
+      <DragOverlay>
+        {activeShift ? (
+          <div style={{ padding: '8px', background: 'var(--color-primary)', color: 'white', borderRadius: '4px', width: '200px' }}>
+            {activeShift.name} ({activeShift.startTime} - {activeShift.endTime})
+          </div>
+        ) : null}
+      </DragOverlay>
+
       {editingShiftId && p.shifts[editingShiftId] && (
         <ShiftEditModal
           shift={p.shifts[editingShiftId]}
@@ -111,17 +159,15 @@ export default function Planning(): JSX.Element {
               id: updatedShift.id,
               data: {
                 name: updatedShift.name,
-                start_time: updatedShift.start,
-                end_time: updatedShift.end,
-                days_of_week: updatedShift.daysActive,
-                // Handle team update if needed, currently updateShift might not support it directly in all implementations
-                // but let's assume it does or we ignore for now
+                start_time: updatedShift.startTime,
+                end_time: updatedShift.endTime,
+                days_of_week: updatedShift.daysOfWeek,
               }
             });
           }}
           onDelete={(id) => p.deleteShift(id)}
         />
       )}
-    </>
+    </DndContext>
   );
 }

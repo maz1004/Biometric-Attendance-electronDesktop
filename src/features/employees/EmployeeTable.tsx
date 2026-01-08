@@ -31,6 +31,7 @@ function mapUserToEmployee(user: UserResponse): Employee {
       presenceRatePct: 0, // Backend doesn't have punctuality_score in UserResponse
       lateCount30d: 0,
       absenceCount30d: 0,
+      efficiencyScore: 0,
     },
   };
 }

@@ -71,7 +71,7 @@ const Badge = styled.span<{ $tone?: "neutral" | "warn" }>`
   padding: 0.2rem 0.6rem;
   border: 1px solid
     ${(p) =>
-      p.$tone === "warn" ? "var(--color-danger-200)" : "var(--color-grey-300)"};
+    p.$tone === "warn" ? "var(--color-danger-200)" : "var(--color-grey-300)"};
   background: ${(p) =>
     p.$tone === "warn" ? "rgba(244,63,94,.06)" : "var(--color-bg-elevated)"};
   border-radius: 999px;
@@ -91,8 +91,13 @@ const Drawer = styled.div`
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function uniqueMembersForShift(sh: Shift, teams: Record<string, Team>) {
-  const teamMembers = sh.teamIds.flatMap((tid) => teams[tid]?.memberIds ?? []);
-  return Array.from(new Set([...teamMembers, ...sh.extraMemberIds]));
+  // Current Shift type has optional teamId (single string)
+  // If we want multiple members, we rely on that team's members.
+  // If extraMemberIds is gone, we ignore it.
+  if (!sh.teamId) return [];
+  return teams[sh.teamId]?.memberIds ?? [];
+  // Note: If Team interface doesn't have memberIds, we have another problem. 
+  // Checking Team interface next.
 }
 
 function ShiftRow(props: {
@@ -112,7 +117,7 @@ function ShiftRow(props: {
       <CellHead>
         <div style={{ fontWeight: 700 }}>{props.sh.name}</div>
         <Times>
-          {props.sh.start} → {props.sh.end}
+          {props.sh.startTime} → {props.sh.endTime}
         </Times>
         <Button
           onClick={() => setOpen((v) => !v)}
@@ -124,13 +129,13 @@ function ShiftRow(props: {
       </CellHead>
 
       {(Array.from({ length: 7 }).map((_, i) => i) as DayKey[]).map((day) => {
-        const active = props.sh.daysActive.includes(day);
+        const active = props.sh.daysOfWeek.includes(day);
         const conflictHere =
           active && allMembers.some((id) => props.dayConflicts[day]?.has(id));
         const conflictCount = conflictHere
           ? Array.from(props.dayConflicts[day] ?? []).filter((id) =>
-              allMembers.includes(id)
-            ).length
+            allMembers.includes(id)
+          ).length
           : 0;
 
         return (
@@ -207,7 +212,7 @@ export default function PlanningGrid(props: {
 }) {
   const teamsWithoutShifts = useMemo(() => {
     const used = new Set(
-      props.shifts.flatMap((s) => s.teamIds.map((id) => id))
+      props.shifts.map((s) => s.teamId).filter((id): id is string => !!id)
     );
     return Object.values(props.teams).filter((t) => !used.has(t.id));
   }, [props.shifts, props.teams]);

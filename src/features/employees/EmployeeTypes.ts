@@ -7,6 +7,7 @@ export type EmployeeStats = {
   presenceRatePct: number; // %
   lateCount30d: number; // number of late arrivals in last 30 days
   absenceCount30d: number; // number of absences in last 30 days
+  efficiencyScore: number; // 0-100
 };
 
 export type Employee = {

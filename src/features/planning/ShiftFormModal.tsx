@@ -51,24 +51,22 @@ export default function ShiftFormModal(props: {
   onSave: (data: Omit<Shift, "id"> & { id?: string }) => void;
 }) {
   const [name, setName] = useState(props.initial?.name ?? "");
-  const [start, setStart] = useState(props.initial?.start ?? "08:00");
-  const [end, setEnd] = useState(props.initial?.end ?? "16:00");
+  const [start, setStart] = useState(props.initial?.startTime ?? "08:00");
+  const [end, setEnd] = useState(props.initial?.endTime ?? "16:00");
   const [days, setDays] = useState<DayKey[]>(
-    props.initial?.daysActive ?? [0, 1, 2, 3, 4]
+    (props.initial?.daysOfWeek as DayKey[]) ?? [0, 1, 2, 3, 4]
   );
   const [teamSel, setTeamSel] = useState<Set<string>>(
-    new Set(props.initial?.teamIds ?? [])
+    new Set(props.initial?.teamId ? [props.initial.teamId] : [])
   );
-  const [extraSel, setExtraSel] = useState<Set<string>>(
-    new Set(props.initial?.extraMemberIds ?? [])
-  );
+  const [extraSel, setExtraSel] = useState<Set<string>>(new Set());
 
   const teamOptions: Option[] = useMemo(
     () =>
       Object.values(props.teams).map((t) => ({
         id: t.id,
         label: t.name,
-        meta: `${t.memberIds.length} users`,
+        meta: `${t.memberIds?.length ?? 0} users`,
       })),
     [props.teams]
   );
@@ -199,14 +197,15 @@ export default function ShiftFormModal(props: {
           variation="primary"
           size="small"
           onClick={() => {
+            const firstTeamId = Array.from(teamSel)[0];
             props.onSave({
               id: props.initial?.id,
               name,
-              start,
-              end,
-              daysActive: days,
-              teamIds: Array.from(teamSel),
-              extraMemberIds: Array.from(extraSel),
+              startTime: start,
+              endTime: end,
+              daysOfWeek: days,
+              teamId: firstTeamId,
+              isActive: true,
             });
             props.onCloseModal();
           }}

@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useDashboard } from "./useDashboard";
 import {
     Area,
     AreaChart,
@@ -30,15 +31,21 @@ const ChartTitle = styled.h2`
 `;
 
 function AttendanceChart() {
-    // TODO: Fetch real data
-    const data = [
-        { label: "Lun", presence: 90, absence: 5, late: 5 },
-        { label: "Mar", presence: 95, absence: 2, late: 3 },
-        { label: "Mer", presence: 88, absence: 8, late: 4 },
-        { label: "Jeu", presence: 92, absence: 4, late: 4 },
-        { label: "Ven", presence: 85, absence: 10, late: 5 },
-        { label: "Sam", presence: 50, absence: 0, late: 0 },
-    ];
+    const { trends, stats } = useDashboard();
+
+    const teamSize = stats?.total_team_size || 1; // Avoid division by zero, but don't mock 50
+
+    const data = trends?.map(t => {
+        const presencePct = Math.min(100, Math.round((t.value / teamSize) * 100));
+        // We don't have historical late/absence data yet, so we estimate rest is absence
+        // TODO: Improve backend to return detailed daily breakdown
+        return {
+            label: t.day, // or t.label
+            presence: presencePct,
+            absence: 100 - presencePct,
+            late: 0
+        };
+    }) || [];
 
     const isDarkMode = false; // TODO: Get from context
     const colors = isDarkMode

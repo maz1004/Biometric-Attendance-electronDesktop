@@ -103,7 +103,7 @@ export default function TeamCard({
             </Header>
 
             <MemberList $visible={isHovered}>
-                {team.memberIds.map((memberId) => (
+                {(team.memberIds || []).map((memberId) => (
                     <DraggableMember
                         key={memberId}
                         id={memberId}

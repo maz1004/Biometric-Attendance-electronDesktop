@@ -1,8 +1,7 @@
 import styled from "styled-components";
 import { HiOutlineUserGroup, HiOutlineClock, HiOutlineCheckCircle } from "react-icons/hi";
-import { useQuery } from "@tanstack/react-query";
-import { getEmployees } from "../../services";
 import Spinner from "../../ui/Spinner";
+import { useDashboard } from "./useDashboard";
 
 const StyledStats = styled.div`
   display: grid;
@@ -30,12 +29,12 @@ const Icon = styled.div<{ color: string; bgcolor: string }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${(props) => props.bgcolor};
+  background-color: ${(props: { bgcolor: string }) => props.bgcolor};
 
   & svg {
     width: 3.2rem;
     height: 3.2rem;
-    color: ${(props) => props.color};
+    color: ${(props: { color: string }) => props.color};
   }
 `;
 
@@ -55,25 +54,19 @@ const Value = styled.p`
 `;
 
 function DashboardStats() {
-  // Fetch employees to get total count
-  const { data: employeesData, isLoading } = useQuery({
-    queryKey: ["employees"],
-    queryFn: () => getEmployees(),
-  });
+  const { stats, isLoading } = useDashboard();
 
   if (isLoading) return <Spinner />;
 
-  const totalEmployees = employeesData?.total || 0;
-  const activeEmployees = employeesData?.users?.filter(u => u.is_active).length || 0;
+  // stats is enhanced with real counts from useDashboard hook
+  if (!stats) return null;
 
-  // TODO: Fetch real attendance stats from API
-  // For now using mock data
-  const stats = {
-    totalEmployees,
-    activeEmployees,
-    presenceRate: 92,
-    latenessRate: 3,
-  };
+  const presenceRate = stats.total_team_size > 0
+    ? Math.round((stats.arrived_count / stats.total_team_size) * 100)
+    : 0;
+
+  // use ArrivedCount as "Employés Présents" or similar. 
+  // The UI label is "Employés Actifs".
 
   return (
     <StyledStats>
@@ -82,28 +75,28 @@ function DashboardStats() {
           <HiOutlineUserGroup />
         </Icon>
         <Title>Total Employés</Title>
-        <Value>{stats.totalEmployees}</Value>
+        <Value>{stats.total_team_size}</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-green-700)" bgcolor="var(--color-green-100)">
           <HiOutlineCheckCircle />
         </Icon>
-        <Title>Employés Actifs</Title>
-        <Value>{stats.activeEmployees}</Value>
+        <Title>Présents Aujourd'hui</Title>
+        <Value>{stats.arrived_count}</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-blue-700)" bgcolor="var(--color-blue-100)">
           <HiOutlineUserGroup />
         </Icon>
         <Title>Taux de Présence</Title>
-        <Value>{stats.presenceRate}%</Value>
+        <Value>{presenceRate}%</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-yellow-700)" bgcolor="var(--color-yellow-100)">
           <HiOutlineClock />
         </Icon>
         <Title>Taux de Retard</Title>
-        <Value>{stats.latenessRate}%</Value>
+        <Value>{Math.round(stats.late_percentage)}%</Value>
       </Stat>
     </StyledStats>
   );

@@ -37,6 +37,7 @@ export default function TeamFormModal(props: {
   onSave: (data: Omit<Team, "id"> & { id?: string }) => void;
 }) {
   const [name, setName] = useState(props.initial?.name ?? "");
+  const [dept, setDept] = useState(props.initial?.department ?? "");
   const [selected, setSelected] = useState<Set<string>>(
     new Set(props.initial?.memberIds ?? [])
   );
@@ -75,6 +76,15 @@ export default function TeamFormModal(props: {
       </Row>
 
       <Row>
+        <Label>Department</Label>
+        <Input
+          value={dept}
+          onChange={(e) => setDept(e.target.value)}
+          placeholder="IT, HR, Sales..."
+        />
+      </Row>
+
+      <Row>
         <Label>Members</Label>
         <VirtualizedSelector
           options={options}
@@ -98,6 +108,7 @@ export default function TeamFormModal(props: {
             props.onSave({
               id: props.initial?.id,
               name,
+              department: dept,
               memberIds: Array.from(selected),
             });
             props.onCloseModal();

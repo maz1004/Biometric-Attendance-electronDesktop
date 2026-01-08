@@ -102,6 +102,7 @@ import CreateEmployeeForm from "./CreateEmployeeForm";
 import EnrollFaceModal from "./EnrollFaceModal";
 import EmployeeProfileModal from "./EmployeeProfileModal";
 import { useDeleteEmployee } from "./useEmployees";
+import EfficiencyBadge from "./components/EfficiencyBadge";
 
 // ... (styled components remain unchanged)
 
@@ -124,14 +125,18 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
   const presence = stats?.presenceRatePct ?? 0;
   const late = stats?.lateCount30d ?? 0;
   const absent = stats?.absenceCount30d ?? 0;
+  const efficiency = stats?.efficiencyScore ?? 0;
 
   return (
     <Table.Row>
       <AvatarImg src={avatar || "/default-user.jpg"} alt={`${firstName} ${lastName}`} />
 
       <NameBlock>
-        <div className="empName">
-          {firstName} {lastName}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <div className="empName">
+            {firstName} {lastName}
+          </div>
+          <EfficiencyBadge score={efficiency} />
         </div>
         <div className="empId">{id}</div>
         <div

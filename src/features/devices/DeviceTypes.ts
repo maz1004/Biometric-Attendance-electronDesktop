@@ -8,6 +8,7 @@ export type Device = {
   lastSyncISO: string; // ISO datetime
   ip?: string;
   version?: string;
+  currentMode?: "recognition" | "enrollment";
 };
 
 export type CaptureStatus = "pending" | "accepted" | "rejected";

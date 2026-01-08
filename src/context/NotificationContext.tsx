@@ -28,7 +28,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const [realtimeNotifications, setRealtimeNotifications] = useState<Notification[]>([]);
 
     // Fetch initial unread count
-    const { data: unreadData, refetch: refetchCount } = useQuery({
+    const { data: unreadData } = useQuery({
         queryKey: ["notifications", "unread"],
         queryFn: getUnreadCount,
         enabled: isAuthenticated,

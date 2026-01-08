@@ -90,6 +90,15 @@ export const updatePassword = async (
   return response.data;
 };
 
+/**
+ * Get current authenticated user details
+ * GET /api/v1/auth/profile
+ */
+export const getCurrentUser = async (): Promise<SuccessResponse<UserResponse>> => {
+  const response = await apiClient.get<SuccessResponse<UserResponse>>('/auth/profile');
+  return response.data;
+};
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================

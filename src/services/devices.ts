@@ -56,6 +56,23 @@ export const deleteDevice = async (id: string): Promise<SuccessResponse<void>> =
     return response.data;
 };
 
+
+/**
+ * Set device mode
+ * POST /api/v1/devices/:id/mode
+ */
+export const setDeviceMode = async (id: string, mode: 'enrollment' | 'recognition'): Promise<void> => {
+    await apiClient.post(`/devices/${id}/mode`, { mode });
+};
+
+/**
+ * Sync device
+ * POST /api/v1/devices/:id/sync
+ */
+export const syncDevice = async (id: string): Promise<void> => {
+    await apiClient.post(`/devices/${id}/sync`);
+};
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
