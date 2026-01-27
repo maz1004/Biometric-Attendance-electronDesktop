@@ -61,18 +61,25 @@ type ButtonProps = {
   size?: keyof typeof sizes;
 };
 
-const Button = styled.button<ButtonProps>`
+const StyledButton = styled.button<{ $variation?: keyof typeof variations; $size?: keyof typeof sizes }>`
   border: none;
   border-radius: var(--border-radius-sm);
   box-shadow: var(--shadow-sm);
+  
+  /* Flex layout for generic button content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
 
-  ${(props) => sizes[props.size ?? "medium"]}
-  ${(props) => variations[props.variation ?? "primary"]}
+  ${(props) => sizes[props.$size ?? "medium"]}
+  ${(props) => variations[props.$variation ?? "primary"]}
 `;
 
-Button.defaultProps = {
-  variation: "primary",
-  size: "medium",
-};
-
-export default Button;
+export default function Button({
+  variation = "primary",
+  size = "medium",
+  ...props
+}: React.ComponentProps<"button"> & ButtonProps) {
+  return <StyledButton $variation={variation} $size={size} {...props} />;
+}

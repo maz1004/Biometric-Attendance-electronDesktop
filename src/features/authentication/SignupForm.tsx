@@ -11,6 +11,8 @@ import type { RegisterRequest } from "../../services/auth";
 // Form values with passwordConfirm
 interface SignupFormValues extends Omit<RegisterRequest, 'role'> {
     passwordConfirm: string;
+    phone_number?: string;
+    date_of_birth?: string;
 }
 
 function SignupForm() {
@@ -19,13 +21,15 @@ function SignupForm() {
     const { register, formState, getValues, handleSubmit, reset } = useForm<SignupFormValues>();
     const { errors } = formState;
 
-    function onSubmit({ first_name, last_name, email, password }: SignupFormValues) {
+    function onSubmit({ first_name, last_name, email, password, phone_number, date_of_birth }: SignupFormValues) {
         signup(
             {
                 first_name,
                 last_name,
                 email,
                 password,
+                phone_number,
+                date_of_birth,
                 role: 'admin' // Default role for signup
             },
             {
@@ -71,6 +75,24 @@ function SignupForm() {
                             message: "Please provide a valid email address",
                         },
                     })}
+                />
+            </FormRowVertical>
+
+            <FormRowVertical label="Phone Number" error={errors?.phone_number?.message}>
+                <Input
+                    type="tel"
+                    id="phone_number"
+                    disabled={isLoading}
+                    {...register("phone_number")}
+                />
+            </FormRowVertical>
+
+            <FormRowVertical label="Date of Birth" error={errors?.date_of_birth?.message}>
+                <Input
+                    type="date"
+                    id="date_of_birth"
+                    disabled={isLoading}
+                    {...register("date_of_birth")}
                 />
             </FormRowVertical>
 

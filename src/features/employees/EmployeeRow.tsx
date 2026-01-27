@@ -1,9 +1,18 @@
-// src/features/employees/EmployeeRow.tsx
 import styled from "styled-components";
 import Table from "../../ui/Table";
 import Modal from "../../ui/Modal";
 import Menus from "../../ui/Menus";
 import ConfirmDelete from "../../ui/ConfirmDelete";
+import SecureImage from "../../ui/SecureImage";
+import { HiPencil, HiTrash, HiUserPlus } from "react-icons/hi2";
+import { Employee } from "./EmployeeTypes";
+import CreateEmployeeForm from "./CreateEmployeeForm";
+import EnrollFaceModal from "./EnrollFaceModal";
+import EfficiencyBadge from "./components/EfficiencyBadge";
+import UserDetailView from "./UserDetailView";
+import AbsenceHistoryView from "./AbsenceHistoryView";
+import { useDeleteEmployee, useEnrollFace } from "./useEmployees";
+import { useMemo } from "react";
 
 const NameBlock = styled.div`
   font-size: 1.4rem;
@@ -84,7 +93,7 @@ const StatsGrid = styled.div`
   }
 `;
 
-const AvatarImg = styled.img`
+const AvatarImg = styled(SecureImage)`
   width: 4rem;
   height: 4rem;
   border-radius: 50%;
@@ -92,22 +101,19 @@ const AvatarImg = styled.img`
   border: 2px solid var(--color-grey-200);
 `;
 
+const StyledTableRow = styled(Table.Row)`
+  &:hover {
+    background-color: var(--color-grey-100);
+  }
+`;
+
 type EmployeeRowProps = {
   employee: Employee;
 };
 
-import { HiPencil, HiTrash, HiUserPlus, HiEye } from "react-icons/hi2";
-import { Employee } from "./EmployeeTypes";
-import CreateEmployeeForm from "./CreateEmployeeForm";
-import EnrollFaceModal from "./EnrollFaceModal";
-import EmployeeProfileModal from "./EmployeeProfileModal";
-import { useDeleteEmployee } from "./useEmployees";
-import EfficiencyBadge from "./components/EfficiencyBadge";
-
-// ... (styled components remain unchanged)
-
 function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
   const { deleteEmployee, isDeleting } = useDeleteEmployee();
+  const { enrollFace, isEnrolling } = useEnrollFace();
 
   const {
     id,
@@ -127,80 +133,84 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
   const absent = stats?.absenceCount30d ?? 0;
   const efficiency = stats?.efficiencyScore ?? 0;
 
+  // Use employee reference to trigger cache bust on invalidation
+  const avatarSrc = useMemo(() => {
+    if (!avatar) return null;
+    return `${avatar}?t=${Date.now()}`;
+  }, [employee, avatar]);
+
   return (
-    <Table.Row>
-      <AvatarImg src={avatar || "/default-user.jpg"} alt={`${firstName} ${lastName}`} />
+    <Modal>
+      {/* We wrap the Row in Modal.Open to make it clickable */}
+      <Modal.Open opens="view-detail-modal">
+        <StyledTableRow role="button" style={{ cursor: "pointer" }}>
+          <AvatarImg src={avatarSrc || "/default-user.jpg"} alt={`${firstName} ${lastName}`} />
 
-      <NameBlock>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div className="empName">
-            {firstName} {lastName}
+          <NameBlock>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+              <div className="empName">
+                {firstName} {lastName}
+              </div>
+              <EfficiencyBadge score={efficiency} />
+            </div>
+            <div className="empId">{id}</div>
+            <div
+              style={{
+                fontSize: "1.1rem",
+                color: "var(--color-text-dim)",
+              }}
+            >
+              {new Date(createdAt).toLocaleDateString("en-GB", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </div>
+          </NameBlock>
+
+          <DeptRoleBlock>
+            <span className="dept">{department}</span>
+            <span className="role">
+              {role === "manager" ? "Manager" : "Employee"}
+            </span>
+          </DeptRoleBlock>
+
+          <div>
+            {enrolled ? (
+              <Badge $type="success">Enrolled</Badge>
+            ) : (
+              <Badge $type="danger">Not Enrolled</Badge>
+            )}
           </div>
-          <EfficiencyBadge score={efficiency} />
-        </div>
-        <div className="empId">{id}</div>
-        <div
-          style={{
-            fontSize: "1.1rem",
-            color: "var(--color-text-dim)",
-          }}
-        >
-          {new Date(createdAt).toLocaleDateString("en-GB", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </div>
-      </NameBlock>
 
-      <DeptRoleBlock>
-        <span className="dept">{department}</span>
-        <span className="role">
-          {role === "manager" ? "Manager" : "Employee"}
-        </span>
-      </DeptRoleBlock>
+          <div>
+            {status === "active" ? (
+              <Badge $type="success">Active</Badge>
+            ) : (
+              <Badge $type="muted">Inactive</Badge>
+            )}
+          </div>
 
-      <div>
-        {enrolled ? (
-          <Badge $type="success">Enrolled</Badge>
-        ) : (
-          <Badge $type="danger">Not Enrolled</Badge>
-        )}
-      </div>
+          <StatsGrid>
+            <div>
+              <strong>{presence}%</strong> presence
+            </div>
+            <div>
+              <strong>{late}</strong> late
+            </div>
+            <div>
+              <strong>{absent}</strong> absent
+            </div>
+          </StatsGrid>
 
-      <div>
-        {status === "active" ? (
-          <Badge $type="success">Active</Badge>
-        ) : (
-          <Badge $type="muted">Inactive</Badge>
-        )}
-      </div>
-
-      <StatsGrid>
-        <div>
-          <strong>{presence}%</strong> presence
-        </div>
-        <div>
-          <strong>{late}</strong> late
-        </div>
-        <div>
-          <strong>{absent}</strong> absent
-        </div>
-      </StatsGrid>
-
-      <div>
-        <Modal>
-          <Menus>
+          {/* Action Menu - prevent propagation to avoid opening Detail View */}
+          <div onClick={(e) => e.stopPropagation()}>
             <Menus.Menu>
               <Menus.Toggle id={id} />
 
               <Menus.List id={id}>
-                <Modal.Open opens="view-profile">
-                  <Menus.Button icon={<HiEye />}>View Profile</Menus.Button>
-                </Modal.Open>
-
                 {!enrolled && (
-                  <Modal.Open opens="enroll-face">
+                  <Modal.Open opens="enroll-face-modal">
                     <Menus.Button icon={<HiUserPlus />}>
                       Enroll face
                     </Menus.Button>
@@ -211,51 +221,46 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
                   <Menus.Button icon={<HiPencil />}>Edit</Menus.Button>
                 </Modal.Open>
 
-                <Modal.Open opens="delete-employee">
+                <Modal.Open opens="delete-employee-modal">
                   <Menus.Button icon={<HiTrash />}>Delete</Menus.Button>
                 </Modal.Open>
               </Menus.List>
             </Menus.Menu>
+          </div>
+        </StyledTableRow>
+      </Modal.Open>
 
-            <Modal.Window name="view-profile">
-              <EmployeeProfileModal employee={employee} />
-            </Modal.Window>
+      <Modal.Window name="edit-employee">
+        <CreateEmployeeForm employeeToEdit={employee} />
+      </Modal.Window>
 
-            <Modal.Window name="edit-employee">
-              <CreateEmployeeForm employeeToEdit={employee} />
-            </Modal.Window>
+      <Modal.Window name="enroll-face-modal">
+        <EnrollFaceModal
+          employee={employee}
+          onCloseModal={() => { }}
+          onEnrollConfirm={({ employeeId, imageBase64 }) => {
+            enrollFace({ id: employeeId, template: imageBase64 });
+          }}
+        />
+      </Modal.Window>
 
-            <Modal.Window name="delete-employee">
-              <ConfirmDelete
-                onCloseModal={() => { }}
-                resourceName="employee"
-                disabled={isDeleting}
-                onConfirm={() => {
-                  deleteEmployee(id);
-                }}
-              />
-            </Modal.Window>
+      <Modal.Window name="view-detail-modal">
+        <UserDetailView employee={employee} />
+      </Modal.Window>
 
-            {/* ENROLL FACE */}
-            <Modal.Window name="enroll-face">
-              <EnrollFaceModal
-                employee={employee}
-                onCloseModal={() => {
-                  // Modal.Window injects onCloseModal automatically if you
-                  // coded it that way. But we also pass a fallback noop
-                }}
-                onEnrollConfirm={({ employeeId, imageBase64 }) => {
-                  console.log("EnrollConfirm →", {
-                    employeeId,
-                    imageBase64: imageBase64.slice(0, 50) + "...",
-                  });
-                }}
-              />
-            </Modal.Window>
-          </Menus>
-        </Modal>
-      </div>
-    </Table.Row>
+      <Modal.Window name="absences-history-modal">
+        <AbsenceHistoryView employee={employee} />
+      </Modal.Window>
+
+      <Modal.Window name="delete-employee-modal">
+        <ConfirmDelete
+          resourceName="employee"
+          disabled={isDeleting}
+          onConfirm={() => deleteEmployee(id)}
+          onCloseModal={() => { }} // Modal handles this
+        />
+      </Modal.Window>
+    </Modal>
   );
 }
 

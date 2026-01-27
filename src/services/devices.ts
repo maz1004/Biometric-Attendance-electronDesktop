@@ -7,6 +7,20 @@ import type {
 } from './types/api-types';
 import type { SuccessResponse } from './types';
 
+export interface PendingEnrollment {
+    id: string;
+    user_id: string;
+    user_name: string;
+    device_id: string;
+    device_name: string;
+    device_type: string;
+    face_image: string;
+    quality_score: number;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+
 // ============================================================================
 // DEVICES API
 // ============================================================================
@@ -57,10 +71,6 @@ export const deleteDevice = async (id: string): Promise<SuccessResponse<void>> =
 };
 
 
-/**
- * Set device mode
- * POST /api/v1/devices/:id/mode
- */
 export const setDeviceMode = async (id: string, mode: 'enrollment' | 'recognition'): Promise<void> => {
     await apiClient.post(`/devices/${id}/mode`, { mode });
 };
@@ -71,6 +81,54 @@ export const setDeviceMode = async (id: string, mode: 'enrollment' | 'recognitio
  */
 export const syncDevice = async (id: string): Promise<void> => {
     await apiClient.post(`/devices/${id}/sync`);
+};
+
+/**
+ * Authorize device
+ * POST /api/v1/devices/:id/authorize
+ */
+export const authorizeDevice = async (id: string): Promise<void> => {
+    await apiClient.post(`/devices/${id}/authorize`);
+};
+
+/**
+ * Update device details
+ * PUT /api/v1/devices/:id/details
+ */
+export const updateDeviceDetails = async (id: string, name: string, location: string): Promise<void> => {
+    await apiClient.put(`/devices/${id}/details`, { name, location });
+};
+
+/**
+ * Get pending enrollments
+ * GET /api/v1/mobile/enrollments/pending
+ */
+export const getPendingEnrollments = async (): Promise<SuccessResponse<PendingEnrollment[]>> => {
+    const response = await apiClient.get<SuccessResponse<PendingEnrollment[]>>("/mobile/enrollments/pending");
+    return response.data;
+};
+
+/**
+ * Validate enrollment
+ * POST /api/v1/mobile/enrollments/pending/:id/validate
+ */
+export const validateEnrollment = async (id: string, approved: boolean): Promise<SuccessResponse<void>> => {
+    if (approved) {
+        const response = await apiClient.post<SuccessResponse<void>>(`/mobile/enrollments/pending/${id}/validate`);
+        return response.data;
+    } else {
+        const response = await apiClient.delete<SuccessResponse<void>>(`/mobile/enrollments/pending/${id}`);
+        return response.data;
+    }
+};
+
+/**
+ * Deactivate a device (Admin)
+ * POST /api/v1/mobile/admin/devices/:id/deactivate
+ */
+export const deactivateDevice = async (id: string): Promise<SuccessResponse<void>> => {
+    const response = await apiClient.post<SuccessResponse<void>>(`/mobile/admin/devices/${id}/deactivate`);
+    return response.data;
 };
 
 // ============================================================================

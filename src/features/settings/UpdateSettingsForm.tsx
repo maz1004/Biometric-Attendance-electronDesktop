@@ -3,6 +3,7 @@ import styled from "styled-components";
 import Form from "../../ui/Form";
 import FormRow from "../../ui/FormRow";
 import Input from "../../ui/Input";
+import Select from "../../ui/Select";
 import Spinner from "../../ui/Spinner";
 import Button from "../../ui/Button";
 import { useSettings } from "./useSettings";
@@ -23,9 +24,40 @@ const Title = styled.h3`
   margin-bottom: 1.6rem;
 `;
 
+const FlexRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  width: 100%;
+`;
+
+
+const LANGUAGE_OPTIONS = [
+    { value: "en", label: "English" },
+    { value: "fr", label: "Français" },
+];
+
+const TIMEZONE_OPTIONS = [
+    { value: "UTC", label: "UTC" },
+    { value: "Europe/Paris", label: "Europe/Paris" },
+    { value: "America/New_York", label: "America/New_York" },
+    { value: "Asia/Dubai", label: "Asia/Dubai" },
+];
+
+const DATE_FORMAT_OPTIONS = [
+    { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
+    { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
+    { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+];
+
+const TIME_FORMAT_OPTIONS = [
+    { value: "24h", label: "24h" },
+    { value: "12h", label: "12h" },
+];
+
 export default function CompanySettingsForm() {
     const { isLoading, settings, update, isUpdating } = useSettings();
-    const { register, handleSubmit, formState, reset } = useForm<UpdateSettingsRequest>();
+    const { register, handleSubmit, formState, reset, setError } = useForm<UpdateSettingsRequest>();
     const { errors } = formState;
 
     useEffect(() => {
@@ -39,6 +71,11 @@ export default function CompanySettingsForm() {
                 working_hours_start: settings.working_hours_start,
                 working_hours_end: settings.working_hours_end,
                 late_threshold_minutes: settings.late_threshold_minutes,
+                // Planning Config
+                planning_day_start: settings.planning_day_start || "07:00",
+                planning_day_end: settings.planning_day_end || "19:00",
+                planning_night_start: settings.planning_night_start || "19:00",
+                planning_night_end: settings.planning_night_end || "07:00",
             });
         }
     }, [settings, reset]);
@@ -46,6 +83,30 @@ export default function CompanySettingsForm() {
     if (isLoading) return <Spinner />;
 
     function onSubmit(data: UpdateSettingsRequest) {
+        // Basic Overlap Validation
+        // Convert times to minutes for comparison
+        const toMins = (t: string) => {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+        };
+
+        const dStart = toMins(data.planning_day_start || "07:00");
+        const dEnd = toMins(data.planning_day_end || "19:00");
+        const nStart = toMins(data.planning_night_start || "19:00");
+        const nEnd = toMins(data.planning_night_end || "07:00");
+
+        // Logic: Day should be "inside" DayStart-DayEnd. Night might wrap.
+        // Check if Day overlaps with Night.
+        // Simplest check: If DayEnd > NightStart (and NightStart > DayStart), that's an overlap.
+        // But user provided 07:00-19:00 and 19:00-07:00. This touches but doesn't overlap.
+        // Let's warn if overlap > 0.
+
+        if (dEnd > nStart) {
+            setError("planning_day_end", { type: "custom", message: "Overlaps with Night Start" });
+            setError("planning_night_start", { type: "custom", message: "Overlaps with Day End" });
+            return;
+        }
+
         update(data);
     }
 
@@ -63,61 +124,89 @@ export default function CompanySettingsForm() {
                 </FormRow>
 
                 <FormRow label="Language" error={errors?.language?.message}>
-                    <Input
-                        type="text"
+                    <Select
                         id="language"
+                        options={LANGUAGE_OPTIONS}
                         disabled={isUpdating}
-                        placeholder="en, fr, es..."
                         {...register("language")}
                     />
                 </FormRow>
 
                 <FormRow label="Timezone" error={errors?.timezone?.message}>
-                    <Input
-                        type="text"
+                    <Select
                         id="timezone"
+                        options={TIMEZONE_OPTIONS}
                         disabled={isUpdating}
-                        placeholder="Europe/Paris, America/New_York..."
                         {...register("timezone")}
                     />
                 </FormRow>
 
                 <FormRow label="Date Format" error={errors?.date_format?.message}>
-                    <Input
-                        type="text"
+                    <Select
                         id="date_format"
+                        options={DATE_FORMAT_OPTIONS}
                         disabled={isUpdating}
-                        placeholder="YYYY-MM-DD, DD/MM/YYYY..."
                         {...register("date_format")}
                     />
                 </FormRow>
 
                 <FormRow label="Time Format" error={errors?.time_format?.message}>
-                    <Input
-                        type="text"
+                    <Select
                         id="time_format"
+                        options={TIME_FORMAT_OPTIONS}
                         disabled={isUpdating}
-                        placeholder="24h, 12h..."
                         {...register("time_format")}
                     />
                 </FormRow>
 
-                <FormRow label="Working Hours Start" error={errors?.working_hours_start?.message}>
-                    <Input
-                        type="time"
-                        id="working_hours_start"
-                        disabled={isUpdating}
-                        {...register("working_hours_start")}
-                    />
+                <FormRow label="Official Working Hours" error={errors?.working_hours_start?.message}>
+                    <FlexRow>
+                        <Input
+                            type="time"
+                            id="working_hours_start"
+                            disabled={isUpdating}
+                            {...register("working_hours_start")}
+                        />
+                        <span>to</span>
+                        <Input
+                            type="time"
+                            id="working_hours_end"
+                            disabled={isUpdating}
+                            {...register("working_hours_end")}
+                        />
+                    </FlexRow>
                 </FormRow>
 
-                <FormRow label="Working Hours End" error={errors?.working_hours_end?.message}>
-                    <Input
-                        type="time"
-                        id="working_hours_end"
-                        disabled={isUpdating}
-                        {...register("working_hours_end")}
-                    />
+                <FormRow label="Horaire Jour (Planning)" error={errors?.planning_day_start?.message}>
+                    <FlexRow>
+                        <Input
+                            type="time"
+                            disabled={isUpdating}
+                            {...register("planning_day_start")}
+                        />
+                        <span>to</span>
+                        <Input
+                            type="time"
+                            disabled={isUpdating}
+                            {...register("planning_day_end")}
+                        />
+                    </FlexRow>
+                </FormRow>
+
+                <FormRow label="Horaire Nuit (Planning)" error={errors?.planning_night_start?.message}>
+                    <FlexRow>
+                        <Input
+                            type="time"
+                            disabled={isUpdating}
+                            {...register("planning_night_start")}
+                        />
+                        <span>to</span>
+                        <Input
+                            type="time"
+                            disabled={isUpdating}
+                            {...register("planning_night_end")}
+                        />
+                    </FlexRow>
                 </FormRow>
 
                 <FormRow label="Late Threshold (minutes)" error={errors?.late_threshold_minutes?.message}>

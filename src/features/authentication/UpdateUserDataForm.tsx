@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import Button from "../../ui/Button";
 import FileInput from "../../ui/FileInput";
@@ -7,55 +7,65 @@ import FormRow from "../../ui/FormRow";
 import Input from "../../ui/Input";
 import ButtonGroup from "../../ui/ButtonGroup";
 
-// import { useUser } from "./useUser";
-// import { useUpdateUser } from "./useUpdateUser";
+import { useUser } from "./useUser";
+import { useUpdateUser } from "./useUpdateUser";
 
 function UpdateUserDataForm() {
-  // We don't need the loading state, and can immediately use the user data,
-  // because we know that it has already been loaded at this point.
-  // const {
-  //   user: {
-  //     email,
-  //     user_metadata: { fullName: currentFullName },
-  //   },
-  // } = useUser();
+  const { user } = useUser();
+  const { updateUser, isUpdating } = useUpdateUser();
 
-  // const { updateUser, isUpdating } = useUpdateUser();
-
-  // ---- Local stand-ins (since hooks are commented) ----
-  const email = "jane.doe@example.com";
-  const currentFullName = "Jane Doe";
-  const isUpdating = false;
-  const updateUser = (
-    payload: { fullName: string; avatar: File | null },
-    opts?: { onSuccess?: () => void }
-  ) => {
-    // Simulate async call
-    // eslint-disable-next-line no-console
-    console.log("Simulated updateUser (profile):", payload);
-    setTimeout(() => opts?.onSuccess?.(), 400);
-  };
-  // -----------------------------------------------------
-
-  const [fullName, setFullName] = useState<string>(currentFullName);
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [dateOfBirth, setDateOfBirth] = useState<string>("");
   const [avatar, setAvatar] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFirstName(user.first_name || "");
+      setLastName(user.last_name || "");
+      setPhoneNumber(user.phone_number || "");
+      // Format date for input type="date" (YYYY-MM-DD)
+      if (user.date_of_birth) {
+        setDateOfBirth(user.date_of_birth.split("T")[0]);
+      } else {
+        setDateOfBirth("");
+      }
+    }
+  }, [user]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!fullName) return;
+    if (!firstName || !lastName) return;
+
     updateUser(
-      { fullName, avatar },
+      {
+        firstName,
+        lastName,
+        phoneNumber,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : undefined,
+        avatar
+      },
       {
         onSuccess: () => {
           setAvatar(null);
-          (e.target as HTMLFormElement).reset();
+          // Don't reset text fields, keep them as is (updated state)
         },
       }
     );
   }
 
   function handleCancel() {
-    setFullName(currentFullName);
+    if (user) {
+      setFirstName(user.first_name || "");
+      setLastName(user.last_name || "");
+      setPhoneNumber(user.phone_number || "");
+      if (user.date_of_birth) {
+        setDateOfBirth(user.date_of_birth.split("T")[0]);
+      } else {
+        setDateOfBirth("");
+      }
+    }
     setAvatar(null);
   }
 
@@ -66,18 +76,46 @@ function UpdateUserDataForm() {
   return (
     <Form onSubmit={handleSubmit}>
       <FormRow label="Email address">
-        <Input value={email} disabled />
+        <Input value={user?.email || ""} disabled />
       </FormRow>
 
-      <FormRow label="Full name">
+      <FormRow label="First name">
         <Input
-          disabled={isUpdating}
           type="text"
-          value={fullName}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            setFullName(e.target.value)
-          }
-          id="fullName"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          disabled={isUpdating}
+          id="firstName"
+        />
+      </FormRow>
+
+      <FormRow label="Last name">
+        <Input
+          type="text"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          disabled={isUpdating}
+          id="lastName"
+        />
+      </FormRow>
+
+      <FormRow label="Phone Number">
+        <Input
+          type="tel"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          disabled={isUpdating}
+          id="phoneNumber"
+        />
+      </FormRow>
+
+      <FormRow label="Date of Birth">
+        <Input
+          type="date"
+          value={dateOfBirth}
+          onChange={(e) => setDateOfBirth(e.target.value)}
+          disabled={isUpdating}
+          id="dateOfBirth"
         />
       </FormRow>
 
@@ -93,7 +131,7 @@ function UpdateUserDataForm() {
       <FormRow label="" error="">
         <ButtonGroup>
           <Button
-            type="reset"
+            type="button"
             variation="secondary"
             disabled={isUpdating}
             onClick={handleCancel}

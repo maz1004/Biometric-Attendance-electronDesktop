@@ -9,12 +9,37 @@ import type {
   UserStatus,
   UserActivity,
   UserActivityResponse,
+  UserAttendanceStats,
 } from './types/api-types';
 import type { SuccessResponse } from './types';
 
 // ============================================================================
 // USER MANAGEMENT API
 // ============================================================================
+
+/**
+ * Upload user photo
+ * POST /api/v1/users/:id/photo
+ */
+export const uploadUserPhoto = async (id: string, photoData: string, fileName: string): Promise<{ photo_url: string }> => {
+  const response = await apiClient.post<SuccessResponse<{ photo_url: string }>>(`/users/${id}/photo`, {
+    photo_data: photoData,
+    file_name: fileName,
+  });
+  return response.data.data!;
+};
+
+/**
+ * Upload user CV
+ * POST /api/v1/users/:id/cv
+ */
+export const uploadUserCV = async (id: string, cvData: string, fileName: string): Promise<{ cv_url: string }> => {
+  const response = await apiClient.post<SuccessResponse<{ cv_url: string }>>(`/users/${id}/cv`, {
+    cv_data: cvData,
+    file_name: fileName,
+  });
+  return response.data.data!;
+};
 
 /**
  * Get paginated list of users
@@ -116,6 +141,20 @@ export const getUserActivity = async (
   return response.data.data!;
 };
 
+/**
+ * Get user attendance stats
+ * GET /api/v1/users/:id/attendance/stats?period=month
+ */
+export const getUserAttendanceStats = async (
+  id: string,
+  period: 'week' | 'month' | 'year' = 'month'
+): Promise<UserAttendanceStats> => {
+  const response = await apiClient.get<SuccessResponse<UserAttendanceStats>>(`/users/${id}/attendance/stats`, {
+    params: { period }
+  });
+  return response.data.data!;
+};
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -129,4 +168,5 @@ export type {
   UserStatus,
   UserActivity,
   UserActivityResponse,
+  UserAttendanceStats,
 };

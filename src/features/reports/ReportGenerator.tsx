@@ -1,61 +1,78 @@
+import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { useState } from "react";
-import Button from "../../ui/Button";
-import { ReportFilterState, ReportType, ReportPeriod } from "./ReportsTypes";
+import SelectUi from "../../ui/Select"; // Use the styled UI component
+import { ReportFilterState, ReportType, ReportPeriod, ReportData } from "../../services/types/api-types";
+import { ReportActionPanel } from "./components/ReportActionPanel";
 
 const Container = styled.div`
   background: var(--color-bg-elevated);
   padding: 2rem;
   border-radius: var(--border-radius-lg);
-  border: 1px solid var(--color-border-card);
-  display: grid;
-  gap: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
 `;
 
-const FormRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+const InlineFilters = styled.div`
+  display: flex;
   gap: 1.6rem;
+  align-items: flex-end; /* Align inputs/selects by bottom */
+  flex-wrap: wrap;
 `;
 
-const FormGroup = styled.div`
+const FormGroup = styled.div<{ $flex?: number; $minWidth?: string }>`
   display: flex;
   flex-direction: column;
   gap: 0.8rem;
+  flex: ${props => props.$flex || 'initial'};
+  min-width: ${props => props.$minWidth || '150px'};
 `;
 
 const Label = styled.label`
   font-weight: 500;
   color: var(--color-text-strong);
-`;
-
-const Select = styled.select`
-  padding: 0.8rem;
-  border: 1px solid var(--color-toolbar-input-border);
-  border-radius: var(--border-radius-sm);
-  background: var(--color-toolbar-input-bg);
-  color: var(--color-text-strong);
+  font-size: 1.4rem;
 `;
 
 const Input = styled.input`
   padding: 0.8rem;
-  border: 1px solid var(--color-toolbar-input-border);
+  border: 1px solid var(--color-grey-300);
   border-radius: var(--border-radius-sm);
-  background: var(--color-toolbar-input-bg);
+  background: var(--color-grey-0);
   color: var(--color-text-strong);
+  font-size: 1.4rem;
 `;
 
 interface ReportGeneratorProps {
     onGenerate: (filters: ReportFilterState) => void;
     isGenerating: boolean;
+    reportData?: ReportData | null;
 }
 
-export default function ReportGenerator({ onGenerate, isGenerating }: ReportGeneratorProps) {
+export default function ReportGenerator({ onGenerate, isGenerating, reportData }: ReportGeneratorProps) {
     const [type, setType] = useState<ReportType>("attendance");
     const [period, setPeriod] = useState<ReportPeriod>("month");
     const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
     const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
     const [department, setDepartment] = useState("all");
+
+    // "Live" preview title
+    const [previewTitle, setPreviewTitle] = useState("");
+
+    useEffect(() => {
+        const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+        const depLabel = department === 'all' ? 'Globale' : department;
+        setPreviewTitle(`${typeLabel} - ${depLabel} (${period})`);
+    }, [type, period, department, startDate, endDate]);
+
+    // Live Data Fetch: Debounce generation when filters change
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            handleSubmit();
+        }, 800); // 800ms delay to avoid spamming while typing/picking
+
+        return () => clearTimeout(timer);
+    }, [type, period, startDate, endDate, department]);
 
     const handleSubmit = () => {
         onGenerate({
@@ -71,60 +88,72 @@ export default function ReportGenerator({ onGenerate, isGenerating }: ReportGene
 
     return (
         <Container>
-            <FormRow>
-                <FormGroup>
-                    <Label>Report Type</Label>
-                    <Select value={type} onChange={(e) => setType(e.target.value as ReportType)}>
-                        <option value="attendance">Attendance</option>
-                        <option value="performance">Performance</option>
-                        <option value="planning">Planning</option>
-                        <option value="summary">Summary</option>
-                    </Select>
+            <InlineFilters>
+                <FormGroup $flex={2} $minWidth="200px">
+                    <Label>Type de Rapport</Label>
+                    <SelectUi
+                        options={[
+                            { value: "attendance", label: "Présence" },
+                            { value: "performance", label: "Performance" },
+                            { value: "planning", label: "Planning" },
+                            { value: "summary", label: "Résumé" }
+                        ]}
+                        value={type}
+                        onChange={(e) => setType(e.target.value as ReportType)}
+                    />
                 </FormGroup>
-                <FormGroup>
-                    <Label>Department</Label>
-                    <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                        <option value="all">All Departments</option>
-                        <option value="R&D">R&D</option>
-                        <option value="Operations">Operations</option>
-                        <option value="Design">Design</option>
-                        <option value="QA">QA</option>
-                        <option value="HR">HR</option>
-                    </Select>
-                </FormGroup>
-            </FormRow>
 
-            <FormRow>
-                <FormGroup>
-                    <Label>Period</Label>
-                    <Select value={period} onChange={(e) => setPeriod(e.target.value as ReportPeriod)}>
-                        <option value="day">Day</option>
-                        <option value="week">Week</option>
-                        <option value="month">Month</option>
-                        <option value="year">Year</option>
-                    </Select>
+                <FormGroup $flex={2} $minWidth="180px">
+                    <Label>Département</Label>
+                    <SelectUi
+                        options={[
+                            { value: "all", label: "Tous Départements" },
+                            { value: "R&D", label: "R&D" },
+                            { value: "Operations", label: "Opérations" },
+                            { value: "Design", label: "Design" },
+                            { value: "QA", label: "QA" },
+                            { value: "HR", label: "RH" }
+                        ]}
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                    />
                 </FormGroup>
-                <FormGroup>
-                    {/* Placeholder to balance grid */}
-                </FormGroup>
-            </FormRow>
 
-            <FormRow>
-                <FormGroup>
-                    <Label>Start Date</Label>
+                <FormGroup $flex={1} $minWidth="120px">
+                    <Label>Période</Label>
+                    <SelectUi
+                        options={[
+                            { value: "day", label: "Jour" },
+                            { value: "week", label: "Semaine" },
+                            { value: "month", label: "Mois" },
+                            { value: "year", label: "Année" }
+                        ]}
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value as ReportPeriod)}
+                    />
+                </FormGroup>
+            </InlineFilters>
+
+            <InlineFilters>
+                <FormGroup $flex={1}>
+                    <Label>Date Début</Label>
                     <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                 </FormGroup>
-                <FormGroup>
-                    <Label>End Date</Label>
+
+                <FormGroup $flex={1}>
+                    <Label>Date Fin</Label>
                     <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </FormGroup>
-            </FormRow>
+            </InlineFilters>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button onClick={handleSubmit} disabled={isGenerating}>
-                    {isGenerating ? "Generating..." : "Generate Report"}
-                </Button>
-            </div>
+            <ReportActionPanel
+                title={previewTitle}
+                description="Aperçu généré en temps réel basé sur vos filtres."
+                onGenerate={handleSubmit}
+                onCancel={() => { }}
+                isGenerating={isGenerating}
+                data={reportData}
+            />
         </Container>
     );
 }

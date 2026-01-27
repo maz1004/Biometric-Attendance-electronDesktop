@@ -17,6 +17,7 @@ export interface RegisterRequest {
     last_name: string; // min 2, max 50
     role: 'admin' | 'employee';
     phone_number?: string;
+    date_of_birth?: string;
 }
 
 export interface LoginResponse {
@@ -34,9 +35,16 @@ export interface UserResponse {
     first_name: string;
     last_name: string;
     role: 'admin' | 'rh' | 'employee';
+    department?: string;
+    phone_number: string;
+    date_of_birth?: string;
+    hire_date?: string;
     is_active: boolean;
     is_admin: boolean;
-    phone_number: string;
+    enrolled: boolean;
+    stats?: UserAttendanceStats;
+    profile_photo?: string;
+    cv_url?: string;
     created_at: string;
     updated_at: string;
     last_login?: string;
@@ -81,6 +89,8 @@ export interface UpdateUserRequest {
     email?: string;
     role?: 'admin' | 'rh' | 'employee';
     department?: string;
+    phone_number?: string;
+    date_of_birth?: string; // ISO 8601
     is_active?: boolean;
     permissions?: string[];
     created_at?: string;
@@ -108,11 +118,31 @@ export interface UserActivity {
     created_at: string;
 }
 
+// ... (previous content)
 export interface UserActivityResponse {
     activities: UserActivity[];
     total: number;
     page: number;
     limit: number;
+}
+
+export interface MonthlyComparison {
+    punctuality_delta: number;
+    absence_delta: number;
+    late_delta: number;
+}
+
+export interface UserAttendanceStats {
+    user_id: string;
+    period: string;
+    total_days: number;
+    present_days: number;
+    absent_days: number;
+    late_days: number;
+    punctuality_rate: number;
+    absence_rate: number;
+    late_rate: number;
+    monthly_comparison: MonthlyComparison;
 }
 
 // ============================================================================
@@ -380,17 +410,45 @@ export interface QualityCheckResponse {
 // REPORTS TYPES
 // ============================================================================
 
+export interface ReportSummary {
+    total_users: number;
+    total_work_days: number;
+    average_attendance_rate: number;
+    total_late_arrivals: number;
+    total_absences: number;
+}
+
+export interface UserReportData {
+    user_id: string;
+    user_name: string;
+    department: string;
+    efficiency_score: number;
+    attendance_rate: number;
+    present_days: number;
+    absent_days: number;
+    late_arrivals: number;
+    early_departures: number;
+    total_work_hours: string;
+}
+
 export interface ReportData {
-    report_type: string;
-    period: {
-        start_date: string;
-        end_date: string;
+    generated_at: string;
+    period: string;
+    summary: ReportSummary;
+    users: UserReportData[];
+}
+
+export type ReportType = 'attendance' | 'performance' | 'planning' | 'summary';
+export type ReportPeriod = 'day' | 'week' | 'month' | 'year';
+
+export interface ReportFilterState {
+    type: ReportType;
+    period: ReportPeriod;
+    dateRange: {
+        start: Date;
+        end: Date;
     };
-    data: any; // Depends on report type
-    summary: {
-        total_records: number;
-        [key: string]: any; // Type-specific summary fields
-    };
+    department: string;
 }
 
 export interface ExportReportParams {
@@ -417,7 +475,7 @@ export interface Notification {
 }
 
 export interface NotificationsResponse {
-    notifications: Notification[];
+    data: Notification[];
     total: number;
     unread_count: number;
 }
@@ -437,6 +495,8 @@ export interface Device {
     ip_address: string;
     mac_address: string;
     is_active: boolean;
+    is_authorized: boolean;
+    location?: string;
     last_seen: string;
     created_at: string;
 }
@@ -550,4 +610,25 @@ export interface ValidateRequest {
     request_id: string;
     employee_id: string; // The employee this scan belongs to
     action: 'validate' | 'reject';
+}
+// ============================================================================
+// ATTENDANCE JUSTIFICATION TYPES
+// ============================================================================
+
+export interface Justification {
+    id: string;
+    user_id: string;
+    attendance_date: string; // YYYY-MM-DD
+    reason: string;
+    document_url?: string;
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface JustifyAbsenceRequest {
+    date: string; // YYYY-MM-DD
+    reason: string;
+    doc_data?: string; // Base64
+    file_name?: string;
 }

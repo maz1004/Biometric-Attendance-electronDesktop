@@ -2,10 +2,12 @@ import styled from "styled-components";
 import { Employee } from "./EmployeeTypes";
 import Heading from "../../ui/Heading";
 import Button from "../../ui/Button";
-import { HiOutlineBriefcase, HiOutlineUserCircle, HiCamera, HiDocumentText } from "react-icons/hi2";
+import { HiOutlineBriefcase, HiOutlineUserCircle, HiDocumentText } from "react-icons/hi2";
 import { useUserUpload } from "../../hooks/useUserUpload";
 import { useRef } from "react";
 import EfficiencyBadge from "./components/EfficiencyBadge";
+import AvatarUploader from "./components/AvatarUploader";
+import { EmployeeExportButton } from "./components/EmployeeExportButton";
 
 const StyledProfile = styled.div`
   display: grid;
@@ -19,40 +21,6 @@ const AvatarSection = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 1.6rem;
-`;
-
-const AvatarContainer = styled.div`
-  position: relative;
-  width: 16rem;
-  height: 16rem;
-`;
-
-const Avatar = styled.img`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid var(--color-brand-100);
-`;
-
-const UploadOverlay = styled.div`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background: var(--color-brand-600);
-  color: white;
-  padding: 0.8rem;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-
-  &:hover {
-    background: var(--color-brand-700);
-    transform: scale(1.1);
-  }
 `;
 
 const InfoSection = styled.div`
@@ -121,12 +89,11 @@ type EmployeeProfileModalProps = {
 function EmployeeProfileModal({ employee }: EmployeeProfileModalProps) {
   const { firstName, lastName, department, role, avatar, stats, id } = employee;
   const { uploadPhoto, uploadCV, uploading } = useUserUpload();
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      uploadPhoto(id, e.target.files[0]);
+  const handleAvatarChange = (file: File | null) => {
+    if (file) {
+      uploadPhoto(id, file);
     }
   };
 
@@ -139,26 +106,13 @@ function EmployeeProfileModal({ employee }: EmployeeProfileModalProps) {
   return (
     <div style={{ minWidth: "60rem" }}>
       <Heading as="h2">Profil Employé</Heading>
+
       <StyledProfile>
         <AvatarSection>
-          <AvatarContainer>
-            <Avatar
-              src={avatar || "/default-user.jpg"}
-              alt={`${firstName} ${lastName}`}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/default-user.jpg";
-              }}
-            />
-            <UploadOverlay onClick={() => photoInputRef.current?.click()}>
-              <HiCamera />
-            </UploadOverlay>
-          </AvatarContainer>
-          <input
-            type="file"
-            ref={photoInputRef}
-            style={{ display: 'none' }}
-            accept="image/*"
-            onChange={handlePhotoChange}
+          <AvatarUploader
+            defaultImage={avatar}
+            onImageChanged={handleAvatarChange}
+            disabled={uploading}
           />
           <Heading as="h3">{`${firstName} ${lastName}`}</Heading>
           <EfficiencyBadge score={stats?.efficiencyScore ?? 0} />
@@ -192,6 +146,7 @@ function EmployeeProfileModal({ employee }: EmployeeProfileModalProps) {
               accept=".pdf,.doc,.docx"
               onChange={handleCVChange}
             />
+            <EmployeeExportButton employeeId={employee.id} />
           </ActionButtons>
 
           <StatsGrid>

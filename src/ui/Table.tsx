@@ -69,7 +69,7 @@ type TableProps = {
 };
 
 type HeaderProps = { children: ReactNode };
-type RowProps = { children: ReactNode };
+type RowProps = { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>;
 
 type BodyProps<T> = {
   data: T[];
@@ -85,10 +85,10 @@ function Header({ children }: HeaderProps) {
   );
 }
 
-function Row({ children }: RowProps) {
+function Row({ children, ...props }: RowProps) {
   const ctx = useContext(TableContext)!;
   return (
-    <StyledRow role="row" columns={ctx.columns}>
+    <StyledRow role="row" columns={ctx.columns} {...props}>
       {children}
     </StyledRow>
   );

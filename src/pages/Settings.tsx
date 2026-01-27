@@ -3,7 +3,7 @@ import Heading from "../ui/Heading";
 import Row from "../ui/Row";
 import GeneralSettings from "../features/settings/UpdateSettingsForm";
 import DeviceManagement from "../features/settings/DeviceManagement";
-import SecuritySettings from "../features/settings/SecuritySettings";
+
 import { useState } from "react";
 
 const Container = styled.div`
@@ -36,7 +36,7 @@ const Tab = styled.button<{ $active: boolean }>`
 `;
 
 function Settings() {
-  const [activeTab, setActiveTab] = useState<"general" | "devices" | "security">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "devices">("general");
 
   return (
     <Container>
@@ -51,14 +51,10 @@ function Settings() {
         <Tab $active={activeTab === "devices"} onClick={() => setActiveTab("devices")}>
           Devices
         </Tab>
-        <Tab $active={activeTab === "security"} onClick={() => setActiveTab("security")}>
-          Security
-        </Tab>
       </TabsContainer>
 
       {activeTab === "general" && <GeneralSettings />}
       {activeTab === "devices" && <DeviceManagement />}
-      {activeTab === "security" && <SecuritySettings />}
     </Container>
   );
 }

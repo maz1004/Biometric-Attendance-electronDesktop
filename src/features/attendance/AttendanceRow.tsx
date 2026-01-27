@@ -1,11 +1,6 @@
 import styled from "styled-components";
 import Table from "../../ui/Table";
-import Modal from "../../ui/Modal";
-import Menus from "../../ui/Menus";
-import { HiCheck, HiInformationCircle, HiPencil } from "react-icons/hi2";
 import { AttendanceRecord } from "./AttendanceTypes";
-import ValidateAnomalyModal from "./ValidateAnomalyModal";
-import { useValidateAnomaly } from "./useAttendance";
 
 const Badge = styled.span<{ $type: string }>`
   padding: 0.35rem 0.7rem;
@@ -27,7 +22,7 @@ const Badge = styled.span<{ $type: string }>`
 `;
 
 export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
-  const { validate } = useValidateAnomaly();
+
 
   return (
     <Table.Row>
@@ -41,40 +36,7 @@ export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
       <div>
         <Badge $type={row.status}>{row.status.replace("-", " ")}</Badge>
       </div>
-      <div style={{ display: "flex", gap: ".6rem" }}>
-        <Modal>
-          <Menus>
-            <Menus.Menu>
-              <Menus.Toggle id={row.id} />
-              <Menus.List id={row.id}>
-                <Modal.Open opens="validate">
-                  <Menus.Button icon={<HiCheck />}>
-                    Validate/Justify
-                  </Menus.Button>
-                </Modal.Open>
-                <Menus.Button icon={<HiPencil />}>Edit row</Menus.Button>
-                <Menus.Button icon={<HiInformationCircle />}>
-                  Details
-                </Menus.Button>
-              </Menus.List>
-            </Menus.Menu>
 
-            <Modal.Window name="validate">
-              <ValidateAnomalyModal
-                record={row}
-                onCloseModal={() => { }}
-                onValidate={(payload) => {
-                  validate({
-                    id: payload.id,
-                    validated: true,
-                    justification: payload.justification,
-                  });
-                }}
-              />
-            </Modal.Window>
-          </Menus>
-        </Modal>
-      </div>
     </Table.Row>
   );
 }

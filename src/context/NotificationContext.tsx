@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -6,36 +6,56 @@ import {
     disconnectWebSocket,
     onNotification,
     getUnreadCount,
+    getNotifications, // Added import
     markAsRead as apiMarkAsRead,
-    markAllAsRead as apiMarkAllAsRead
+    markAllAsRead as apiMarkAllAsRead,
+    deleteNotification as apiDeleteNotification
 } from "../services/notifications";
 import { Notification } from "../services/types/api-types";
-import { useAuth } from "../features/authentication/useAuth"; // Assuming this exists or similar
+import { useAuth } from "../features/authentication/useAuth";
 
 interface NotificationContextType {
     notifications: Notification[];
     unreadCount: number;
     markAsRead: (id: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
+    deleteNotification: (id: string) => Promise<void>;
     addNotification: (notification: Notification) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated, token } = useAuth(); // You might need to adjust this based on actual AuthContext
+    const { isAuthenticated, token } = useAuth();
     const queryClient = useQueryClient();
-    const [realtimeNotifications, setRealtimeNotifications] = useState<Notification[]>([]);
+
+    // We rely on React Query for the source of truth, no separate state needed for list
+    // unless we want to prepend realtime ones instantly (optimistic).
+    // For now, invalidating queries on WS event is safer and "fast enough".
 
     // Fetch initial unread count
     const { data: unreadData } = useQuery({
         queryKey: ["notifications", "unread"],
         queryFn: getUnreadCount,
         enabled: isAuthenticated,
-        refetchInterval: 60000, // Fallback polling
+    });
+
+    // Fetch initial notifications list
+    const { data: notificationsData } = useQuery({
+        queryKey: ["notifications", "list"],
+        queryFn: () => getNotifications(1, 20),
+        enabled: isAuthenticated,
     });
 
     const unreadCount = unreadData?.count || 0;
+    const notifications = notificationsData?.data || [];
+
+    useEffect(() => {
+        // console.log("[NotificationContext] Auth State:", { isAuthenticated, hasToken: !!token });
+        // console.log("[NotificationContext] Unread Data:", unreadData);
+        // console.log("[NotificationContext] Notifications Data:", notificationsData);
+        // console.log("[NotificationContext] Notifications List:", notifications);
+    }, [isAuthenticated, token, unreadData, notificationsData, notifications]);
 
     // WebSocket connection
     useEffect(() => {
@@ -43,16 +63,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             connectWebSocket(token);
 
             const cleanup = onNotification((notification) => {
-                setRealtimeNotifications((prev) => [notification, ...prev]);
+                // Invalidate queries to refresh lists/counts from server
+                // This ensures we get the persisted state
+                queryClient.invalidateQueries({ queryKey: ["notifications"] });
 
                 // Show toast
                 toast(notification.message, {
                     icon: notification.type === 'error' ? '🔴' : notification.type === 'warning' ? '⚠️' : 'ℹ️',
                     duration: 4000,
                 });
-
-                // Invalidate queries to refresh lists/counts
-                queryClient.invalidateQueries({ queryKey: ["notifications"] });
             });
 
             return () => {
@@ -70,19 +89,26 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const markAllAsRead = useCallback(async () => {
         await apiMarkAllAsRead();
         queryClient.invalidateQueries({ queryKey: ["notifications"] });
-        setRealtimeNotifications([]); // Clear realtime buffer if needed or merge logic
     }, [queryClient]);
 
-    const addNotification = useCallback((notification: Notification) => {
-        setRealtimeNotifications(prev => [notification, ...prev]);
-    }, []);
+    const deleteNotification = useCallback(async (id: string) => {
+        await apiDeleteNotification(id);
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }, [queryClient]);
+
+    const addNotification = useCallback((_notification: Notification) => {
+        // Manually adding is less critical if we invalidate, but we can keep it for optimistic updates if we wanted.
+        // For now, just invalidate to be safe.
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }, [queryClient]);
 
     return (
         <NotificationContext.Provider value={{
-            notifications: realtimeNotifications,
+            notifications,
             unreadCount,
             markAsRead,
             markAllAsRead,
+            deleteNotification,
             addNotification
         }}>
             {children}

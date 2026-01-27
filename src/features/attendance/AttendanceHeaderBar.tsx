@@ -3,16 +3,16 @@ import styled from "styled-components";
 import {
   HiMagnifyingGlass,
   HiFunnel,
-  HiChevronUpDown,
   HiChevronLeft,
   HiChevronRight,
 } from "react-icons/hi2";
 import { PeriodFilter, SortByOption, StatusType } from "./AttendanceTypes";
 import AttendanceFiltersPopover from "./AttendanceFiltersPopover";
+import SelectMenu from "../../ui/SelectMenu";
 
 const Bar = styled.div`
-  background-color: var(--color-toolbar-bg);
-  border: 1px solid var(--color-toolbar-border);
+  background-color: var(--color-grey-0);
+  border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-md);
   padding: 1rem 1.2rem;
   display: flex;
@@ -31,7 +31,7 @@ const SearchIcon = styled.span`
   left: 0.9rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--color-toolbar-input-placeholder);
+  color: var(--color-grey-500);
   pointer-events: none;
   font-size: 1.4rem;
 `;
@@ -39,12 +39,12 @@ const SearchInput = styled.input`
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 2.6rem;
   font-size: 1.35rem;
-  background: var(--color-toolbar-input-bg);
-  border: 1px solid var(--color-toolbar-input-border);
+  background: var(--color-grey-0);
+  border: 1px solid var(--color-grey-300);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-strong);
+  color: var(--color-grey-900);
   &::placeholder {
-    color: var(--color-toolbar-input-placeholder);
+    color: var(--color-grey-500);
   }
 `;
 
@@ -58,32 +58,11 @@ const GhostBtn = styled.button`
   align-items: center;
   gap: 0.6rem;
   padding: 0.7rem 0.9rem;
-  background: var(--color-toolbar-input-bg);
-  border: 1px solid var(--color-toolbar-input-border);
+  background: var(--color-grey-0);
+  border: 1px solid var(--color-grey-300);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-strong);
+  color: var(--color-grey-900);
   cursor: pointer;
-`;
-
-const SelectWrap = styled.div`
-  position: relative;
-`;
-const Select = styled.select`
-  min-width: 160px;
-  padding: 0.7rem 2.2rem 0.7rem 0.9rem;
-  font-size: 1.3rem;
-  font-weight: 500;
-  background: var(--color-toolbar-input-bg);
-  border: 1px solid var(--color-toolbar-input-border);
-  border-radius: var(--border-radius-sm);
-  color: var(--color-text-strong);
-`;
-const Chevron = styled.span`
-  position: absolute;
-  right: 0.7rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-dim);
 `;
 
 const Pager = styled.div`
@@ -93,10 +72,10 @@ const Pager = styled.div`
 `;
 const PagerBtn = styled.button`
   padding: 0.4rem 0.6rem;
-  border: 1px solid var(--color-toolbar-input-border);
-  background: var(--color-toolbar-input-bg);
+  border: 1px solid var(--color-grey-300);
+  background: var(--color-grey-0);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-strong);
+  color: var(--color-grey-900);
 `;
 
 export default function AttendanceHeaderBar(props: {
@@ -138,36 +117,30 @@ export default function AttendanceHeaderBar(props: {
             <HiFunnel /> Filters
           </GhostBtn>
 
-          <SelectWrap>
-            <Select
-              value={props.period}
-              onChange={(e) => props.onPeriod(e.target.value as PeriodFilter)}
-            >
-              <option value="day">Day</option>
-              <option value="week">Week</option>
-              <option value="month">Month</option>
-            </Select>
-            <Chevron>
-              <HiChevronUpDown />
-            </Chevron>
-          </SelectWrap>
+          <SelectMenu
+            width="14rem"
+            value={props.period}
+            onChange={(v) => props.onPeriod(v as PeriodFilter)}
+            options={[
+              { value: "day", label: "Day" },
+              { value: "week", label: "Week" },
+              { value: "month", label: "Month" },
+            ]}
+          />
 
-          <SelectWrap>
-            <Select
-              value={props.sortBy}
-              onChange={(e) => props.onSort(e.target.value as SortByOption)}
-            >
-              <option value="date-desc">Newest date</option>
-              <option value="date-asc">Oldest date</option>
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="name-desc">Name (Z-A)</option>
-              <option value="status-asc">Status (A-Z)</option>
-              <option value="status-desc">Status (Z-A)</option>
-            </Select>
-            <Chevron>
-              <HiChevronUpDown />
-            </Chevron>
-          </SelectWrap>
+          <SelectMenu
+            width="18rem" // Increased width for sort options
+            value={props.sortBy}
+            onChange={(v) => props.onSort(v as SortByOption)}
+            options={[
+              { value: "date-desc", label: "Newest date" },
+              { value: "date-asc", label: "Oldest date" },
+              { value: "name-asc", label: "Name (A-Z)" },
+              { value: "name-desc", label: "Name (Z-A)" },
+              { value: "status-asc", label: "Status (A-Z)" },
+              { value: "status-desc", label: "Status (Z-A)" },
+            ]}
+          />
 
           <Pager>
             <PagerBtn onClick={props.onPrev}>

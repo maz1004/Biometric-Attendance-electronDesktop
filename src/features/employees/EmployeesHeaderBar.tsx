@@ -1,7 +1,8 @@
 import { useState } from "react";
 import styled from "styled-components";
 import { EmployeesFiltersPopover } from "./EmployeesFiltersPopover";
-import { HiFunnel, HiMagnifyingGlass, HiChevronUpDown } from "react-icons/hi2";
+import { HiFunnel, HiMagnifyingGlass, HiChevronUpDown, HiPlus } from "react-icons/hi2";
+import Button from "../../ui/Button";
 
 export type RoleFilter = "all" | "employee" | "manager";
 export type EnrolledFilter = "all" | "enrolled" | "not";
@@ -14,25 +15,17 @@ export type SortByOption =
   | "presenceRate-desc"
   | "presenceRate-asc";
 
+// ... (styled components)
+
 const Toolbar = styled.div`
-  width: 100%;
-  background-color: var(--color-grey-0);
-  border: 1px solid var(--color-grey-200);
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-sm);
-
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.2rem;
+  justify-content: space-between;
   align-items: center;
-
-  padding: 0.8rem 1.2rem;
-  margin-bottom: 1.6rem;
-
-  /* On big screens: keep it as a row */
-  @media (min-width: 768px) {
-    padding: 1rem 1.6rem;
-  }
+  gap: 1.6rem;
+  background-color: var(--color-grey-0);
+  padding: 1.2rem;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-grey-100);
 `;
 
 const LeftSide = styled.div`
@@ -40,6 +33,7 @@ const LeftSide = styled.div`
   min-width: 200px;
   display: flex;
   align-items: center;
+  gap: 1.2rem;
 `;
 
 const SearchWrapper = styled.div`
@@ -165,18 +159,21 @@ export type EmployeesHeaderBarProps = {
     status: StatusFilter;
   }) => void;
   onChangeSort: (value: SortByOption) => void;
+  onAddEmployee?: () => void;
 
   search: string;
   role: RoleFilter;
   enrolled: EnrolledFilter;
   status: StatusFilter;
   sortBy: SortByOption;
+  actionComponent?: React.ReactNode;
 };
 
 export default function EmployeesHeaderBar({
   onChangeSearch,
   onApplyFilters,
   onChangeSort,
+  onAddEmployee,
   search,
   role,
   enrolled,
@@ -201,6 +198,13 @@ export default function EmployeesHeaderBar({
               onChange={(e) => onChangeSearch(e.target.value)}
             />
           </SearchWrapper>
+
+          {onAddEmployee && (
+            <Button size="medium" onClick={onAddEmployee}>
+              <HiPlus />
+              <span>Add Employee</span>
+            </Button>
+          )}
         </LeftSide>
 
         {/* RIGHT: filters + sort */}

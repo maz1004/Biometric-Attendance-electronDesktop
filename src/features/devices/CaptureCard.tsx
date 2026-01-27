@@ -18,17 +18,12 @@ const Img = styled.img`
 `;
 const Meta = styled.div`
   padding: 0.8rem 1rem;
-  display: grid;
-  gap: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.2rem;
 `;
-const Tag = styled.span`
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px solid var(--color-border-card);
-  background: var(--color-toolbar-bg);
-`;
+
 
 export default function CaptureCard(props: {
   capture: Capture;
@@ -41,29 +36,56 @@ export default function CaptureCard(props: {
     <Card>
       <Img src={c.imageUrl} alt="capture" />
       <Meta>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <strong>{props.device?.name ?? c.deviceId}</strong>
-          <small style={{ opacity: 0.7 }}>
+        {/* Top Row: Guess (Left) and Timestamp (Right) */}
+        {/* Top Section: Guess, Score/Liveness, Timestamp */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', position: 'relative' }}>
+
+          {/* Date absolute top right to be independent */}
+          <small style={{ position: 'absolute', top: 0, right: 0, opacity: 0.8, fontSize: "1.1rem", whiteSpace: "nowrap", color: "var(--color-text-dim)" }}>
             {new Date(c.tsISO).toLocaleString()}
           </small>
+
+          {/* Guess */}
+          {c.employeeNameGuess ? (
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--color-text-strong)", lineHeight: 1.2, paddingRight: '140px' /* Space for date */ }}>
+              guess: {c.employeeNameGuess}
+            </div>
+          ) : (
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--color-text-dim)", paddingRight: '140px' }}>
+              Unknown
+            </div>
+          )}
+
+          {/* Meta Tags - Directly below Guess */}
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
+              score: <strong style={{ color: "var(--color-text-strong)" }}>{c.score ?? 0}</strong>
+            </span>
+            <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
+              liveness: <strong style={{ color: "var(--color-text-strong)" }}>{c.liveness ?? "pass"}</strong>
+            </span>
+            <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
+              status: <strong style={{ color: "var(--color-text-strong)" }}>{c.status}</strong>
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: ".4rem", flexWrap: "wrap" }}>
-          <Tag>score: {c.score ?? "—"}</Tag>
-          <Tag>liveness: {c.liveness ?? "unknown"}</Tag>
-          <Tag>status: {c.status}</Tag>
-          {c.employeeNameGuess && <Tag>guess: {c.employeeNameGuess}</Tag>}
-        </div>
-        <div style={{ display: "flex", gap: ".6rem", marginTop: ".4rem" }}>
+
+        {/* Buttons - Even Thinner and Controlled Width */}
+        {/* Buttons - Bottom Anchored */}
+        <div style={{ display: "flex", gap: "1rem", marginTop: "auto", paddingTop: "0.8rem" }}>
           <Button
-            variation="primary"
             size="small"
             onClick={() => props.onAccept(c.id)}
+            style={{
+              backgroundColor: 'var(--color-green-600)',
+              color: 'white',
+              border: 'none',
+              padding: '0.2rem 1rem',
+              fontSize: '1.1rem',
+              height: '30px',
+              flex: 1,
+              maxWidth: '120px'
+            }}
           >
             Accept
           </Button>
@@ -71,6 +93,13 @@ export default function CaptureCard(props: {
             variation="danger"
             size="small"
             onClick={() => props.onReject(c.id)}
+            style={{
+              padding: '0.2rem 1rem',
+              fontSize: '1.1rem',
+              height: '30px',
+              flex: 1,
+              maxWidth: '120px'
+            }}
           >
             Reject
           </Button>

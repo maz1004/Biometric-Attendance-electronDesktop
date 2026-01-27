@@ -1,4 +1,4 @@
-// src/pages/Employees.tsx (or wherever you mount it)
+// src/pages/Employees.tsx
 import { useState } from "react";
 import Row from "../ui/Row";
 import EmployeesHeaderBar, {
@@ -8,8 +8,11 @@ import EmployeesHeaderBar, {
   StatusFilter,
 } from "../features/employees/EmployeesHeaderBar";
 import EmployeeTable from "../features/employees/EmployeeTable";
-import AddEmployee from "../features/employees/AddEmployee";
+import CreateEmployeeForm from "../features/employees/CreateEmployeeForm";
 import Heading from "../ui/Heading";
+import Modal from "../ui/Modal";
+import Button from "../ui/Button";
+import { HiPlus } from "react-icons/hi2";
 
 export default function EmployeesPage(): JSX.Element {
   const [search, setSearch] = useState<string>("");
@@ -19,19 +22,19 @@ export default function EmployeesPage(): JSX.Element {
   const [sortBy, setSortBy] = useState<SortByOption>("createdAt-desc");
 
   return (
-    <>
+    <Modal>
       {/* Page heading */}
       <Row type="horizontal">
         <Heading as="h1">Employees</Heading>
-
-        {/* header bar with Search / Filters / Sort */}
+        <Modal.Open opens="new-employee">
+          <Button size="medium">
+            <HiPlus />
+            <span>Add Employee</span>
+          </Button>
+        </Modal.Open>
       </Row>
 
-      {/* Controls bar (like Briefs) */}
-
-      {/* Table + Add employee button */}
       <Row>
-        {" "}
         <EmployeesHeaderBar
           search={search}
           role={role}
@@ -53,8 +56,11 @@ export default function EmployeesPage(): JSX.Element {
           status={status}
           sortBy={sortBy}
         />
-        <AddEmployee />
+
+        <Modal.Window name="new-employee">
+          <CreateEmployeeForm />
+        </Modal.Window>
       </Row>
-    </>
+    </Modal>
   );
 }

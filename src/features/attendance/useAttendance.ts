@@ -94,7 +94,7 @@ export function useAttendance() {
       }),
   });
 
-  const rawList = data?.data?.records || [];
+  const rawList = data?.data?.data || [];
   const total = data?.data?.total || 0;
   const totalPages = Math.ceil(total / 12) || 1;
 
@@ -104,12 +104,12 @@ export function useAttendance() {
     employeeId: r.user_id,
     fullName: r.user_name || r.user_id, // Backend should provide user_name ideally
     department: r.department || "General",
-    dateISO: r.check_in_time ? r.check_in_time.split('T')[0] : "",
-    checkIn: r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
-    checkOut: r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    dateISO: (r.timestamp || "").split('T')[0],
+    checkIn: (r.type === 'entry' || r.type === 'check_in') && r.timestamp ? new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+    checkOut: (r.type === 'exit' || r.type === 'check_out') && r.timestamp ? new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
     status: r.status as StatusType,
     justification: r.notes,
-    deviceId: r.device_id
+    deviceId: r.location
   }));
 
   function gotoPrev() {

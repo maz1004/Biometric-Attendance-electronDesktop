@@ -19,6 +19,11 @@ export interface CompanySettings {
     working_hours_end: string;
     late_threshold_minutes: number;
     early_departure_threshold_minutes: number;
+    // Planning Configuration
+    planning_day_start?: string;
+    planning_day_end?: string;
+    planning_night_start?: string;
+    planning_night_end?: string;
     created_at: string;
     updated_at: string;
 }
@@ -35,6 +40,11 @@ export interface UpdateSettingsRequest {
     working_hours_end?: string;
     late_threshold_minutes?: number;
     early_departure_threshold_minutes?: number;
+    // Planning Configuration
+    planning_day_start?: string;
+    planning_day_end?: string;
+    planning_night_start?: string;
+    planning_night_end?: string;
 }
 
 // ============================================================================

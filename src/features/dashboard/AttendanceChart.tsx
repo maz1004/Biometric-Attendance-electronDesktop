@@ -35,15 +35,39 @@ function AttendanceChart() {
 
     const teamSize = stats?.total_team_size || 1; // Avoid division by zero, but don't mock 50
 
-    const data = trends?.map(t => {
-        const presencePct = Math.min(100, Math.round((t.value / teamSize) * 100));
-        // We don't have historical late/absence data yet, so we estimate rest is absence
-        // TODO: Improve backend to return detailed daily breakdown
+    const data = trends?.map((t: any) => {
+        // t has value (present), late, absent (counts)
+        // We want to display percentages relative to teamSize
+        // Note: t.value (Present) includes Late in some definitions? 
+        // Backend: Value = DailyStats (Total Checkins). Late = DailyLateStats. 
+        // Typically Present includes Late.
+        // So Punctual = Present - Late.
+        // Stacked Chart: Punctual + Late + Absent = 100%?
+        // Current Chart areas: Presence, Late. 
+        // If not stacked, we just show Punctual Rate and Late Rate?
+        // Let's assume Present = Punctual + Late.
+
+        const presentCount = t.value || 0;
+        const lateCount = t.late || 0;
+        const absentCount = t.absent || (teamSize - presentCount); // Fallback if backend absent is 0
+
+        const total = teamSize || (presentCount + absentCount) || 1;
+
+        const presencePct = Math.round((presentCount / total) * 100);
+        const latePct = Math.round((lateCount / total) * 100);
+        const absencePct = 100 - presencePct; // Simplified
+
+        // For Area chart, validation usually expects:
+        // Presence (Total Present) = Punctual + Late
+        // Or separate? 
+        // The Chart has separate "presence" and "late".
+        // Let's pass them as is.
+
         return {
-            label: t.day, // or t.label
-            presence: presencePct,
-            absence: 100 - presencePct,
-            late: 0
+            label: t.day,
+            presence: presencePct, // This is total presence %
+            late: latePct,         // This is late %
+            absence: absencePct
         };
     }) || [];
 

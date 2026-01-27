@@ -21,6 +21,9 @@ export {
     deactivateUser,
     getUserStatus as getUserStatusFromUsers,
     getUserActivity,
+    getUserAttendanceStats,
+    uploadUserPhoto,
+    uploadUserCV,
 } from './users';
 
 // Attendance service
@@ -59,6 +62,7 @@ export {
     deleteEmployee,
     activateEmployee,
     deactivateEmployee,
+    enrollFace,
 } from './employees';
 
 // Settings service

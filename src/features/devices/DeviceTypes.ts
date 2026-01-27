@@ -9,6 +9,7 @@ export type Device = {
   ip?: string;
   version?: string;
   currentMode?: "recognition" | "enrollment";
+  isAuthorized?: boolean;
 };
 
 export type CaptureStatus = "pending" | "accepted" | "rejected";
@@ -23,6 +24,7 @@ export type Capture = {
   liveness?: "pass" | "fail" | "unknown";
   status: CaptureStatus; // pending by default here
   imageUrl: string; // static placeholder
+  source: "enrollment" | "attendance";
 };
 
 export type DevicesFilters = {

@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
-import { HiBell } from "react-icons/hi";
+import { HiBell, HiX } from "react-icons/hi";
 import { useNotifications } from "../../context/NotificationContext";
-
-import ValidationQueueModal from "../validation/ValidationQueueModal";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -52,8 +51,8 @@ const Dropdown = styled.div`
   top: 100%;
   right: 0;
   width: 36rem;
-  background-color: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-card);
+  background-color: var(--color-grey-0);
+  border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
@@ -65,7 +64,7 @@ const Dropdown = styled.div`
 
 const Header = styled.div`
   padding: 1.6rem;
-  border-bottom: 1px solid var(--color-border-card);
+  border-bottom: 1px solid var(--color-grey-200);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -74,6 +73,7 @@ const Header = styled.div`
 const Title = styled.h3`
   font-size: 1.6rem;
   font-weight: 600;
+  color: var(--color-grey-900);
 `;
 
 const MarkReadButton = styled.button`
@@ -96,8 +96,8 @@ const NotificationList = styled.div`
 
 const NotificationItem = styled.div<{ $read: boolean }>`
   padding: 1.2rem 1.6rem;
-  border-bottom: 1px solid var(--color-border-card);
-  background-color: ${(props) => (props.$read ? "transparent" : "var(--color-brand-50)")};
+  border-bottom: 1px solid var(--color-grey-200);
+  background-color: ${(props) => (props.$read ? "transparent" : "var(--color-grey-50)")};
   cursor: pointer;
   transition: background-color 0.2s;
 
@@ -119,18 +119,46 @@ const ItemHeader = styled.div`
 const ItemTitle = styled.span`
   font-weight: 600;
   font-size: 1.4rem;
-  color: var(--color-text-strong);
+  color: var(--color-grey-900);
 `;
 
-const ItemTime = styled.span`
+const MetaContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 80px;
+`;
+
+const TimeText = styled.span`
   font-size: 1.1rem;
-  color: var(--color-text-dim);
+  color: var(--color-grey-500);
 `;
 
 const ItemMessage = styled.p`
   font-size: 1.3rem;
-  color: var(--color-text-main);
+  color: var(--color-grey-700);
   line-height: 1.4;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--color-grey-400);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-left: 0;
+  margin-top: 0;
+
+  &:hover {
+    background-color: var(--color-red-100);
+    color: var(--color-red-600);
+  }
 `;
 
 const EmptyState = styled.div`
@@ -140,10 +168,10 @@ const EmptyState = styled.div`
 `;
 
 export default function NotificationCenter() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  const [showValidationModal, setShowValidationModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -162,12 +190,21 @@ export default function NotificationCenter() {
     }
 
     // Handle specific notification types
-    if (notification.type === "validation_request") {
-      setShowValidationModal(true);
+    // Handle specific notification types
+    if (notification.type === "validation_pending" || notification.type === "manual_validation") {
+      navigate("/devices?tab=validation");
+      setIsOpen(false);
+    } else if (notification.type === "attendance_late" || notification.type === "attendance_early_exit") {
+      navigate("/attendance");
       setIsOpen(false);
     } else if (notification.type === "system_alert") {
       // Maybe navigate to logs or settings
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    deleteNotification(id);
   };
 
   return (
@@ -200,12 +237,17 @@ export default function NotificationCenter() {
                 >
                   <ItemHeader>
                     <ItemTitle>{notification.title}</ItemTitle>
-                    <ItemTime>
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                        locale: fr,
-                      })}
-                    </ItemTime>
+                    <MetaContainer>
+                      <CloseButton onClick={(e) => handleDelete(e, notification.id)}>
+                        <HiX size={16} />
+                      </CloseButton>
+                      <TimeText>
+                        {formatDistanceToNow(new Date(notification.created_at), {
+                          addSuffix: true,
+                          locale: fr,
+                        })}
+                      </TimeText>
+                    </MetaContainer>
                   </ItemHeader>
                   <ItemMessage>{notification.message}</ItemMessage>
                 </NotificationItem>
@@ -213,10 +255,6 @@ export default function NotificationCenter() {
             )}
           </NotificationList>
         </Dropdown>
-      )}
-
-      {showValidationModal && (
-        <ValidationQueueModal onClose={() => setShowValidationModal(false)} />
       )}
     </Container>
   );

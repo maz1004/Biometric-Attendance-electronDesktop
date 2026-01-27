@@ -7,9 +7,9 @@ import {
   HiOutlineUserGroup,
   HiOutlineClipboardDocumentCheck,
   HiDevicePhoneMobile,
-  // Optional alt for Attendance:
-  // HiOutlineFingerPrint,
+  HiOutlineChartBar,
 } from "react-icons/hi2";
+
 
 const NavList = styled.ul`
   display: flex;
@@ -88,6 +88,12 @@ function MainNav() {
           <StyledNavLink to="/devices">
             <HiDevicePhoneMobile />
             <span> Devices</span>
+          </StyledNavLink>
+        </li>
+        <li>
+          <StyledNavLink to="/reports">
+            <HiOutlineChartBar />
+            <span> Reports</span>
           </StyledNavLink>
         </li>
         <li>

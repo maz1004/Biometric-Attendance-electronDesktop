@@ -8,7 +8,7 @@ export default function AttendanceTable({
   rows: AttendanceRecord[];
 }) {
   return (
-    <Table columns="1.5fr 1fr 1fr 0.7fr 0.7fr 0.9fr 0.5fr">
+    <Table columns="1.5fr 1fr 1fr 1fr 1fr 1fr">
       <Table.Header>
         <div>Name</div>
         <div>Department</div>
@@ -16,7 +16,7 @@ export default function AttendanceTable({
         <div>In</div>
         <div>Out</div>
         <div>Status</div>
-        <div>Actions</div>
+
       </Table.Header>
 
       <Table.Body

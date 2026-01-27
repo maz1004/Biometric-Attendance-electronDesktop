@@ -95,6 +95,7 @@ html, body {
   --image-opacity: 100%;
   }
   &.dark-mode{
+    color-scheme: dark;
 
     ::selection {
  background: color-mix(in srgb, var(--color-brand-600) 30%, transparent);

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "react-hot-toast";
@@ -27,39 +27,46 @@ const queryClient = new QueryClient({
   },
 });
 
+// Configure Main Router
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <AppLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Navigate replace to="dashboard" /> },
+      { path: "dashboard", element: <Dashboard /> },
+      { path: "users", element: <Users /> },
+      { path: "settings", element: <Settings /> },
+      { path: "account", element: <Account /> },
+      { path: "employees", element: <Employees /> },
+      { path: "attendance", element: <Attendance /> },
+      { path: "planning", element: <Planning /> },
+      { path: "reports", element: <Reports /> },
+      { path: "devices", element: <Devices /> },
+    ],
+  },
+  {
+    path: "login",
+    element: <Login />,
+  },
+  {
+    path: "*",
+    element: <PageNotFound />,
+  },
+]);
+
 function App() {
   return (
     <DarkModeProvider>
       <QueryClientProvider client={queryClient}>
         <ReactQueryDevtools initialIsOpen={false} />
         <GlobalStyles />
-
         <NotificationProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate replace to="dashboard" />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="users" element={<Users />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="account" element={<Account />} />
-                <Route path="employees" element={<Employees />} />
-                <Route path="attendance" element={<Attendance />} />
-                <Route path="planning" element={<Planning />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="devices" element={<Devices />} />
-              </Route>
-
-              <Route path="login" element={<Login />} />
-              <Route path="*" element={<PageNotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <RouterProvider router={router} />
         </NotificationProvider>
 
         <Toaster

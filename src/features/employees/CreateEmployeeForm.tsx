@@ -1,5 +1,5 @@
-// src/features/employees/CreateEmployeeForm.tsx
-import { useForm, SubmitErrorHandler, SubmitHandler } from "react-hook-form";
+﻿import { useForm, SubmitErrorHandler, SubmitHandler } from "react-hook-form";
+import styled from "styled-components";
 import Form from "../../ui/Form";
 import FormRow from "../../ui/FormRow";
 import Input from "../../ui/Input";
@@ -8,7 +8,31 @@ import Button from "../../ui/Button";
 import { CreateEmployeeFormProps, EmployeeFormValues } from "./EmployeeTypes";
 import ButtonGroup from "../../ui/ButtonGroup";
 import { useCreateEmployee, useUpdateEmployee } from "./useEmployees";
-import type { CreateEmployeeRequest, UpdateUserRequest } from "../../services";
+import type { UpdateUserRequest } from "../../services";
+import AvatarUploader from "./components/AvatarUploader";
+import { useEffect } from "react";
+
+const TopSection = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4rem;
+  margin-bottom: 2rem;
+`;
+
+const MainInputs = styled.div`
+  display: flex;
+  flex-direction: column;
+  /* gap: 1rem; */
+`;
+
+const AvatarSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 1rem;
+  padding-right: 2rem;
+`;
 
 function CreateEmployeeForm({
   employeeToEdit,
@@ -17,24 +41,36 @@ function CreateEmployeeForm({
   const editId = employeeToEdit?.id;
   const isEditSession = Boolean(editId);
 
-  const { register, handleSubmit, reset, formState } =
+  const { register, handleSubmit, reset, formState, watch, setValue } =
     useForm<EmployeeFormValues>({
       defaultValues: isEditSession
         ? {
           firstName: employeeToEdit?.firstName ?? "",
           lastName: employeeToEdit?.lastName ?? "",
+          email: employeeToEdit?.email ?? "",
+          phone: (employeeToEdit as any)?.phoneNumber ?? "",
           department: employeeToEdit?.department ?? "",
           role: employeeToEdit?.role ?? "employee",
           status: employeeToEdit?.status ?? "active",
+          password: "", // Password not filled in edit
+          dateOfBirth: (employeeToEdit as any)?.dateOfBirth
+            ? (employeeToEdit as any).dateOfBirth.split("T")[0]
+            : "", // Format YYYY-MM-DD
           avatar: "" as unknown as FileList,
+          cv: "" as unknown as FileList,
         }
         : {
           firstName: "",
           lastName: "",
+          email: "",
+          phone: "",
           department: "",
           role: "employee",
           status: "active",
+          password: "",
+          dateOfBirth: "",
           avatar: "" as unknown as FileList,
+          cv: "" as unknown as FileList,
         },
     });
 
@@ -43,17 +79,43 @@ function CreateEmployeeForm({
   const { updateEmployee, isUpdating } = useUpdateEmployee();
   const isWorking = isCreating || isUpdating;
 
+  // Watch role to conditionally show/require password
+  const watchedRole = watch("role");
+  const isManager =
+    (watchedRole as string) === "manager" ||
+    (watchedRole as string) === "admin" ||
+    (watchedRole as string) === "rh";
+
+  // Register avatar manually since we use a custom component
+  useEffect(() => {
+    register("avatar");
+  }, [register]);
+
+  const onAvatarChange = (file: File | null) => {
+    // Mimic FileList for consistency with existing types/logic
+    // useEmployees expects avatarFile to be a FileList (or array-like with length)
+    const fileList = file ? ([file] as unknown as FileList) : ([] as unknown as FileList);
+    setValue("avatar", fileList, { shouldValidate: true });
+  };
+
   const onSubmit: SubmitHandler<EmployeeFormValues> = (data) => {
     if (isEditSession) {
       // Map to UpdateUserRequest
       const updateData: UpdateUserRequest = {
         first_name: data.firstName,
         last_name: data.lastName,
+        email: data.email,
         department: data.department,
         is_active: data.status === "active",
-        // Note: role 'manager' is not supported by backend, map to 'employee'
-        role: data.role === "manager" ? "employee" : "employee",
+        role: data.role as "admin" | "rh" | "employee", // Correctly pass selected role
+        // phone_number: data.phone, // TODO: Add to API type if not present
       };
+
+      // If API supports phone update for users, add it (it usually does)
+      (updateData as any).phone_number = data.phone;
+      (updateData as any).date_of_birth = data.dateOfBirth
+        ? new Date(data.dateOfBirth).toISOString()
+        : undefined;
 
       updateEmployee(
         { id: editId!, data: updateData },
@@ -65,21 +127,31 @@ function CreateEmployeeForm({
         }
       );
     } else {
-      // Map to CreateEmployeeRequest
-      const createData: CreateEmployeeRequest = {
+      // Create Request
+      const createData: any = {
         first_name: data.firstName,
         last_name: data.lastName,
-        email: `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@company.com`, // Generate email
+        email: data.email,
+        phone_number: data.phone,
         department: data.department,
+        role: data.role, // Pass role!
+        password: data.password, // Pass password!
+        date_of_birth: data.dateOfBirth
+          ? new Date(data.dateOfBirth).toISOString()
+          : undefined,
         is_active: data.status === "active",
       };
 
-      createEmployee(createData, {
-        onSuccess: () => {
-          reset();
-          onCloseModal?.();
-        },
-      });
+      // Pass files alongside data
+      createEmployee(
+        { ...createData, avatarFile: data.avatar, cvFile: data.cv },
+        {
+          onSuccess: () => {
+            reset();
+            onCloseModal?.();
+          },
+        }
+      );
     }
   };
 
@@ -92,25 +164,78 @@ function CreateEmployeeForm({
       onSubmit={handleSubmit(onSubmit, onError)}
       type={onCloseModal ? "modal" : "regular"}
     >
-      <FormRow label="First name" error={errors?.firstName?.message}>
-        <Input
-          type="text"
-          id="firstName"
-          disabled={isWorking}
-          {...register("firstName", {
-            required: "Required",
-          })}
-        />
-      </FormRow>
+      <TopSection>
+        <MainInputs>
+          <FormRow label="First name" error={errors?.firstName?.message}>
+            <Input
+              type="text"
+              id="firstName"
+              disabled={isWorking}
+              {...register("firstName", {
+                required: "Required",
+              })}
+            />
+          </FormRow>
 
-      <FormRow label="Last name" error={errors?.lastName?.message}>
+          <FormRow label="Last name" error={errors?.lastName?.message}>
+            <Input
+              type="text"
+              id="lastName"
+              disabled={isWorking}
+              {...register("lastName", {
+                required: "Required",
+              })}
+            />
+          </FormRow>
+
+          <FormRow label="Email" error={errors?.email?.message}>
+            <Input
+              type="email"
+              id="email"
+              disabled={isWorking}
+              placeholder="name@company.com"
+              {...register("email", {
+                required: "Required",
+                pattern: {
+                  value: /\S+@\S+\.\S+/,
+                  message: "Invalid email",
+                },
+              })}
+            />
+          </FormRow>
+
+          <FormRow label="Phone" error={errors?.phone?.message}>
+            <Input
+              type="tel"
+              id="phone"
+              disabled={isWorking}
+              placeholder="+123456789"
+              {...register("phone")}
+            />
+          </FormRow>
+        </MainInputs>
+
+        <AvatarSection>
+          <AvatarUploader
+            defaultImage={employeeToEdit?.avatar}
+            onImageChanged={onAvatarChange}
+            disabled={isWorking}
+          />
+          {/* Hidden Input purely for error message display if needed, though AvatarUploader handles display */}
+          {errors?.avatar?.message && (
+            <span style={{ color: 'var(--color-red-700)', fontSize: '1.2rem', marginTop: '0.5rem' }}>
+              {errors.avatar.message}
+            </span>
+          )}
+        </AvatarSection>
+      </TopSection>
+
+      <FormRow label="Date of Birth" error={errors?.dateOfBirth?.message}>
         <Input
-          type="text"
-          id="lastName"
+          type="date"
+          id="dateOfBirth"
           disabled={isWorking}
-          {...register("lastName", {
-            required: "Required",
-          })}
+          {...register("dateOfBirth")}
         />
       </FormRow>
 
@@ -147,6 +272,24 @@ function CreateEmployeeForm({
         </select>
       </FormRow>
 
+      {!isEditSession && isManager && (
+        <FormRow label="Password" error={errors?.password?.message}>
+          <Input
+            type="password"
+            id="password"
+            disabled={isWorking}
+            placeholder="Min 8 chars"
+            {...register("password", {
+              required: isManager ? "Password is required for Managers" : false,
+              minLength: {
+                value: 8,
+                message: "Password must be at least 8 characters",
+              },
+            })}
+          />
+        </FormRow>
+      )}
+
       <FormRow label="Status" error={errors?.status?.message}>
         <select
           id="status"
@@ -168,14 +311,12 @@ function CreateEmployeeForm({
         </select>
       </FormRow>
 
-      <FormRow label="Photo / Face" error={errors?.avatar?.message}>
+      <FormRow label="CV (PDF)" error={errors?.cv?.message}>
         <FileInput
-          id="avatar"
-          accept="image/*"
+          id="cv"
+          accept=".pdf,.doc,.docx"
           disabled={isWorking}
-          {...register("avatar", {
-            required: isEditSession ? false : "Required",
-          })}
+          {...register("cv")}
         />
       </FormRow>
 

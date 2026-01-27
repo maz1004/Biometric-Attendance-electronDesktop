@@ -23,6 +23,10 @@ export const markAllAsRead = async (): Promise<void> => {
     await api.put("/notifications/mark-all-read");
 };
 
+export const deleteNotification = async (id: string): Promise<void> => {
+    await api.delete(`/notifications/${id}`);
+};
+
 // WebSocket
 let ws: WebSocket | null = null;
 let reconnectTimeout: NodeJS.Timeout | null = null;
@@ -42,7 +46,7 @@ export const connectWebSocket = (token: string) => {
     ws = new WebSocket(`${wsUrl}?token=${token}`);
 
     ws.onopen = () => {
-        console.log("Notification WebSocket connected");
+        // console.log("Notification WebSocket connected");
         if (reconnectTimeout) {
             clearTimeout(reconnectTimeout);
             reconnectTimeout = null;
@@ -61,7 +65,7 @@ export const connectWebSocket = (token: string) => {
     };
 
     ws.onclose = () => {
-        console.log("Notification WebSocket disconnected");
+        // console.log("Notification WebSocket disconnected");
         ws = null;
         // Simple reconnect logic
         reconnectTimeout = setTimeout(() => {

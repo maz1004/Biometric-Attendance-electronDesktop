@@ -20,6 +20,10 @@ export type Employee = {
   status: EmployeeStatus;
   createdAt: string; // ISO string
   avatar?: string; // URL
+  cv?: string; // URL
+  email?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
   stats?: EmployeeStats;
 };
 
@@ -27,10 +31,15 @@ export type Employee = {
 export type EmployeeFormValues = {
   firstName: string;
   lastName: string;
+  email: string;
+  phone: string;
   department: string;
   role: EmployeeRole;
   status: EmployeeStatus;
   avatar: FileList | string; // react-hook-form will give FileList
+  cv: FileList | string;
+  password?: string;
+  dateOfBirth?: string;
 };
 
 // prop when editing (optional employee + optional close callback)
