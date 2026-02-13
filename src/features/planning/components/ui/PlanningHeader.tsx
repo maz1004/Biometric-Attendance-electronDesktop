@@ -4,6 +4,14 @@ import { fr } from "date-fns/locale";
 import { HiChevronLeft, HiChevronRight } from "react-icons/hi2";
 import Select from "../../../../ui/Select";
 
+// Type for settings (minimal, just what we need)
+interface PlanningSettings {
+  planning_day_start?: string;
+  planning_day_end?: string;
+  planning_night_start?: string;
+  planning_night_end?: string;
+}
+
 const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -60,6 +68,10 @@ const RightControls = styled.div`
   margin-left: auto; /* Push to right if not using absolute center for nav */
 `;
 
+
+
+// ... existing imports ...
+
 export interface PlanningHeaderProps {
   currentDate: Date;
   onPrev: () => void;
@@ -68,9 +80,16 @@ export interface PlanningHeaderProps {
   onViewChange: (mode: "week" | "month" | "cells") => void;
   timeSlot: "day" | "night";
   onTimeSlotChange: (slot: "day" | "night") => void;
-  // onClone?: () => void; // Removed per user request
-  mode: "view" | "template"; // NEW
-  onModeChange: (m: "view" | "template") => void; // NEW
+  mode: "view" | "template";
+  onModeChange: (m: "view" | "template") => void;
+  settings?: PlanningSettings;
+}
+
+// Helper to format time label
+function formatTimeLabel(timeStr: string | undefined, defaultVal: string): string {
+  if (!timeStr) return defaultVal;
+  const [h, m] = timeStr.split(':');
+  return `${h}h${m !== '00' ? m : ''}`;
 }
 
 export default function PlanningHeader({
@@ -82,9 +101,11 @@ export default function PlanningHeader({
   timeSlot,
   onTimeSlotChange,
   mode,
-  onModeChange
+  onModeChange,
+  settings
 }: PlanningHeaderProps) {
 
+  // ... existing handlers ...
   const handleViewChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onViewChange(e.target.value as "week" | "month" | "cells");
   };
@@ -97,19 +118,33 @@ export default function PlanningHeader({
     onModeChange(e.target.value as "view" | "template");
   };
 
+  // Dynamic labels based on settings
+
+  // Dynamic labels based on settings
+  const dayStart = formatTimeLabel(settings?.planning_day_start, "07h");
+  const dayEnd = formatTimeLabel(settings?.planning_day_end, "19h");
+  const nightStart = formatTimeLabel(settings?.planning_night_start, "19h");
+  const nightEnd = formatTimeLabel(settings?.planning_night_end, "07h");
+
+  const dayLabel = `Jour (${dayStart} - ${dayEnd})`;
+  const nightLabel = `Nuit (${nightStart} - ${nightEnd})`;
+
   return (
     <HeaderContainer>
       {/* Left Side: Actions */}
-      <div style={{ width: 220, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <Select
-          options={[
-            { value: "view", label: "Vue Planning" },
-            { value: "template", label: "Mode Modèle" }
-          ]}
-          value={mode}
-          onChange={handleModeChange}
-          variant="default"
-        />
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {mode === 'view' && (
+          <Select
+            options={[
+              { value: "month", label: "Stratégique" },
+              { value: "week", label: "Opérationnel" },
+              { value: "cells", label: "Vue par cases" }
+            ]}
+            value={viewMode}
+            onChange={handleViewChange}
+            variant="default"
+          />
+        )}
       </div>
 
       {/* Centered Date Navigation (Only in VIEW mode) */}
@@ -127,12 +162,11 @@ export default function PlanningHeader({
 
       {/* Right Side Controls */}
       <RightControls>
-
         {viewMode === "week" && (
           <Select
             options={[
-              { value: "day", label: "Jour (08h - 19h)" },
-              { value: "night", label: "Nuit (19h - 07h)" }
+              { value: "day", label: dayLabel },
+              { value: "night", label: nightLabel }
             ]}
             value={timeSlot}
             onChange={handleTimeSlotChange}
@@ -140,19 +174,17 @@ export default function PlanningHeader({
           />
         )}
 
-        {mode === 'view' && (
-          <Select
-            options={[
-              { value: "month", label: "Stratégique" },
-              { value: "week", label: "Opérationnel" },
-              { value: "cells", label: "Vue par cases" }
-            ]}
-            value={viewMode}
-            onChange={handleViewChange}
-            variant="white"
-          />
-        )}
+        <Select
+          options={[
+            { value: "view", label: "Vue Planning" },
+            { value: "template", label: "Mode Modèle" }
+          ]}
+          value={mode}
+          onChange={handleModeChange}
+          variant="white"
+        />
       </RightControls>
     </HeaderContainer>
   );
 }
+

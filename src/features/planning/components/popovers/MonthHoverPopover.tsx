@@ -6,10 +6,11 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
-const PopoverContainer = styled.div<{ x: number; y: number }>`
+const PopoverContainer = styled.div<{ x: number; y: number; alignment?: 'left' | 'right' }>`
   position: fixed;
   top: ${p => p.y + 10}px;
-  left: ${p => p.x + 10}px;
+  left: ${p => p.alignment === 'left' ? 'auto' : `${p.x + 10}px`};
+  right: ${p => p.alignment === 'left' ? `${window.innerWidth - p.x + 10}px` : 'auto'};
   background-color: var(--color-grey-0);
   border: 1px solid var(--color-grey-200);
   color: var(--color-grey-700);
@@ -72,18 +73,23 @@ interface MonthHoverPopoverProps {
     dateStr: string;
     items: ComputedSchedule[];
     exception?: PlanningException;
+    alignment?: 'left' | 'right';
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
 }
 
-export default function MonthHoverPopover({ x, y, items, exception, onMouseEnter, onMouseLeave }: MonthHoverPopoverProps) {
-    // Unique teams/shifts
-    const teams = Array.from(new Set(items.map(i => i.teamId))).filter(t => t !== 'unassigned');
-    const employees = Array.from(new Set(items.map(i => i.assigneeName))).filter(Boolean);
-    const shiftNames = Array.from(new Set(items.map(i => i.shiftName)));
+export default function MonthHoverPopover({ x, y, items, exception, alignment = 'right', onMouseEnter, onMouseLeave }: MonthHoverPopoverProps) {
+    // Separate Holidays from Regular Assignments
+    const holidayItems = items.filter(i => i.shiftId === 'holiday');
+    const regularItems = items.filter(i => i.shiftId !== 'holiday');
+
+    // Unique teams/shifts/employees from REGULAR items only
+    const teams = Array.from(new Set(regularItems.map(i => i.teamId)));
+    const employees = Array.from(new Set(regularItems.map(i => i.assigneeName))).filter(Boolean);
+    const shiftNames = Array.from(new Set(regularItems.map(i => i.shiftName)));
 
     return (
-        <PopoverContainer x={x} y={y} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+        <PopoverContainer x={x} y={y} alignment={alignment} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
             {exception && (
                 <Section>
                     <Label style={{ color: "var(--color-red-500)" }}>Exception</Label>
@@ -94,7 +100,19 @@ export default function MonthHoverPopover({ x, y, items, exception, onMouseEnter
                 </Section>
             )}
 
-            {items.length > 0 && (
+            {holidayItems.length > 0 && (
+                <Section>
+                    <Label style={{ color: "var(--color-primary)" }}>Férié</Label>
+                    {holidayItems.map(h => (
+                        <Value key={h.id}>
+                            <Dot color={h.color || '#fee2e2'} />
+                            {h.shiftName.replace('🏖️ ', '')}
+                        </Value>
+                    ))}
+                </Section>
+            )}
+
+            {regularItems.length > 0 && (
                 <>
                     <Section>
                         <Label>Planning</Label>
@@ -108,7 +126,11 @@ export default function MonthHoverPopover({ x, y, items, exception, onMouseEnter
                     {teams.length > 0 && (
                         <Section>
                             <Label>Équipes</Label>
-                            <Value>{teams.length} assignée(s)</Value>
+                            {teams.map(t => (
+                                <div key={String(t)} style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
+                                    • {!t || t === 'unassigned' || t === 'GLOBAL' ? 'Indépendants' : 'Équipe ' + (t.length > 8 ? t.substring(0, 8) : t) + '...'}
+                                </div>
+                            ))}
                         </Section>
                     )}
 

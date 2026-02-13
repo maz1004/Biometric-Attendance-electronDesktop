@@ -14,7 +14,6 @@ interface PlanningCalendarProps {
     metaMap: Record<string, MonthDayMeta>;
     templates?: Shift[];
     onAssignTemplate?: (date: Date | Date[], template: Shift) => Promise<void>;
-    onAssignException?: (date: Date | Date[], type: 'LEAVE' | 'SICK' | 'REMOTE' | 'OVERRIDE') => Promise<void>;
     timeZone?: string;
 }
 
@@ -82,7 +81,6 @@ export default function PlanningCalendar({
     metaMap,
     templates = [],
     onAssignTemplate,
-    onAssignException,
     timeZone
 }: PlanningCalendarProps) {
     // --- LOCAL INTERACTION STATE ---
@@ -91,7 +89,7 @@ export default function PlanningCalendar({
 
     // Popovers
     const [clickPopover, setClickPopover] = useState<{ x: number, y: number, date: Date, endDate?: Date } | null>(null);
-    const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], exception?: ShiftException } | null>(null);
+    const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], exception?: ShiftException, alignment?: 'left' | 'right' } | null>(null);
 
     // --- LOGIC ---
 
@@ -169,12 +167,16 @@ export default function PlanningCalendar({
 
                 // Delay showing to prevent "Gap Crossing" issues
                 openTimeoutRef.current = setTimeout(() => {
+                    // Check if close to right edge
+                    const isNearRightEdge = rect.right > window.innerWidth - 350;
+
                     setHoverPopover({
-                        x: rect.left + rect.width,
+                        x: isNearRightEdge ? rect.left : rect.left + rect.width,
                         y: rect.top,
                         dateStr,
                         items: meta.items || [],
-                        exception: meta.exception
+                        exception: meta.exception,
+                        alignment: isNearRightEdge ? 'left' : 'right'
                     });
                 }, 150);
             } else {
@@ -288,28 +290,7 @@ export default function PlanningCalendar({
         setClickPopover(null);
     };
 
-    const handleAssignException = async (type: 'LEAVE' | 'SICK' | 'REMOTE' | 'OVERRIDE') => {
-        if (!clickPopover) return;
-        const start = clickPopover.date;
-        const end = clickPopover.endDate || start;
 
-        const days: Date[] = [];
-        let curr = new Date(start);
-        while (curr <= end) {
-            days.push(new Date(curr));
-            curr.setDate(curr.getDate() + 1);
-        }
-
-        try {
-            if (onAssignException) {
-                await onAssignException(days, type);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-
-        handleClear();
-    };
 
     const handleClear = () => {
         setSelectionStart(null);
@@ -358,7 +339,6 @@ export default function PlanningCalendar({
                         date={clickPopover.date}
                         templates={templates}
                         onSelectTemplate={handleAssign}
-                        onSelectException={handleAssignException}
                         onClear={handleClear}
                         onClose={handleClear}
                     />
@@ -371,6 +351,7 @@ export default function PlanningCalendar({
                         dateStr={hoverPopover.dateStr}
                         items={hoverPopover.items}
                         exception={hoverPopover.exception}
+                        alignment={hoverPopover.alignment}
                         onMouseEnter={() => {
                             clearHoverTimeout();
                             clearOpenTimeout();

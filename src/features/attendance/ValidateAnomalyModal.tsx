@@ -42,6 +42,8 @@ const Footer = styled.div`
   gap: 0.6rem;
 `;
 
+import { useTranslation } from "react-i18next";
+
 export default function ValidateAnomalyModal(props: {
   record: AttendanceRecord;
   onCloseModal: () => void;
@@ -55,38 +57,39 @@ export default function ValidateAnomalyModal(props: {
   const [justif, setJustif] = useState<string>(
     props.record.justification ?? ""
   );
+  const { t } = useTranslation();
 
   return (
     <Card>
       <div style={{ fontWeight: 700, color: "var(--color-text-strong)" }}>
-        Validate / Justify
+        {t("attendance.validate_modal.title")}
       </div>
 
       <Row>
-        <Label>Employee</Label>
+        <Label>{t("attendance.validate_modal.employee")}</Label>
         <div>
           {props.record.fullName} • {props.record.dateISO}
         </div>
       </Row>
 
       <Row>
-        <Label>Set status</Label>
+        <Label>{t("attendance.validate_modal.set_status")}</Label>
         <Select
           value={newStatus}
           onChange={(e) => setNewStatus(e.target.value as StatusType)}
         >
-          <option value="present">Present</option>
-          <option value="late">Late</option>
-          <option value="absent">Absent</option>
-          <option value="left-early">Left early</option>
-          <option value="manual">Manual</option>
+          <option value="present">{t("attendance.status.present")}</option>
+          <option value="late">{t("attendance.status.late")}</option>
+          <option value="absent">{t("attendance.status.absent")}</option>
+          <option value="left-early">{t("attendance.status.left_early")}</option>
+          <option value="manual">{t("attendance.status.manual")}</option>
         </Select>
       </Row>
 
       <Row>
-        <Label>Justification (optional)</Label>
+        <Label>{t("attendance.validate_modal.justification")}</Label>
         <Input
-          placeholder="Reason / note…"
+          placeholder={t("attendance.validate_modal.justification_placeholder")}
           value={justif}
           onChange={(e) => setJustif(e.target.value)}
         />
@@ -94,7 +97,7 @@ export default function ValidateAnomalyModal(props: {
 
       <Footer>
         <Button variation="secondary" size="small" onClick={props.onCloseModal}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button
           variation="primary"
@@ -108,7 +111,7 @@ export default function ValidateAnomalyModal(props: {
             props.onCloseModal();
           }}
         >
-          Save
+          {t("common.save")}
         </Button>
       </Footer>
     </Card>

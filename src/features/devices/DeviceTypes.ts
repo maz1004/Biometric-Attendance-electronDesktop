@@ -1,4 +1,6 @@
-export type DeviceStatus = "online" | "offline" | "error";
+export type DeviceStatus = "online" | "offline" | "error" | "archived";
+
+export type TrustStatus = "trusted" | "pending_auth" | "conflict" | "blocked" | "blacklisted";
 
 export type Device = {
   id: string;
@@ -7,9 +9,15 @@ export type Device = {
   status: DeviceStatus;
   lastSyncISO: string; // ISO datetime
   ip?: string;
+  mobileIP?: string;
   version?: string;
   currentMode?: "recognition" | "enrollment";
-  isAuthorized?: boolean;
+
+  // Security definitions
+  trustStatus: TrustStatus;
+  conflictId?: string;
+  blockedReason?: string;
+  blockedBy?: string;
 };
 
 export type CaptureStatus = "pending" | "accepted" | "rejected";

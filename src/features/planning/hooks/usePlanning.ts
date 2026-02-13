@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { addWeeks } from "date-fns";
 import { PlanningService } from "../../../services/planning";
 import { getUsers } from "../../../services/users";
 import toast from "react-hot-toast";
@@ -13,8 +14,7 @@ import {
   UserShift,
   CreateShiftDTO,
   UpdateShiftCommand,
-  CreateTeamCommand,
-  UpdateTeamCommand
+  ViewContext
 } from "../types";
 
 /* ---------- utils ---------- */
@@ -36,6 +36,9 @@ export function usePlanning() {
   const queryClient = useQueryClient();
   const [week, setWeekState] = useState<WeekKey>(iso(mondayOf(new Date())));
 
+  // New: Context State
+  const [viewContext, setViewContext] = useState<ViewContext>({ type: 'GLOBAL_DEFAULT' });
+
   const weekStart = useMemo(() => new Date(week), [week]);
   const weekEnd = useMemo(() => {
     const d = new Date(weekStart);
@@ -49,15 +52,44 @@ export function usePlanning() {
     queryFn: () => PlanningService.getShifts(week),
   });
 
+  const { data: templatesData, isLoading: isLoadingTemplates } = useQuery({
+    queryKey: ["templates"],
+    queryFn: PlanningService.getTemplates,
+  });
+
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: ["teams"],
     queryFn: PlanningService.getTeams,
   });
 
-  const { data: assignmentsData, isLoading: isLoadingAssignments } = useQuery({
-    queryKey: ["assignments", week],
-    queryFn: () => PlanningService.getAssignments(week, iso(weekEnd)),
-    // Re-fetch when assigning users
+  // Context-Driven Assignments Query
+  const { data: assignmentsData, isLoading: isLoadingAssignments } = useQuery<UserShift[]>({
+    queryKey: ["assignments", week, viewContext],
+    queryFn: async () => {
+      const start = week;
+      const end = iso(weekEnd);
+
+      if (viewContext.type === 'TEAM') {
+        const res = await PlanningService.fetchAssignmentsBatch({
+          team_id: viewContext.teamId,
+          start_date: start,
+          end_date: end
+        });
+        return res.data;
+      } else if (viewContext.type === 'USER_LIST') {
+        const res = await PlanningService.fetchAssignmentsBatch({
+          user_ids: viewContext.userIds,
+          start_date: start,
+          end_date: end
+        });
+        return res.data;
+      } else {
+        // Fallback to Global (Legacy)
+        const res = await PlanningService.getAssignments(start, end);
+        return res.data;
+      }
+    },
+    // placeholderData: keepPreviousData, // Optional: keep data while fetching new context
   });
 
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
@@ -71,7 +103,9 @@ export function usePlanning() {
   });
 
 
-  const userShifts: UserShift[] = assignmentsData?.data || [];
+  const userShifts: UserShift[] = Array.isArray(assignmentsData)
+    ? assignmentsData
+    : [];
 
   // Transform API data to internal state format
   const state: PlanningState = useMemo(() => {
@@ -84,11 +118,7 @@ export function usePlanning() {
     }
 
     // Transform teams
-    // API returns { teams: [...] } or just array depending on my services fix?
-    // In planning.ts I returned `res.data`. If backend returns { data: [] } then planning.ts should handle it.
-    // Let's assume teamsData is the array or {teams: []}.
     const teamsList = Array.isArray(teamsData) ? teamsData : (teamsData as any)?.teams || (teamsData as any)?.data || [];
-
     const teamsRecord: Record<string, Team> = {};
     if (Array.isArray(teamsList)) {
       teamsList.forEach((t: Team) => {
@@ -107,6 +137,15 @@ export function usePlanning() {
           department: u.department,
         };
       });
+    } else if (Array.isArray(usersData)) {
+      usersData.forEach((u: any) => {
+        employeesRecord[u.id] = {
+          id: u.id,
+          name: `${u.first_name} ${u.last_name}`,
+          avatar: `https://ui-avatars.com/api/?name=${u.first_name}+${u.last_name}&background=random`,
+          department: u.department,
+        };
+      });
     }
 
     return {
@@ -115,6 +154,7 @@ export function usePlanning() {
       teams: teamsRecord,
       shifts: shiftsRecord,
     };
+
   }, [shiftsData, teamsData, usersData, week]);
 
   const isLoading = isLoadingShifts || isLoadingTeams || isLoadingUsers || isLoadingAssignments;
@@ -167,44 +207,32 @@ export function usePlanning() {
     onError: () => toast.error("Failed to delete shift"),
   });
 
-  const { mutate: createTeam } = useMutation({
-    mutationFn: (data: CreateTeamCommand) => PlanningService.createTeam(data),
+  /* ===== TEMPLATE MUTATIONS ===== */
+  const { mutate: createTemplate } = useMutation({
+    mutationFn: (data: any) => PlanningService.createTemplate(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast.success("Team created");
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Modèle créé");
     },
-    onError: () => toast.error("Failed to create team"),
+    onError: () => toast.error("Erreur lors de la création du modèle"),
   });
 
-  const { mutate: updateTeam } = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateTeamCommand }) =>
-      PlanningService.updateTeam(id, data),
+  const { mutate: updateTemplate } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => PlanningService.updateTemplate(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast.success("Team updated");
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Modèle mis à jour");
     },
-    onError: () => toast.error("Failed to update team"),
+    onError: () => toast.error("Erreur lors de la mise à jour du modèle"),
   });
 
-  const { mutate: deleteTeam } = useMutation({
-    mutationFn: PlanningService.deleteTeam,
+  const { mutate: deleteTemplate } = useMutation({
+    mutationFn: PlanningService.deleteTemplate,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["teams"] });
-      toast.success("Team deleted");
+      queryClient.invalidateQueries({ queryKey: ["templates"] });
+      toast.success("Modèle supprimé");
     },
-    onError: () => toast.error("Failed to delete team"),
-  });
-
-  const { mutate: assignUserToShift } = useMutation({
-    mutationFn: PlanningService.assignUserToShift,
-    onSuccess: () => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["assignments"] });
-      toast.success("User assigned to shift");
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to assign user");
-    },
+    onError: () => toast.error("Erreur lors de la suppression du modèle"),
   });
 
   /* ===== helpers ===== */
@@ -247,6 +275,30 @@ export function usePlanning() {
   });
 
   /* ===== NEW MUTATIONS ===== */
+
+  const { mutate: createSchedule } = useMutation({
+    mutationFn: PlanningService.createSchedule,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      toast.success("Schedule assigned");
+    },
+    onError: () => toast.error("Failed to assign schedule"),
+  });
+
+  /* ===== BATCH MUTATION ===== */
+  const { mutate: createAssignmentsBatch } = useMutation({
+    mutationFn: (data: { assignments: any[]; overwrite?: boolean }) =>
+      PlanningService.createAssignmentsBatch(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] }); // CRITICAL: Batch might create new shift templates!
+      toast.success("Assignments batch created");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || "Failed to batch assign");
+    },
+  });
+
   const { mutate: createHoliday } = useMutation({
     mutationFn: PlanningService.createHoliday,
     onSuccess: () => {
@@ -274,60 +326,51 @@ export function usePlanning() {
     onError: () => toast.error("Failed to create exception"),
   });
 
-  const { mutate: createSchedule } = useMutation({
-    mutationFn: PlanningService.createSchedule,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["schedules"] });
-      toast.success("Schedule assigned");
-    },
-    onError: () => toast.error("Failed to assign schedule"),
-  });
-
-  /* ===== BATCH MUTATION ===== */
-  const { mutate: createAssignmentsBatch } = useMutation({
-    mutationFn: (data: { assignments: any[]; overwrite?: boolean }) =>
-      PlanningService.createAssignmentsBatch(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["assignments"] });
-      queryClient.invalidateQueries({ queryKey: ["shifts"] }); // CRITICAL: Batch might create new shift templates!
-      toast.success("Assignments batch created");
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || "Failed to batch assign");
-    },
-  });
-
   return {
     state,
     employees,
     teams,
     shifts,
+    templates: templatesData || [],
+    isLoadingTemplates,
     userShifts,
 
     // New Data
     holidays: holidaysData || [],
     exceptions: exceptionsData || [],
     schedules: effectiveSchedules || [],
-    settings: settingsData, // Expose Global Settings
 
     // week
-    setWeek,
     gotoPrevWeek,
     gotoNextWeek,
     copyWeekForward,
-    // mutations
+    // Context
+    viewContext,
+    setViewContext,
+
+    // Actions
     createShift,
     updateShift,
     deleteShift,
-    createTeam,
-    updateTeam,
-    deleteTeam,
-    assignUserToShift,
+    createSchedule,
     createAssignmentsBatch,
     createHoliday,
     deleteHoliday,
     createException,
-    createSchedule,
+
+    // Templates
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+
+    // Navigation
+    nextWeek: () => setWeekState(iso(addWeeks(new Date(week), 1))),
+    prevWeek: () => setWeekState(iso(addWeeks(new Date(week), -1))),
+    setWeek: (d: Date) => setWeekState(iso(mondayOf(d))),
+
+    // Settings
+    settings: settingsData,
+
     // helpers
     expandShiftMembers,
     dayConflicts,

@@ -2,6 +2,7 @@ import { useState } from "react";
 import styled from "styled-components";
 import { RoleFilter, EnrolledFilter, StatusFilter } from "./EmployeesHeaderBar";
 import { HiXMark } from "react-icons/hi2";
+import { useTranslation } from "react-i18next";
 
 const PopoverCard = styled.div`
   position: absolute;
@@ -175,14 +176,15 @@ export function EmployeesFiltersPopover({
   const [role, setRole] = useState<RoleFilter>(initialRole);
   const [enrolled, setEnrolled] = useState<EnrolledFilter>(initialEnrolled);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
+  const { t } = useTranslation();
 
   return (
     <PopoverCard>
       {/* header */}
       <HeaderRow>
         <TitleBlock>
-          <Title>Filters</Title>
-          <Subtitle>Refine the employee list</Subtitle>
+          <Title>{t("employees.filters.filter_btn")}</Title>
+          <Subtitle>{t("employees.filters.subtitle")}</Subtitle>
         </TitleBlock>
 
         <CloseBtn type="button" onClick={onClose}>
@@ -194,40 +196,40 @@ export function EmployeesFiltersPopover({
 
       {/* Role */}
       <Section>
-        <Label>Role</Label>
+        <Label>{t("employees.filters.role_label")}</Label>
         <Select
           value={role}
           onChange={(e) => setRole(e.target.value as RoleFilter)}
         >
-          <option value="all">All roles</option>
-          <option value="employee">Employees</option>
-          <option value="manager">Managers</option>
+          <option value="all">{t("employees.filters.role_options.all")}</option>
+          <option value="employee">{t("employees.filters.role_options.employee")}</option>
+          <option value="manager">{t("employees.filters.role_options.manager")}</option>
         </Select>
       </Section>
 
       {/* Enrollment */}
       <Section>
-        <Label>Enrollment</Label>
+        <Label>{t("employees.filters.enrolled_label")}</Label>
         <Select
           value={enrolled}
           onChange={(e) => setEnrolled(e.target.value as EnrolledFilter)}
         >
-          <option value="all">All enroll</option>
-          <option value="enrolled">Enrolled</option>
-          <option value="not">Not enrolled</option>
+          <option value="all">{t("employees.filters.enrolled_options.all")}</option>
+          <option value="enrolled">{t("employees.filters.enrolled_options.enrolled")}</option>
+          <option value="not">{t("employees.filters.enrolled_options.not")}</option>
         </Select>
       </Section>
 
       {/* Status */}
       <Section>
-        <Label>Status</Label>
+        <Label>{t("employees.filters.status_label")}</Label>
         <Select
           value={status}
           onChange={(e) => setStatus(e.target.value as StatusFilter)}
         >
-          <option value="all">All status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">{t("employees.filters.status_options.all")}</option>
+          <option value="active">{t("employees.filters.status_options.active")}</option>
+          <option value="inactive">{t("employees.filters.status_options.inactive")}</option>
         </Select>
       </Section>
 
@@ -240,12 +242,12 @@ export function EmployeesFiltersPopover({
             onClear();
           }}
         >
-          <span>Clear all</span>
+          <span>{t("employees.filters.clear")}</span>
         </GhostButton>
 
         <div style={{ display: "flex", gap: "0.8rem" }}>
           <GhostButton type="button" onClick={onClose}>
-            <span>Cancel</span>
+            <span>{t("common.cancel")}</span>
           </GhostButton>
 
           <ApplyButton
@@ -254,7 +256,7 @@ export function EmployeesFiltersPopover({
               onApply({ role, enrolled, status });
             }}
           >
-            <span>Apply</span>
+            <span>{t("employees.filters.apply")}</span>
           </ApplyButton>
         </div>
       </FooterRow>

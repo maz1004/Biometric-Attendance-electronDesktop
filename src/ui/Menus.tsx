@@ -20,8 +20,11 @@ const StyledToggle = styled.button`
   border: none;
   padding: 0.4rem;
   border-radius: var(--border-radius-sm);
-  transform: translateX(0.8rem);
+  border-radius: var(--border-radius-sm);
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background-color: var(--color-grey-100);
@@ -45,6 +48,7 @@ const StyledList = styled.ul<{ position: Position }>`
 
   right: ${(props) => props.position.x}px;
   top: ${(props) => props.position.y}px;
+  z-index: 2000;
 `;
 
 const StyledButton = styled.button`
@@ -99,9 +103,9 @@ function Menus({ children }: MenusProps) {
   );
 }
 
-type ToggleProps = { id: string };
+type ToggleProps = { id: string; children?: React.ReactNode };
 
-function Toggle({ id }: ToggleProps) {
+function Toggle({ id, children }: ToggleProps) {
   const ctx = useContext(MenuContext);
   if (!ctx) throw new Error("Menus.Toggle must be used within <Menus>");
 
@@ -124,7 +128,7 @@ function Toggle({ id }: ToggleProps) {
 
   return (
     <StyledToggle onClick={handleClick}>
-      <HiEllipsisVertical />
+      {children || <HiEllipsisVertical />}
     </StyledToggle>
   );
 }

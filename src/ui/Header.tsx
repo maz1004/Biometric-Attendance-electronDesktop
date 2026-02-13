@@ -1,5 +1,4 @@
 import styled from "styled-components";
-import UserAvatar from "../features/authentication/UserAvatar";
 import HeaderMenu from "./HeaderMenu";
 import NotificationCenter from "../features/notifications/NotificationCenter";
 
@@ -8,7 +7,7 @@ const StyledHeader = styled.header`
   padding: 1.2rem 4.8rem;
   border-bottom: 1px solid var(--color-grey-100);
   display: flex;
-  gap: 2.4rem;
+  gap: 0.6rem;
   align-items: center;
   justify-content: flex-end;
 `;
@@ -16,7 +15,6 @@ function Header() {
   return (
     <StyledHeader>
       <NotificationCenter />
-      <UserAvatar />
       <HeaderMenu />
     </StyledHeader>
   );

@@ -21,8 +21,10 @@ const Badge = styled.span<{ $type: string }>`
   }}
 `;
 
-export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
+import { useTranslation } from "react-i18next";
 
+export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
+  const { t } = useTranslation();
 
   return (
     <Table.Row>
@@ -34,7 +36,7 @@ export default function AttendanceRow({ row }: { row: AttendanceRecord }) {
       <div>{row.checkIn ?? "—"}</div>
       <div>{row.checkOut ?? "—"}</div>
       <div>
-        <Badge $type={row.status}>{row.status.replace("-", " ")}</Badge>
+        <Badge $type={row.status}>{t(`attendance.status.${row.status.replace("-", "_")}`)}</Badge>
       </div>
 
     </Table.Row>

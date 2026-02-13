@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { EmployeesFiltersPopover } from "./EmployeesFiltersPopover";
 import { HiFunnel, HiMagnifyingGlass, HiChevronUpDown, HiPlus } from "react-icons/hi2";
 import Button from "../../ui/Button";
@@ -181,6 +182,7 @@ export default function EmployeesHeaderBar({
   sortBy,
 }: EmployeesHeaderBarProps): JSX.Element {
   const [openFilters, setOpenFilters] = useState<boolean>(false);
+  const { t } = useTranslation();
 
   return (
     <div style={{ position: "relative" }}>
@@ -193,7 +195,7 @@ export default function EmployeesHeaderBar({
             </SearchIcon>
 
             <SearchInput
-              placeholder="Search employee, ID, department..."
+              placeholder={t("employees.filters.search_placeholder")}
               value={search}
               onChange={(e) => onChangeSearch(e.target.value)}
             />
@@ -202,7 +204,7 @@ export default function EmployeesHeaderBar({
           {onAddEmployee && (
             <Button size="medium" onClick={onAddEmployee}>
               <HiPlus />
-              <span>Add Employee</span>
+              <span>{t("employees.actions.add_employee")}</span>
             </Button>
           )}
         </LeftSide>
@@ -214,7 +216,7 @@ export default function EmployeesHeaderBar({
             onClick={() => setOpenFilters((prev) => !prev)}
           >
             <HiFunnel />
-            <span>Filters</span>
+            <span>{t("employees.filters.filter_btn")}</span>
           </FiltersButton>
 
           <SortWrapper>
@@ -222,12 +224,12 @@ export default function EmployeesHeaderBar({
               value={sortBy}
               onChange={(e) => onChangeSort(e.target.value as SortByOption)}
             >
-              <option value="createdAt-desc">Newest first</option>
-              <option value="createdAt-asc">Oldest first</option>
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="name-desc">Name (Z-A)</option>
-              <option value="presenceRate-desc">Best attendance</option>
-              <option value="presenceRate-asc">Lowest attendance</option>
+              <option value="createdAt-desc">{t("employees.filters.sort.newest")}</option>
+              <option value="createdAt-asc">{t("employees.filters.sort.oldest")}</option>
+              <option value="name-asc">{t("employees.filters.sort.name_asc")}</option>
+              <option value="name-desc">{t("employees.filters.sort.name_desc")}</option>
+              <option value="presenceRate-desc">{t("employees.filters.sort.best_attendance")}</option>
+              <option value="presenceRate-asc">{t("employees.filters.sort.lowest_attendance")}</option>
             </SortSelect>
 
             <SortChevron>

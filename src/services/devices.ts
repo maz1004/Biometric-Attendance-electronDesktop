@@ -27,107 +27,115 @@ export interface PendingEnrollment {
 
 /**
  * Get all devices
- * GET /api/v1/devices
+ * GET /api/v1/admin/devices
  */
 export const getDevices = async (): Promise<DevicesResponse> => {
-    const response = await apiClient.get<DevicesResponse>('/devices');
+    const response = await apiClient.get<DevicesResponse>('/admin/devices');
     return response.data;
 };
 
 /**
  * Get single device by ID
- * GET /api/v1/devices/:id
+ * GET /api/v1/admin/devices/:id
  */
 export const getDevice = async (id: string): Promise<Device> => {
-    const response = await apiClient.get<Device>(`/devices/${id}`);
+    const response = await apiClient.get<Device>(`/admin/devices/${id}`);
     return response.data;
 };
 
 /**
  * Register new device
- * POST /api/v1/devices
+ * POST /api/v1/admin/devices/register
  */
 export const registerDevice = async (data: RegisterDeviceRequest): Promise<SuccessResponse<Device>> => {
-    const response = await apiClient.post<SuccessResponse<Device>>('/devices', data);
+    const response = await apiClient.post<SuccessResponse<Device>>('/admin/devices/register', data);
     return response.data;
 };
 
 /**
  * Update device
- * PUT /api/v1/devices/:id
+ * PUT /api/v1/admin/devices/:id/details
  */
 export const updateDevice = async (id: string, data: Partial<RegisterDeviceRequest>): Promise<SuccessResponse<Device>> => {
-    const response = await apiClient.put<SuccessResponse<Device>>(`/devices/${id}`, data);
+    const response = await apiClient.put<SuccessResponse<Device>>(`/admin/devices/${id}/details`, data);
     return response.data;
 };
 
 /**
  * Delete device
- * DELETE /api/v1/devices/:id
+ * DELETE /api/v1/admin/devices/:id
  */
 export const deleteDevice = async (id: string): Promise<SuccessResponse<void>> => {
-    const response = await apiClient.delete<SuccessResponse<void>>(`/devices/${id}`);
+    const response = await apiClient.delete<SuccessResponse<void>>(`/admin/devices/${id}`);
     return response.data;
 };
 
 
 export const setDeviceMode = async (id: string, mode: 'enrollment' | 'recognition'): Promise<void> => {
-    await apiClient.post(`/devices/${id}/mode`, { mode });
+    await apiClient.post(`/admin/devices/${id}/mode`, { mode });
 };
 
 /**
  * Sync device
- * POST /api/v1/devices/:id/sync
+ * POST /api/v1/admin/devices/:id/sync
  */
 export const syncDevice = async (id: string): Promise<void> => {
-    await apiClient.post(`/devices/${id}/sync`);
+    await apiClient.post(`/admin/devices/${id}/sync`);
 };
 
 /**
- * Authorize device
- * POST /api/v1/devices/:id/authorize
+ * Resolve device conflict or authorize replacement
+ * POST /api/v1/admin/devices/:id/resolve
  */
-export const authorizeDevice = async (id: string): Promise<void> => {
-    await apiClient.post(`/devices/${id}/authorize`);
+export const resolveConflict = async (id: string, resolution: 'approve_replacement' | 'block_device' | 'blacklist_device'): Promise<void> => {
+    await apiClient.post(`/admin/devices/${id}/resolve`, { resolution });
+};
+
+/**
+ * Blacklist IP address
+ * POST /api/v1/admin/devices/blacklist-ip
+ */
+export const blockIP = async (ip: string, reason: string): Promise<void> => {
+    await apiClient.post(`/admin/devices/blacklist-ip`, { ip, reason });
 };
 
 /**
  * Update device details
- * PUT /api/v1/devices/:id/details
+ * PUT /api/v1/admin/devices/:id/details
  */
 export const updateDeviceDetails = async (id: string, name: string, location: string): Promise<void> => {
-    await apiClient.put(`/devices/${id}/details`, { name, location });
+    await apiClient.put(`/admin/devices/${id}/details`, { name, location });
 };
 
 /**
  * Get pending enrollments
- * GET /api/v1/mobile/enrollments/pending
+ * GET /api/v1/admin/enrollments/pending
  */
 export const getPendingEnrollments = async (): Promise<SuccessResponse<PendingEnrollment[]>> => {
-    const response = await apiClient.get<SuccessResponse<PendingEnrollment[]>>("/mobile/enrollments/pending");
+    const response = await apiClient.get<SuccessResponse<PendingEnrollment[]>>("/admin/enrollments/pending");
     return response.data;
 };
 
 /**
  * Validate enrollment
- * POST /api/v1/mobile/enrollments/pending/:id/validate
+ * POST /api/v1/admin/enrollments/pending/:id/validate
  */
 export const validateEnrollment = async (id: string, approved: boolean): Promise<SuccessResponse<void>> => {
     if (approved) {
-        const response = await apiClient.post<SuccessResponse<void>>(`/mobile/enrollments/pending/${id}/validate`);
+        const response = await apiClient.post<SuccessResponse<void>>(`/admin/enrollments/pending/${id}/validate`);
         return response.data;
     } else {
-        const response = await apiClient.delete<SuccessResponse<void>>(`/mobile/enrollments/pending/${id}`);
+        const response = await apiClient.delete<SuccessResponse<void>>(`/admin/enrollments/pending/${id}`);
         return response.data;
     }
 };
 
 /**
  * Deactivate a device (Admin)
- * POST /api/v1/mobile/admin/devices/:id/deactivate
+ * POST /api/v1/admin/devices/live/:id/deactivate
  */
 export const deactivateDevice = async (id: string): Promise<SuccessResponse<void>> => {
-    const response = await apiClient.post<SuccessResponse<void>>(`/mobile/admin/devices/${id}/deactivate`);
+    const response = await apiClient.post<SuccessResponse<void>>(`/admin/devices/live/${id}/deactivate`);
     return response.data;
 };
 

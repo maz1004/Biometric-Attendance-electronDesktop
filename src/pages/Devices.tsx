@@ -1,4 +1,7 @@
+import { useEffect } from "react";
+import toast from "react-hot-toast";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { useDevices } from "../features/devices/useDevices";
 import DeviceHeaderBar from "../features/devices/DeviceHeaderBar";
 import ValidationQueue from "../features/devices/ValidationQueue";
@@ -15,18 +18,35 @@ const Section = styled.section`
 `;
 
 export default function Devices(): JSX.Element {
+  const { t } = useTranslation();
   const d = useDevices();
+
+  useEffect(() => {
+    const conflicts = d.devices.filter(dev => dev.trustStatus === 'conflict');
+    if (conflicts.length > 0) {
+      toast.error(t("devices.alerts.conflict_toast", { count: conflicts.length }), {
+        duration: 6000,
+        icon: '⚠️'
+      });
+    }
+  }, [d.devices, t]);
 
   return (
     <Section>
-      <h2 style={{ margin: 0 }}>Devices & Validation</h2>
+      <h2 style={{ margin: 0 }}>{t("devices.header.title")}</h2>
 
       <DeviceHeaderBar
         filters={d.devFilters}
         onChange={(patch) => d.setDevFilters((prev) => ({ ...prev, ...patch }))}
       />
 
-      <DeviceTable devices={d.devices} />
+      <DeviceTable
+        devices={d.devices}
+        onResolve={(id, resolution) => d.resolveConflict({ id, resolution })}
+        onBlock={(ip, reason) => d.blockIP({ ip, reason })}
+        onDelete={d.removeDevice}
+        isLoading={d.isLoading}
+      />
 
       <ValidationQueue
         allDevices={d.allDevices}

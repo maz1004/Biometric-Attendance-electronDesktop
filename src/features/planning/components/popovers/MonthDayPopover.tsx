@@ -83,7 +83,6 @@ interface MonthDayPopoverProps {
   date: Date;
   templates: Shift[];
   onSelectTemplate: (template: Shift) => void;
-  onSelectException?: (type: 'LEAVE' | 'SICK' | 'REMOTE' | 'OVERRIDE') => void;
   onClear: () => void;
   onClose: () => void;
 }
@@ -93,7 +92,6 @@ export default function MonthDayPopover({
   y,
   templates,
   onSelectTemplate,
-  onSelectException,
   onClear,
   onClose
 }: MonthDayPopoverProps) {
@@ -126,39 +124,38 @@ export default function MonthDayPopover({
         <ScrollList>
           {/* Section: Modèles */}
           <div className="px-1 py-1 text-sm font-bold text-gray-600 uppercase tracking-wider">Modèles</div>
-          {templates.map(t => (
-            <TemplateItem
-              key={t.id}
-              color={t.color || "#ccc"}
-              onClick={() => onSelectTemplate(t)}
-              className="hover:bg-muted/50 hover:border-border"
-            >
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: 500 }}>{t.name}</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                  {t.startTime || "09:00"} - {t.endTime || "17:00"}
-                </span>
-              </div>
-            </TemplateItem>
-          ))}
+          {templates.map(t => {
+            // Derive a proper display name - detect if name is just a time range
+            const isTimeRangeName = t.name && /^\d{1,2}[h:]?\d{0,2}\s*[>\-]\s*\d{1,2}[h:]?\d{0,2}$/i.test(t.name);
+            const displayName = isTimeRangeName || !t.name
+              ? `Shift ${t.startTime || "09:00"} - ${t.endTime || "17:00"}`
+              : t.name;
 
-          <div className="my-2 border-t border-border-element" />
+            // Extract time info for subtitle
+            const timeInfo = t.startTime && t.endTime
+              ? `${t.startTime} - ${t.endTime}`
+              : null;
 
-          {/* Section: Exceptions */}
-          <div className="px-1 py-1 text-sm font-bold text-gray-600 uppercase tracking-wider">Absences & Exceptions</div>
-          {[
-            { type: 'LEAVE', label: 'Holiday', color: '#ef4444' },
-            { type: 'OVERRIDE', label: 'Exception', color: '#f97316' },
-          ].map((exc) => (
-            <TemplateItem
-              key={exc.type}
-              color={exc.color}
-              onClick={() => onSelectException?.(exc.type as any)}
-              className="hover:bg-muted/50 hover:border-border"
-            >
-              <span style={{ fontWeight: 500 }}>{exc.label}</span>
-            </TemplateItem>
-          ))}
+            return (
+              <TemplateItem
+                key={t.id}
+                color={t.color || "#ccc"}
+                onClick={() => onSelectTemplate(t)}
+                className="hover:bg-muted/50 hover:border-border"
+              >
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 500 }}>{displayName}</span>
+                  {timeInfo && !isTimeRangeName && (
+                    <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+                      {timeInfo}
+                    </span>
+                  )}
+                </div>
+              </TemplateItem>
+            );
+          })}
+
+
         </ScrollList>
       </PopoverContainer>
     </>

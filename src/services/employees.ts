@@ -45,10 +45,14 @@ const mapApiUserToEmployee = (user: UserResponse): Employee => {
     phoneNumber: user.phone_number,
     dateOfBirth: user.date_of_birth,
     stats: user.stats ? {
-      presenceRatePct: user.stats.punctuality_rate || 0,
+      presenceRatePct: user.stats.total_days > 0
+        ? Math.round((user.stats.present_days / user.stats.total_days) * 100)
+        : 0,
       lateCount30d: user.stats.late_days || 0,
       absenceCount30d: user.stats.absent_days || 0,
-      efficiencyScore: 100, // Placeholder
+      efficiencyScore: user.stats.total_days > 0
+        ? Math.round((user.stats.present_days / user.stats.total_days) * 100)
+        : 0,
     } : undefined
   };
 };
@@ -101,55 +105,55 @@ export const getEmployee = async (id: string): Promise<Employee> => {
 
 /**
  * Create new employee
- * POST /api/v1/users/employee
+ * POST /api/v1/admin/users/employee
  */
 export const createEmployee = async (data: CreateEmployeeRequest): Promise<Employee> => {
-  const response = await apiClient.post<SuccessResponse<UserResponse>>('/users/employee', data);
+  const response = await apiClient.post<SuccessResponse<UserResponse>>('/admin/users/employee', data);
   return mapApiUserToEmployee(response.data.data!);
 };
 
 /**
  * Update employee
- * PUT /api/v1/users/:id
+ * PUT /api/v1/admin/users/:id
  */
 export const updateEmployee = async (id: string, data: UpdateUserRequest): Promise<Employee> => {
-  const response = await apiClient.put<SuccessResponse<UserResponse>>(`/users/${id}`, data);
+  const response = await apiClient.put<SuccessResponse<UserResponse>>(`/admin/users/${id}`, data);
   return mapApiUserToEmployee(response.data.data!);
 };
 
 /**
  * Delete employee
- * DELETE /api/v1/users/:id
+ * DELETE /api/v1/admin/users/:id
  */
 export const deleteEmployee = async (id: string): Promise<void> => {
-  await apiClient.delete<SuccessResponse<void>>(`/users/${id}`);
+  await apiClient.delete<SuccessResponse<void>>(`/admin/users/${id}`);
   return;
 };
 
 /**
  * Activate employee account
- * PUT /api/v1/users/:id/activate
+ * PUT /api/v1/admin/users/:id/activate
  */
 export const activateEmployee = async (id: string): Promise<void> => {
-  await apiClient.put<SuccessResponse<void>>(`/users/${id}/activate`);
+  await apiClient.put<SuccessResponse<void>>(`/admin/users/${id}/activate`);
   return;
 };
 
 /**
  * Deactivate employee account
- * PUT /api/v1/users/:id/deactivate
+ * PUT /api/v1/admin/users/:id/deactivate
  */
 export const deactivateEmployee = async (id: string): Promise<void> => {
-  await apiClient.put<SuccessResponse<void>>(`/users/${id}/deactivate`);
+  await apiClient.put<SuccessResponse<void>>(`/admin/users/${id}/deactivate`);
   return;
 };
 
 /**
  * Enroll user face (Separated from profile photo)
- * POST /api/v1/users/:id/enroll
+ * POST /api/v1/admin/users/:id/enroll
  */
 export const enrollFace = async (id: string, faceTemplate: string): Promise<void> => {
-  await apiClient.post<SuccessResponse<void>>(`/users/${id}/enroll`, { face_template: faceTemplate });
+  await apiClient.post<SuccessResponse<void>>(`/admin/users/${id}/enroll`, { face_template: faceTemplate });
   return;
 };
 

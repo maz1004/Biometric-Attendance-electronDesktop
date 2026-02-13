@@ -1,0 +1,382 @@
+{
+    "common": {
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "delete": "حذف",
+        "edit": "تعديل",
+        "loading": "جاري التحميل...",
+        "search": "بحث...",
+        "confirm": "تأكيد",
+        "last_update": "آخر تحديث: ",
+        "field_required": "هذا الحقل مطلوب"
+    },
+    "sidebar": {
+        "dashboard": "لوحة القيادة",
+        "attendance": "الحضور",
+        "employees": "الموظفين",
+        "planning": "التخطيط",
+        "devices": "الأجهزة",
+        "reports": "التقارير",
+        "settings": "الإعدادات"
+    },
+    "header": {
+        "profile": "الملف الشخصي",
+        "logout": "تسجيل خروج"
+    },
+    "dashboard": {
+        "title": "لوحة القيادة",
+        "welcome": "مرحباً بعودتك",
+        "stats": {
+            "total_employees": "إجمالي الموظفين",
+            "presents_today": "الحضور اليوم",
+            "presence_rate": "نسبة الحضور",
+            "late_rate": "نسبة التأخير"
+        },
+        "chart": {
+            "title": "الانضباط الأسبوعي",
+            "presence": "حضور",
+            "late": "تأخير"
+        },
+        "quick_actions": {
+            "title": "إجراءات سريعة",
+            "add_employee": "إضافة موظف",
+            "view_planning": "عرض التخطيط",
+            "todays_attendance": "حضور اليوم"
+        },
+        "recent": {
+            "title": "النشاط الأخير",
+            "no_activity": "لا يوجد نشاط أخير."
+        }
+    },
+    "settings": {
+        "title": "الإعدادات",
+        "appearance": "المظهر",
+        "language": "اللغة",
+        "theme": "الموضوع",
+        "form": {
+            "company_name": "اسم الشركة",
+            "company_name_required": "هذا الحقل مطلوب",
+            "late_threshold": "حد التأخير (بالدقائق)",
+            "late_threshold_min": "الحد الأدنى هو 0",
+            "early_departure_threshold": "حد المغادرة المبكرة (بالدقائق)",
+            "early_departure_threshold_min": "الحد الأدنى هو 0",
+            "day_schedule": "جدول العمل النهاري (تخطيط)",
+            "night_schedule": "جدول العمل الليلي (تخطيط)",
+            "to": "إلى",
+            "update_btn": "تحديث الإعدادات",
+            "updating": "جاري التحديث..."
+        },
+        "logic": {
+            "title": "منطق الحضور",
+            "enable_planning": "تفعيل وضع التخطيط",
+            "enable_planning_tooltip": "تفعيل تتبع الحضور الصارم بناءً على جداول الموظفين الفردية. سيتم حساب التأخير والغياب مقابل الورديات المخصصة.",
+            "track_global": "تتبع التأخير العام",
+            "track_global_tooltip": "تفعيل تتبع التأخير العام بناءً على 'ساعات العمل العامة'. ينطبق على جميع الموظفين الذين ليس لديهم جدول محدد."
+        },
+        "verification": {
+            "overlap_day_end": "يتداخل مع بداية الليل",
+            "overlap_night_start": "يتداخل مع نهاية النهار",
+            "warning_title": "تحذير",
+            "restore_btn": "استعادة الجداول",
+            "archive_btn": "أرشفة ومتابعة",
+            "success_updated": "تم تحديث الإعدادات. تمت أرشفة {{count}} وردية.",
+            "restored_msg": "تمت استعادة الجداول إلى القيم الحالية",
+            "archive_reason": "غير متوافق مع الجدول الزمني الجديد: {{range}}",
+            "current": "الحالي",
+            "new": "الجديد"
+        }
+    },
+    "attendance": {
+        "header": {
+            "title": "الحضور",
+            "description": "الحضور، التأخير، الغياب — تصفية حسب اليوم/الأسبوع/الشهر والتحقق من الحالات الشاذة."
+        },
+        "heatmap": {
+            "title": "الخريطة الحرارية الشهرية (للحاضرين فقط)"
+        },
+        "export": {
+            "csv": "تصدير CSV",
+            "pdf": "تصدير PDF",
+            "loading": "جاري التصدير..."
+        },
+        "table": {
+            "name": "الاسم",
+            "department": "القسم",
+            "date": "التاريخ",
+            "in": "دخول",
+            "out": "خروج",
+            "status": "الحالة"
+        },
+        "filters": {
+            "search_placeholder": "بحث الاسم، المعرف، القسم...",
+            "filter_btn": "تصفية",
+            "period": {
+                "day": "يوم",
+                "week": "أسبوع",
+                "month": "شهر"
+            },
+            "sort": {
+                "date_newest": "الأحدث تاريخاً",
+                "date_oldest": "الأقدم تاريخاً",
+                "name_asc": "الاسم (أ-ي)",
+                "name_desc": "الاسم (ي-أ)",
+                "status_asc": "الحالة (أ-ي)",
+                "status_desc": "الحالة (ي-أ)"
+            }
+        },
+        "status": {
+            "present": "حاضر",
+            "late": "متأخر",
+            "absent": "غائب",
+            "left_early": "غادر مبكراً",
+            "manual": "يدوي"
+        },
+        "validate_modal": {
+            "title": "تأكيد / تبرير",
+            "employee": "الموظف",
+            "set_status": "تعيين الحالة",
+            "justification": "تبرير (اختياري)",
+            "justification_placeholder": "سبب / ملاحظة..."
+        }
+    },
+    "planning": {
+        "actions": {
+            "manage_holidays": "إدارة الأعياد",
+            "manage_exceptions": "إدارة الاستثناءات"
+        },
+        "filters": {
+            "display_label": "عرض",
+            "show_shifts": "التخطيط",
+            "show_exceptions": "الاستثناءات / الغياب",
+            "show_holidays": "أيام العطل"
+        }
+    },
+    "employees": {
+        "table": {
+            "pic": "صورة",
+            "employee": "الموظف",
+            "dept_role": "القسم / الدور",
+            "enroll": "التسجيل",
+            "status": "الحالة",
+            "stats": "إحصائيات (30 يوم)"
+        },
+        "status": {
+            "active": "نشط",
+            "inactive": "غير نشط",
+            "enrolled": "مسجل",
+            "not_enrolled": "غير مسجل"
+        },
+        "role": {
+            "manager": "مدير",
+            "employee": "موظف",
+            "admin": "مسؤول",
+            "rh": "الموارد البشرية"
+        },
+        "actions": {
+            "enroll_face": "تسجيل الوجه",
+            "edit": "تعديل",
+            "delete": "حذف",
+            "add_employee": "إضافة موظف"
+        },
+        "filters": {
+            "search_placeholder": "بحث الموظف، المعرف، القسم...",
+            "filter_btn": "تصفية",
+            "subtitle": "تصفية قائمة الموظفين",
+            "role_label": "الدور",
+            "role_options": {
+                "all": "كل الأدوار",
+                "employee": "موظفون",
+                "manager": "مدراء"
+            },
+            "enrolled_label": "التسجيل",
+            "enrolled_options": {
+                "all": "الكل",
+                "enrolled": "مسجل",
+                "not": "غير مسجل"
+            },
+            "status_label": "الحالة",
+            "status_options": {
+                "all": "كل الحالات",
+                "active": "نشط",
+                "inactive": "غير نشط"
+            },
+            "apply": "تطبيق",
+            "clear": "مسح الكل",
+            "sort": {
+                "newest": "الأحدث أولاً",
+                "oldest": "الأقدم أولاً",
+                "name_asc": "الاسم (أ-ي)",
+                "name_desc": "الاسم (ي-أ)",
+                "best_attendance": "أفضل حضور",
+                "lowest_attendance": "أقل حضور"
+            }
+        },
+        "form": {
+            "create_employee": "إنشاء موظف",
+            "create_admin": "إنشاء مسؤول / HR",
+            "update": "تحديث",
+            "first_name": "الاسم الأول",
+            "last_name": "الاسم الأخير",
+            "email": "البريد الإلكتروني",
+            "phone": "الهاتف",
+            "dob": "تاريخ الميلاد",
+            "department": "القسم",
+            "role": "الدور",
+            "password": "كلمة المرور",
+            "status": "الحالة",
+            "cv": "السيرة الذاتية (PDF)",
+            "placeholders": {
+                "email": "name@company.com",
+                "phone": "+123...",
+                "department": "إنتاج / جودة / موارد...",
+                "password": "8 أحرف كحد أدنى"
+            }
+        },
+        "stats": {
+            "presence": "حضور",
+            "late": "تأخير",
+            "absent": "غياب"
+        }
+    },
+    "devices": {
+        "alerts": {
+            "ip_conflict": "تنبيه أمني: يوجد تعارض في عناوين IP لـ {{count}} جهاز/أجهزة!"
+        },
+        "header": {
+            "title": "الأجهزة والتحقق",
+            "description": "إدارة ومراقبة الوحدات البيومترية الخاصة بك عبر المؤسسة."
+        },
+        "table": {
+            "device": "الجهاز",
+            "location": "الموقع",
+            "status": "الحالة",
+            "last_sync": "آخر مزامنة",
+            "mode": "الوضع",
+            "version": "الإصدار"
+        },
+        "status": {
+            "online": "متصل",
+            "offline": "غير متصل",
+            "error": "خطأ",
+            "pending_auth": "في انتظار المصادقة",
+            "conflict": "تعارض",
+            "blocked": "محظور",
+            "trusted": "موثوق",
+            "blacklisted": "قائمة سوداء",
+            "unknown": "غير معروف"
+        },
+        "mode": {
+            "recognition": "التعرف",
+            "enrollment": "التسجيل",
+            "idle": "خامل"
+        },
+        "actions": {
+            "sync": "مزامنة الآن",
+            "switch_recognition": "التبديل إلى التعرف",
+            "switch_enrollment": "التبديل إلى التسجيل",
+            "resolve": "حل مسألة أمنية",
+            "blacklist": "حظر IP",
+            "delete": "حذف الجهاز"
+        },
+        "filters": {
+            "search_placeholder": "بحث الجهاز، IP، الموقع...",
+            "filter_btn": "تصفية",
+            "status_label": "الحالة",
+            "sort_label": "ترتيب",
+            "clear": "مسح",
+            "apply": "تطبيق",
+            "sort": {
+                "newest_sync": "آخر مزامنة (الأحدث)",
+                "oldest_sync": "آخر مزامنة (الأقدم)",
+                "name_az": "الاسم أ ← ي",
+                "name_za": "الاسم ي ← أ"
+            },
+            "status_options": {
+                "all": "الكل",
+                "online": "متصل",
+                "offline": "غير متصل",
+                "error": "خطأ"
+            }
+        },
+        "modals": {
+            "block": {
+                "title": "حظر عنوان IP",
+                "confirm_text": "هل أنت متأكد من أنك تريد حظر {{ip}}؟ سيتم حظر جميع الأجهزة المتصلة من هذا العنوان فوراً.",
+                "reason_label": "سبب الحظر",
+                "confirm_btn": "تأكيد الحظر"
+            },
+            "conflict": {
+                "title_resolve": "حل تعارض الجهاز",
+                "title_auth": "تفويض الجهاز",
+                "alert_conflict": "تنبيه أمني: تعارض عنوان IP",
+                "alert_auth": "التفويض مطلوب",
+                "text_conflict": "يحاول هذا الجهاز الاتصال باستخدام عنوان IP مرتبط بجهاز آخر موثوق.",
+                "text_auth": "هذا الجهاز ينتظر التفويض. يرجى التحقق من تفاصيل الجهاز قبل المتابعة.",
+                "details_title": "تفاصيل الجهاز",
+                "labels": {
+                    "name": "الاسم",
+                    "ip": "عنوان IP",
+                    "mac": "عنوان MAC",
+                    "trust_status": "حالة الثقة"
+                },
+                "btns": {
+                    "block": "حظر الجهاز",
+                    "approve": "اعتماد الاستبدال",
+                    "authorize": "تفويض الجهاز"
+                }
+            },
+            "details": {
+                "headers": {
+                    "network": "واجهات الشبكة",
+                    "system": "تفاصيل النظام",
+                    "deployment": "النشر",
+                    "activity": "النشاط"
+                },
+                "labels": {
+                    "kiosk_ip": "IP الكشك (إيثرنت/واي فاي)",
+                    "tablet_ip": "IP الجهاز اللوحي (موبايل)",
+                    "mac": "عنوان MAC",
+                    "version": "إصدار البرنامج",
+                    "current_mode": "الوضع الحالي",
+                    "trust_status": "حالة الثقة",
+                    "location": "الموقع",
+                    "last_seen": "آخر ظهور"
+                },
+                "values": {
+                    "unknown": "غير معروف",
+                    "unassigned": "غير معين",
+                    "never": "أبداً"
+                }
+            }
+        },
+        "validation": {
+            "title": "اللقطات غير المتحقق منها",
+            "card": {
+                "guess": "تخمين",
+                "unknown": "غير معروف",
+                "score": "النتيجة",
+                "liveness": "الحيوية",
+                "status": "الحالة",
+                "accept": "قبول",
+                "reject": "رفض",
+                "values": {
+                    "pending": "قيد الانتظار",
+                    "pass": "ناجح",
+                    "fail": "فاشل"
+                }
+            },
+            "filters": {
+                "all_devices": "كل الأجهزة",
+                "all_liveness": "كل حالات الحيوية",
+                "liveness_pass": "نجاح الحياة",
+                "liveness_fail": "فشل الحياة",
+                "unknown": "غير معروف",
+                "all_statuses": "كل الحالات",
+                "pending": "قيد الانتظار",
+                "accepted": "مقبول",
+                "rejected": "مرفوض",
+                "min_score": "الحد الأدنى للدرجة"
+            }
+        }
+    }
+}

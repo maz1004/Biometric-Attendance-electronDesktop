@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import styled from "styled-components";
 import { useAttendance } from "../features/attendance/useAttendance";
 import { AttendanceRow, DayAgg } from "../features/attendance/AttendanceTypes";
@@ -59,6 +60,7 @@ const attendanceColumns: ColumnDefinition<AttendanceRow>[] = [
 ];
 
 export default function Attendance(): JSX.Element {
+  const { t } = useTranslation();
   const at = useAttendance();
 
   // simple day aggregations for heatmap (present count only)
@@ -96,10 +98,9 @@ export default function Attendance(): JSX.Element {
   return (
     <Section>
       <Head>
-        <Title>Attendance</Title>
+        <Title>{t("attendance.header.title")}</Title>
         <Sub>
-          Presence, lateness, absences — filter by day/week/month and validate
-          anomalies.
+          {t("attendance.header.description")}
         </Sub>
       </Head>
 
@@ -132,14 +133,14 @@ export default function Attendance(): JSX.Element {
             alignItems: "center",
           }}
         >
-          <div style={{ fontWeight: 600 }}>Monthly heatmap (present only)</div>
+          <div style={{ fontWeight: 600 }}>{t("attendance.heatmap.title")}</div>
           <div style={{ display: "flex", gap: ".6rem" }}>
             <Button
               size="small"
               variation="secondary"
               onClick={handleExportCSV}
             >
-              Export CSV
+              {t("attendance.export.csv")}
             </Button>
 
             <PDFDownloadLink
@@ -153,7 +154,7 @@ export default function Attendance(): JSX.Element {
             >
               {({ loading }) => (
                 <Button size="small" variation="secondary" disabled={loading}>
-                  {loading ? "Exporting..." : "Export PDF"}
+                  {loading ? t("attendance.export.loading") : t("attendance.export.pdf")}
                 </Button>
               )}
             </PDFDownloadLink>

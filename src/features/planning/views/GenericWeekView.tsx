@@ -1,57 +1,24 @@
-import styled from "styled-components";
+import { } from "react";
+import styled, { css } from "styled-components";
 import { ComputedSchedule, Team } from "../types";
+import { computeDotVariant, DotVariant } from "../engine/dotRenderEngine";
 
-// ----- STYLED COMPONENTS (Shared-ish with OperationalWeekView but simplified) -----
+// ----- STYLED COMPONENTS (Shared with OperationalWeekView) -----
 
 const Container = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
   background: var(--color-bg-main);
-  overflow: hidden;
-  height: 100%;
-`;
-
-const LegendBar = styled.div`
-  display: flex;
-  gap: 1.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--color-bg-main);
-  border-bottom: 1px solid var(--color-border-element);
-  overflow-x: auto;
-  align-items: center;
-  flex-shrink: 0;
-  
-  .label { font-size: 0.75rem; font-weight: 600; color: var(--color-grey-500); text-transform: uppercase; margin-right: 0.5rem; }
-`;
-
-const LegendItem = styled.div<{ color: string }>`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-  
-  &::before {
-    content: '';
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: ${props => props.color};
-  }
+  min-height: 880px; /* Full grid height */
 `;
 
 const GridArea = styled.div`
   flex: 1;
   display: flex;
   flex-direction: row;
-  overflow-y: auto; 
   align-items: flex-start;
-  
-  /* Hide scrollbar but allow scrolling */
-  &::-webkit-scrollbar { display: none; }
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  min-height: 500px;
 `;
 
 const TimeAxis = styled.div`
@@ -62,11 +29,11 @@ const TimeAxis = styled.div`
   display: flex;
   flex-direction: column;
   padding-top: 50px; /* Header Height */
-  min-height: 700px;
+  min-height: 880px; /* 11 slots x 80px */
 `;
 
 const TimeSlotLabel = styled.div`
-  height: 60px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -80,7 +47,7 @@ const ColumnsContainer = styled.div`
   flex: 1;
   display: flex;
   overflow-x: auto;
-  min-height: 700px;
+  min-height: 880px; /* Match TimeAxis */
 `;
 
 const DayColumn = styled.div`
@@ -114,7 +81,7 @@ const Swimlane = styled.div`
 `;
 
 const SlotCell = styled.div`
-  height: 60px; /* MATCH TimeSlotLabel height */
+  height: 80px; /* MATCH TimeSlotLabel height */
   border-bottom: 1px solid var(--color-grey-100);
   box-sizing: border-box;
   width: 100%;
@@ -137,19 +104,62 @@ const SlotDots = styled.div`
   gap: 4px;
 `;
 
-const ShiftDot = styled.div<{ color: string }>`
-  width: 14px;
-  height: 14px;
+const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $isLinked?: boolean }>`
+  width: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
+  height: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
   border-radius: 50%;
-  background-color: ${props => props.color};
+  background-color: ${props => props.$variant === 'hollow' ? 'transparent' : props.$color};
+  border: ${props => props.$variant === 'hollow' ? `2px solid ${props.$color}` : 'none'};
   box-shadow: 0 1px 2px rgba(0,0,0,0.2);
   cursor: pointer;
   transition: transform 0.1s;
+  position: relative;
+  z-index: 2;
 
   &:hover {
     transform: scale(1.3);
     z-index: 10;
   }
+
+  /* Linked Indicator (Left Bar) */
+  ${props => props.$isLinked && css`
+    &::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 80%;
+      background-color: ${props.$color};
+      border-radius: 2px;
+      opacity: 0.7;
+    }
+  `}
+`;
+
+const ConnectorLine = styled.div<{ $color: string }>`
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: ${props => props.$color};
+  opacity: 0.4;
+  z-index: 1;
+  pointer-events: none;
+`;
+
+const MissingCheckoutBadge = styled.div`
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  border: 1px solid white;
+  z-index: 11;
 `;
 
 // ----- HELPERS -----
@@ -160,6 +170,7 @@ const TEAM_COLORS = [
 ];
 const getTeamColor = (index: number) => TEAM_COLORS[index % TEAM_COLORS.length];
 
+// parseTime still used for filtering
 const parseTime = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return h + m / 60;
@@ -184,9 +195,52 @@ export default function GenericWeekView({
   const teamColorMap = new Map<string, string>();
   teams.forEach((t, i) => teamColorMap.set(t.id, getTeamColor(i)));
 
+  // Filter schedule
+  const teamIds = new Set(teams.map(t => t.id));
+  const filteredSchedule = computedSchedule.filter(s => {
+    // Always show independent employees (no teamId)
+    if (!s.teamId) return true;
+
+    // Show team items only if the team is in the visible list
+    if (!teamIds.has(s.teamId)) return false;
+
+    // OVERRIDE LOGIC:
+    // If this is a "Team Assignment" (s.type === 'team' or implicitly via teamId),
+    // Check if there is an INDIVIDUAL assignment for this same employee on this day.
+    // If so, hide the Team assignment (User Override takes precedence).
+
+    // Note: computedSchedule items usually have `assigneeId` (which is userId for expanded shifts).
+    // If an item is "Team Audit", it might not have assigneeId?
+
+    if (s.assigneeId) {
+      /*
+      console.log(`[OverrideDebug] Checking Team Item: ${s.date} ${s.assigneeId} ${s.teamId}`);
+      */
+      const hasIndividualOverride = computedSchedule.some(override => {
+        const isSameUser = override.assigneeId === s.assigneeId;
+        const isIndividual = !override.teamId || override.teamId === 'unassigned' || override.teamId === 'GLOBAL';
+        const isNotSelf = override.id !== s.id;
+        const isSameDate = override.date === s.date; // IMPORTANT: Must be same day!
+
+        /*
+        if (isSameUser && isIndividual && isNotSelf && isSameDate) {
+             console.log(`[OverrideDebug] FOUND OVERRIDE for ${s.assigneeId} on ${s.date}:`, override);
+        }
+        */
+
+        return isSameUser && isIndividual && isNotSelf && isSameDate;
+      });
+
+      // If hasIndividualOverride, we skip this Team Item.
+      if (hasIndividualOverride) return false;
+    }
+
+    return true;
+  });
+
   // 1. Define Slots based on Mode
   const startHour = timeSlot === "day" ? 8 : 19;
-  const endHour = timeSlot === "day" ? 19 : 31;
+  const endHour = timeSlot === "day" ? 19 : 31; // night starts 19:00, ends 07:00 (19+12=31) or similar logic
   const totalSlots = endHour - startHour;
 
   const slots = Array.from({ length: totalSlots }).map((_, i) => {
@@ -199,12 +253,7 @@ export default function GenericWeekView({
   const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 
   // Mapping from JS Day Index (0=Sun) to our Column Order (Mon=0)
-  // Day Index: Sun=0, Mon=1, Tue=2...
-  // We want: Mon=0, Tue=1... Sun=6
   const getDayColumnIndex = (dateStr: string) => {
-    // Relying on computedSchedule date being a valid date string.
-    // In Template Mode, we might use a Reference Week (e.g., 2024-01-01 -> 2024-01-07)
-    // 2024-01-01 is Monday.
     const d = new Date(dateStr);
     const day = d.getDay(); // 0-6 (Sun-Sat)
     return day === 0 ? 6 : day - 1;
@@ -212,15 +261,6 @@ export default function GenericWeekView({
 
   return (
     <Container>
-      <LegendBar>
-        <span className="label">LÉGENDE EQUIPES (MODELE):</span>
-        {teams.map(t => (
-          <LegendItem key={t.id} color={teamColorMap.get(t.id) || "#ccc"}>
-            {t.name}
-          </LegendItem>
-        ))}
-      </LegendBar>
-
       <GridArea>
         {/* Time Axis */}
         <TimeAxis>
@@ -235,8 +275,7 @@ export default function GenericWeekView({
         <ColumnsContainer>
           {DAYS.map((dayName, index) => {
             // Find items for this day column (Mon=0, Sun=6)
-            // We iterate schedule and match based on date->dayIndex
-            const dayItems = computedSchedule.filter(s => getDayColumnIndex(s.date) === index);
+            const dayItems = filteredSchedule.filter(s => getDayColumnIndex(s.date) === index);
 
             return (
               <DayColumn key={dayName}>
@@ -251,9 +290,24 @@ export default function GenericWeekView({
                     const slotEnd = slotStart + 1;
 
                     const slotItems = dayItems.filter(item => {
-                      let t = parseTime(item.startTime);
-                      if (timeSlot === "night" && t < 12) t += 24;
-                      return t >= slotStart && t < slotEnd;
+                      let tStart = parseTime(item.startTime);
+                      let tEnd = parseTime(item.endTime);
+
+                      if (timeSlot === "night") {
+                        if (tStart < 12) tStart += 24;
+                        if (tEnd < 12) tEnd += 24;
+                      }
+
+                      // Fix: Check for overlap, not just start time
+                      // Include if item starts in slot, ends in slot, or spans slot
+                      // But specifically handle the exact boundary for dots
+                      // We want inclusion if:
+                      // 1. Start is in [slotStart, slotEnd)
+                      // 2. End is in (slotStart, slotEnd] -- strictly > slotStart to avoid clutter from previous end?
+                      //    Actually, we want to draw the hollow dot at EndTime. If EndTime = 11.0, we draw in Slot 11 (if math.floor match).
+                      // 3. Spans over
+
+                      return tStart < slotEnd && tEnd >= slotStart;
                     });
 
                     return (
@@ -263,14 +317,45 @@ export default function GenericWeekView({
                           onCellClick(index, slotStart, e, slotItems);
                         }}
                       >
+                        {/* Draw connector lines first (underneath) */}
                         <SlotDots>
-                          {slotItems.map(item => (
-                            <ShiftDot
-                              key={item.id}
-                              color={item.color || teamColorMap.get(item.teamId || "") || "#ccc"}
-                              title={`${item.assigneeName || item.shiftName || "Unknown"} (${item.startTime})`}
-                            />
-                          ))}
+                          {slotItems.map(item => {
+                            // Use dot render engine for clean variant computation
+                            const variant: DotVariant = computeDotVariant(
+                              item.startTime,
+                              item.endTime,
+                              slotStart,
+                              timeSlot,
+                              item.isCheckoutMarker
+                            );
+
+                            if (variant === null) return null;
+
+                            if (variant === 'line') {
+                              return (
+                                <div key={item.id} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <ConnectorLine $color={item.color || "#ccc"} />
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div key={item.id} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {/* Connector for continuity */}
+                                {(variant === 'hollow' || variant === 'filled') && <ConnectorLine $color={item.color || "#ccc"} style={{ width: variant === 'filled' ? '50%' : '50%', left: variant === 'filled' ? '50%' : 0, right: 'auto' }} />}
+
+                                <ShiftDot
+                                  $color={item.color || teamColorMap.get(item.teamId || "") || "#ccc"}
+                                  $variant={variant}
+                                  $isLinked={!!item.teamId}
+                                  title={`${item.assigneeName} (${item.startTime} - ${item.endTime})`}
+                                >
+                                  {/* Bug #1 fix: Red badge for missing checkout */}
+                                  {variant === 'filled' && item.isMissingCheckout && <MissingCheckoutBadge title="Check-out manquant" />}
+                                </ShiftDot>
+                              </div>
+                            );
+                          })}
                         </SlotDots>
                       </SlotCell>
                     );

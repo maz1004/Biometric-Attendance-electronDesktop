@@ -1,6 +1,6 @@
 // src/features/employees/EmployeeTypes.ts
 
-export type EmployeeRole = "employee" | "manager";
+export type EmployeeRole = "employee" | "manager" | "admin" | "rh";
 export type EmployeeStatus = "active" | "inactive";
 
 export type EmployeeStats = {

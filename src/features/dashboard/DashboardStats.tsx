@@ -1,7 +1,8 @@
 import styled from "styled-components";
-import { HiOutlineUserGroup, HiOutlineClock, HiOutlineCheckCircle } from "react-icons/hi";
-import Spinner from "../../ui/Spinner";
+import { useTranslation } from "react-i18next";
 import { useDashboard } from "./useDashboard";
+import Spinner from "../../ui/Spinner";
+import { HiOutlineClock, HiOutlineUserGroup, HiOutlineCheckCircle } from "react-icons/hi";
 
 const StyledStats = styled.div`
   display: grid;
@@ -16,29 +17,31 @@ const Stat = styled.div`
   border-radius: var(--border-radius-md);
   padding: 1.6rem;
   display: grid;
-  grid-template-columns: 6.4rem 1fr;
+  grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
   column-gap: 1.6rem;
-  row-gap: 0.4rem;
+  align-items: center;
 `;
 
 const Icon = styled.div<{ color: string; bgcolor: string }>`
-  grid-row: 1 / -1;
-  aspect-ratio: 1;
+  grid-row: 1 / span 2;
+  width: 4.8rem;
+  height: 4.8rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${(props: { bgcolor: string }) => props.bgcolor};
+  background-color: ${(props) => props.bgcolor};
 
   & svg {
     width: 3.2rem;
     height: 3.2rem;
-    color: ${(props: { color: string }) => props.color};
+    color: ${(props) => props.color};
   }
 `;
 
 const Title = styled.h5`
+  grid-column: 2;
   align-self: end;
   font-size: 1.2rem;
   text-transform: uppercase;
@@ -48,12 +51,16 @@ const Title = styled.h5`
 `;
 
 const Value = styled.p`
+  grid-column: 2;
+  align-self: start;
   font-size: 2.4rem;
   line-height: 1;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--color-grey-700);
 `;
 
 function DashboardStats() {
+  const { t } = useTranslation();
   const { stats, isLoading } = useDashboard();
 
   if (isLoading) return <Spinner />;
@@ -74,28 +81,28 @@ function DashboardStats() {
         <Icon color="var(--color-brand-700)" bgcolor="var(--color-brand-100)">
           <HiOutlineUserGroup />
         </Icon>
-        <Title>Total Employés</Title>
+        <Title>{t("dashboard.stats.total_employees")}</Title>
         <Value>{stats.total_team_size}</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-green-700)" bgcolor="var(--color-green-100)">
           <HiOutlineCheckCircle />
         </Icon>
-        <Title>Présents Aujourd'hui</Title>
+        <Title>{t("dashboard.stats.presents_today")}</Title>
         <Value>{stats.arrived_count}</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-blue-700)" bgcolor="var(--color-blue-100)">
           <HiOutlineUserGroup />
         </Icon>
-        <Title>Taux de Présence</Title>
+        <Title>{t("dashboard.stats.presence_rate")}</Title>
         <Value>{presenceRate}%</Value>
       </Stat>
       <Stat>
         <Icon color="var(--color-yellow-700)" bgcolor="var(--color-yellow-100)">
           <HiOutlineClock />
         </Icon>
-        <Title>Taux de Retard</Title>
+        <Title>{t("dashboard.stats.late_rate")}</Title>
         <Value>{Math.round(stats.late_percentage)}%</Value>
       </Stat>
     </StyledStats>

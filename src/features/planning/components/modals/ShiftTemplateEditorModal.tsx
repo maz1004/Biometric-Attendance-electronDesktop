@@ -5,12 +5,12 @@ import Form from "../../../../ui/Form";
 import FormRowVertical from "../../../../ui/FormRowVertical";
 import Heading from "../../../../ui/Heading";
 import { StyledModal, Overlay } from "../../../../ui/Modal";
-import { Shift } from "../../types";
+import { Shift, WeeklyTemplate } from "../../types";
 
 // ----- STYLED COMPONENTS -----
 
 const CustomModal = styled(StyledModal)`
-  width: min(90vw, 30rem); 
+  width: min(95vw, 42rem); 
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -25,7 +25,14 @@ const ModalHeader = styled.div`
 
 const ModalContent = styled.div`
   flex: 1;
-  padding: 2rem;
+  padding: 2.4rem; /* Increased padding */
+  overflow-y: auto;
+  overflow-x: hidden;
+`;
+
+const ModalForm = styled(Form)`
+  width: 100%; /* Force full width to respect parent padding */
+  font-size: 1.4rem;
 `;
 
 const ModalFooter = styled.div`
@@ -37,7 +44,6 @@ const ModalFooter = styled.div`
   gap: 1rem;
 `;
 
-// Shared Colors 
 // Shared Colors 
 // EXCLUDED: Red (#ef4444) reserved for Exceptions (Leaves)
 // EXCLUDED: Yellow/Amber (#f59e0b) reserved for Holidays
@@ -65,21 +71,36 @@ const COLORS = [
 
 
 const ColorCircle = styled.button<{ $bg: string; $selected: boolean }>`
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem; /* Larger touch target */
+  height: 2.5rem;
   border-radius: 50%;
   background-color: ${(p) => p.$bg};
-  border: ${(p) => p.$selected ? "2px solid var(--color-text-main)" : "1px solid transparent"};
+  border: ${(p) => p.$selected ? "3px solid var(--color-grey-800)" : "1px solid var(--color-grey-200)"};
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.1s, border-color 0.2s;
+  flex-shrink: 0; /* Prevent shrinking */
+  
   &:hover { transform: scale(1.1); }
 `;
 
 const ColorGrid = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-wrap: nowrap; /* Prevent wrapping */
+  gap: 0.8rem;
   margin-top: 0.5rem;
+  overflow-x: auto; /* Horizontal Scroll */
+  padding: 0.5rem;
+  margin-left: -0.5rem; /* Negative margin to align with padding */
+  width: calc(100% + 1rem); /* Compensate padding */
+  
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-grey-300);
+    border-radius: 3px;
+  }
 `;
 
 // ----- TYPES & LOGIC -----
@@ -87,8 +108,8 @@ const ColorGrid = styled.div`
 interface ShiftTemplateEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
-    shift?: Shift;
-    onSave: (updatedShift: Partial<Shift>) => void;
+    shift?: Shift | WeeklyTemplate;
+    onSave: (updatedShift: Partial<Shift> & Partial<WeeklyTemplate> & { color?: string }) => void;
 }
 
 export default function ShiftTemplateEditorModal({
@@ -101,6 +122,7 @@ export default function ShiftTemplateEditorModal({
     // Defaults
     const defaultShift: Partial<Shift> = {
         name: "Nouveau Modèle",
+        description: "",
         color: COLORS[0],
     };
 
@@ -108,19 +130,22 @@ export default function ShiftTemplateEditorModal({
 
     // Form State
     const [name, setName] = useState(targetShift.name || "");
-    const [color, setColor] = useState(targetShift.color || COLORS[0]);
+    const [description, setDescription] = useState(targetShift.description || "");
+    const [color, setColor] = useState((targetShift as Shift).color || COLORS[0]);
 
     useEffect(() => {
         if (isOpen) {
             const current = shift || defaultShift;
             setName(current.name || "");
-            setColor(current.color || COLORS[0]);
+            setDescription(current.description || "");
+            setColor((current as Shift).color || COLORS[0]);
         }
     }, [isOpen, shift]);
 
     const handleSave = () => {
         onSave({
             name,
+            description,
             color,
         });
     };
@@ -135,7 +160,7 @@ export default function ShiftTemplateEditorModal({
                 </ModalHeader>
 
                 <ModalContent>
-                    <Form type="regular">
+                    <ModalForm type="modal">
                         <FormRowVertical label="Nom du modèle">
                             <input
                                 value={name}
@@ -144,26 +169,58 @@ export default function ShiftTemplateEditorModal({
                                 autoFocus
                                 style={{
                                     width: '100%',
+                                    maxWidth: '100%',
+                                    boxSizing: 'border-box',
                                     background: 'var(--color-bg-input)',
                                     color: 'var(--color-text-main)',
-                                    padding: '0.6rem',
+                                    padding: '0.8rem',
                                     border: '1px solid var(--color-border-input)',
-                                    borderRadius: 'var(--border-radius-sm)'
+                                    borderRadius: 'var(--border-radius-sm)',
+                                    outline: 'none',
+                                    fontSize: '1rem'
                                 }}
+                                onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
+                                onBlur={(e) => e.target.style.borderColor = 'var(--color-border-input)'}
+                            />
+                        </FormRowVertical>
+
+                        <FormRowVertical label="Description">
+                            <textarea
+                                value={description}
+                                onChange={e => setDescription(e.target.value)}
+                                placeholder="Description du modèle (optionnel)"
+                                rows={3}
+                                style={{
+                                    width: '100%',
+                                    maxWidth: '100%',
+                                    boxSizing: 'border-box',
+                                    background: 'var(--color-bg-input)',
+                                    color: 'var(--color-text-main)',
+                                    padding: '0.8rem',
+                                    border: '1px solid var(--color-border-input)',
+                                    borderRadius: 'var(--border-radius-sm)',
+                                    resize: 'vertical',
+                                    fontFamily: 'inherit',
+                                    outline: 'none',
+                                    fontSize: '1rem'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = 'var(--color-primary)'}
+                                onBlur={(e) => e.target.style.borderColor = 'var(--color-border-input)'}
                             />
                         </FormRowVertical>
 
                         <FormRowVertical label="Couleur">
                             <ColorGrid>
-                                {COLORS.slice(0, 16).map(c => (
+                                {COLORS.map(c => (
                                     <ColorCircle
                                         key={c} $bg={c} $selected={color === c}
                                         onClick={() => setColor(c)} type="button"
+                                        title={c}
                                     />
                                 ))}
                             </ColorGrid>
                         </FormRowVertical>
-                    </Form>
+                    </ModalForm>
                 </ModalContent>
 
                 <ModalFooter>

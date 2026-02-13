@@ -169,7 +169,7 @@ export default function StrategicWeekGrid({
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeMini | null>(null);
 
     // --- HOVER POPOVER STATE ---
-    const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], exception?: ShiftException } | null>(null);
+    const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], exception?: ShiftException, alignment?: 'left' | 'right' } | null>(null);
     const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const clearHoverTimeout = () => {
@@ -182,12 +182,15 @@ export default function StrategicWeekGrid({
     const handleMouseEnter = (e: React.MouseEvent, item: ComputedSchedule) => {
         clearHoverTimeout();
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const isNearRightEdge = rect.right > window.innerWidth - 350;
+
         setHoverPopover({
-            x: rect.left + rect.width, // Right side of the block
+            x: isNearRightEdge ? rect.left : rect.left + rect.width, // Right side of the block or left if flipped
             y: rect.top,
             dateStr: item.date,
             items: [item], // Show only this item details
-            exception: undefined // To do: handle exceptions if they are rendered as blocks
+            exception: undefined, // To do: handle exceptions if they are rendered as blocks
+            alignment: isNearRightEdge ? 'left' : 'right'
         });
     };
 
@@ -267,7 +270,7 @@ export default function StrategicWeekGrid({
                     </thead>
                     <tbody>
                         {Object.entries(groupedData).map(([teamId, emps]) => {
-                            if (emps.length === 0) return null;
+                            // if (emps.length === 0) return null; // FIX: Don't hide empty teams
                             const team = teams[teamId];
                             const teamName = team ? team.name : "Non assigné";
 

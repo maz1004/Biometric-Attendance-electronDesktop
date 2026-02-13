@@ -1,5 +1,6 @@
+import { useTranslation } from "react-i18next";
+import { useDashboard } from "./useDashboard";
 import styled from "styled-components";
-import { useAttendance } from "../attendance/useAttendance";
 import Spinner from "../../ui/Spinner";
 import Tag from "../../ui/Tag";
 import { AttendanceRecord } from "../attendance/AttendanceTypes";
@@ -53,19 +54,23 @@ const Department = styled.div`
   font-size: 1.2rem;
 `;
 
-function AttendanceList() {
-  const { list, isLoading } = useAttendance();
+export default function AttendanceList() {
+  const { t } = useTranslation();
+  const { recentAttendance, isLoading } = useDashboard();
 
   if (isLoading) return <Spinner />;
 
-  // Take only the last 5 records
-  const recentAttendance = list?.slice(0, 5) || [];
-
-  if (!recentAttendance.length) return <StyledAttendanceList><Title>Recent Activity</Title><p>No recent activity.</p></StyledAttendanceList>;
+  if (!recentAttendance.length)
+    return (
+      <StyledAttendanceList>
+        <Title>{t("dashboard.recent.title")}</Title>
+        <p>{t("dashboard.recent.no_activity")}</p>
+      </StyledAttendanceList>
+    );
 
   return (
     <StyledAttendanceList>
-      <Title>🕒 Activité Récente</Title>
+      <Title>🕒 {t("dashboard.recent.title")}</Title>
       <List>
         {recentAttendance.map((record: AttendanceRecord) => (
           <ListItem key={record.id}>
@@ -76,12 +81,18 @@ function AttendanceList() {
               {" → "}
               {record.checkOut || "..."}
             </Time>
-            <Tag type={
-              record.status === "present" ? "green" :
-                record.status === "late" ? "yellow" :
-                  record.status === "absent" ? "red" : "blue"
-            }>
-              {record.status.replace("_", " ")}
+            <Tag
+              type={
+                record.status === "present"
+                  ? "green"
+                  : record.status === "late"
+                    ? "yellow"
+                    : record.status === "absent"
+                      ? "red"
+                      : "blue"
+              }
+            >
+              {t(`attendance.status.${record.status}`)}
             </Tag>
           </ListItem>
         ))}
@@ -89,5 +100,3 @@ function AttendanceList() {
     </StyledAttendanceList>
   );
 }
-
-export default AttendanceList;

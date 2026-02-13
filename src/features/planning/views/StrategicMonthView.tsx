@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import styled from "styled-components";
 import { format, addDays, subDays, startOfYear, endOfYear } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { Shift, UserShift, ComputedSchedule } from "@/features/planning/types";
 import { PlanningService } from "../../../services/planning";
@@ -50,14 +51,17 @@ interface StrategicMonthManagerProps {
   shifts?: Record<string, Shift>;
   templates?: Shift[];
   onAssignTemplate?: (date: Date, template: Shift) => void;
+  selectedTeamIds?: string[]; // NEW
 }
 
 export default function StrategicMonthManager({
   userShifts: propUserShifts = [],
   shifts: propShifts = {},
   templates = [],
-  onAssignTemplate
+  onAssignTemplate,
+  selectedTeamIds
 }: StrategicMonthManagerProps) {
+  const { t } = useTranslation();
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   // Use the full planning hook for global state/actions
@@ -66,7 +70,7 @@ export default function StrategicMonthManager({
     // exceptions: weekExceptions,
     employees,
     settings,
-    createException
+    templates: globalTemplates
   } = usePlanning();
 
   const [showHolidayManager, setShowHolidayManager] = useState(false);
@@ -94,17 +98,29 @@ export default function StrategicMonthManager({
   });
 
 
-  const userShifts = monthAssignments?.data || propUserShifts;
+  const userShifts = Array.isArray(monthAssignments) ? monthAssignments : (monthAssignments?.data || propUserShifts);
 
   const shifts = useMemo(() => {
     // Priority: Fetched Data > Props
+    let record: Record<string, Shift> = {};
+
+    // 1. Add Shifts
     if (monthShifts && monthShifts.length > 0) {
-      const record: Record<string, Shift> = {};
       monthShifts.forEach(s => record[s.id] = s);
-      return record;
+    } else {
+      record = { ...propShifts };
     }
-    return propShifts;
-  }, [monthShifts, propShifts]);
+
+    // 2. Add Templates (CRITICAL for resolving template-based assignments/placeholders)
+    if (globalTemplates && globalTemplates.length > 0) {
+      globalTemplates.forEach((t: any) => {
+        // Ensure ID is present. Templates are compatible with Shift interface for resolution purposes
+        if (t.id) record[t.id] = t as Shift;
+      });
+    }
+
+    return record;
+  }, [monthShifts, propShifts, globalTemplates]);
 
   // Combine fetched exceptions with manual ones if any (legacy)
   const exceptionsList = monthExceptions || [];
@@ -133,8 +149,13 @@ export default function StrategicMonthManager({
     // CRITICAL FIX: Always wait for local shifts to load to prevent partial layout rendering errors
     if (shiftsLoading) return [];
 
+    // DEBUG: Verify Data Presence
+    const mimi = userShifts.find(u => u.userId === '3febe6cc-894e-4969-a345-acb800f6c508');
+    console.log(`[StrategicMonthView CHECK] WeekDates Range: ${days.length > 0 ? format(days[0], 'yyyy-MM-dd') : 'N/A'} to ${days.length > 0 ? format(days[days.length - 1], 'yyyy-MM-dd') : 'N/A'}`);
+    console.log(`[StrategicMonthView CHECK] Mimi in UserShifts? ${!!mimi}`, mimi);
+
     // Compute with validation
-    const result = computeScheduleWithValidation(shifts, userShifts, {}, {}, { weekDates: days, debugContext: 'MonthView', settings });
+    const result = computeScheduleWithValidation(shifts, userShifts, {}, {}, { weekDates: days, debugContext: 'MonthView', settings, selectedTeamIds });
 
     // Log any validation issues
     if (!result.validation.isValid) {
@@ -145,7 +166,21 @@ export default function StrategicMonthManager({
     }
 
     return result.schedule;
-  }, [currentMonth, userShifts, shifts, yearStart, yearEnd, shiftsLoading, settings]);
+  }, [currentMonth, userShifts, shifts, yearStart, yearEnd, shiftsLoading, settings, selectedTeamIds]);
+
+  // DEBUG: Trace why specific assignees are missing or not colored
+  useEffect(() => {
+    if (userShifts.length > 0) {
+      console.log(`[StrategicMonthView DEBUG] UserShifts: ${userShifts.length}. Templates available: ${templates.length}. Shifts map size: ${Object.keys(shifts).length}`);
+      const samples = userShifts.filter(u => u.is_placeholder || (u as any).isPlaceholder).slice(0, 3);
+      console.log(`[StrategicMonthView DEBUG] Placeholder Samples:`, samples);
+
+      if (samples.length > 0) {
+        const sampleId = samples[0].shiftId;
+        console.log(`[StrategicMonthView DEBUG] Sample ShiftID resolution: ${sampleId} -> Found in map? ${!!shifts[sampleId]}`);
+      }
+    }
+  }, [userShifts, shifts, templates]);
 
 
 
@@ -176,6 +211,12 @@ export default function StrategicMonthManager({
       }
       if (!dateMeta.items) dateMeta.items = [];
       dateMeta.items.push(item);
+
+      // DEBUG: Trace March 19th
+      if (item.date === '2026-03-19') {
+        console.log(`[StrategicMonthView DEBUG] Adding item to 2026-03-19:`, item);
+      }
+
       if (!dateMeta.color) {
         dateMeta.color = (item.color || '#3b82f6') + '30';
       }
@@ -239,32 +280,18 @@ export default function StrategicMonthManager({
     }
   };
 
-  const handleAssignException = async (date: Date | Date[], type: 'LEAVE' | 'SICK' | 'REMOTE' | 'OVERRIDE') => {
-    const dates = Array.isArray(date) ? date : [date];
 
-    // Simulate/Call API
-    // Since backend might throw "Not Ready", we catch and simulate UI feedback
-    for (const d of dates) {
-      try {
-        await createException({
-          start_date: format(d, 'yyyy-MM-dd'),
-          end_date: format(d, 'yyyy-MM-dd'),
-          type: type,
-          user_id: 'GLOBAL' // Or derived from context if/when available
-        });
-      } catch (e) {
-        console.warn("Exception creation simulation/error:", e);
-        // Optimistically update or just notify
-      }
-    }
-  };
 
   return (
     <Container>
       <PlanningFilterBar filters={filters} onFilterChange={handleFilterChange} />
       <Toolbar>
-        <ActionButton onClick={() => setShowHolidayManager(true)}>Manage Holidays</ActionButton>
-        <ActionButton onClick={() => setShowExceptionManager(true)}>Manage Exceptions</ActionButton>
+        <ActionButton onClick={() => setShowHolidayManager(true)}>
+          {t("planning.actions.manage_holidays")}
+        </ActionButton>
+        <ActionButton onClick={() => setShowExceptionManager(true)}>
+          {t("planning.actions.manage_exceptions")}
+        </ActionButton>
       </Toolbar>
       <PlanningCalendar
         month={currentMonth}
@@ -272,7 +299,6 @@ export default function StrategicMonthManager({
         metaMap={metaMap}
         templates={templates}
         onAssignTemplate={handleAssignTemplate}
-        onAssignException={handleAssignException}
         timeZone={timeZone}
       />
       <HolidayManager isOpen={showHolidayManager} onClose={() => setShowHolidayManager(false)} />

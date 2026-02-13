@@ -4,6 +4,7 @@ import { Team, UpdateTeamCommand, EmployeeMini } from "../../types";
 import VirtualizedSelector from "../ui/VirtualizedSelector";
 import Button from "../../../../ui/Button"; // Design System Button
 import { addMemberToTeam, removeMemberFromTeam } from "../../../../services/planning";
+import TeamMemberPopover from "../popovers/TeamMemberPopover";
 
 import {
   HiPencil,
@@ -13,7 +14,9 @@ import {
   HiCheck,
   HiXMark,
   HiChevronDown,
-  HiChevronUp
+  HiChevronUp,
+  HiMinus,
+  HiCog6Tooth
 } from "react-icons/hi2";
 
 // --- STYLED COMPONENTS ---
@@ -55,7 +58,57 @@ const TeamList = styled.div`
   flex: 1;
 `;
 
-const TeamChip = styled.div<{ $selected: boolean; $color: string }>`
+const ManageButton = styled.button<{ active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid ${p => p.active ? 'var(--color-red-500)' : 'var(--color-border-element)'};
+  background: ${p => p.active ? 'var(--color-red-100)' : 'transparent'};
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: ${p => p.active ? 'var(--color-red-600)' : 'var(--color-text-secondary)'};
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+`;
+
+const DeleteBadge = styled.button`
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid var(--color-grey-0);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  animation: wiggle 0.3s ease-in-out;
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.2);
+    background: #dc2626;
+  }
+
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+  }
+`;
+
+const TeamChip = styled.div<{ $selected: boolean; $color: string; $isManaging?: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -68,6 +121,16 @@ const TeamChip = styled.div<{ $selected: boolean; $color: string }>`
   transition: all 0.2s;
   white-space: nowrap;
   position: relative;
+  overflow: visible;
+
+  /* Wiggle animation in manage mode */
+  ${p => p.$isManaging && `
+    animation: chipWiggle 0.15s ease-in-out infinite alternate;
+    @keyframes chipWiggle {
+      0% { transform: rotate(-1deg); }
+      100% { transform: rotate(1deg); }
+    }
+  `}
 
   &:hover {
     border-color: ${props => props.$color};
@@ -117,27 +180,50 @@ const ModalOverlay = styled.div`
   display: flex; align-items: center; justify-content: center;
 `;
 const ModalContent = styled.div`
-  background: white; padding: 1.5rem; border-radius: 8px; width: 450px;
-  display: flex; flex-direction: column; gap: 1rem;
+  background: var(--color-grey-0); 
+  padding: 1.5rem; 
+  border-radius: 8px; 
+  width: 450px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 1rem;
   box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
   max-height: 90vh;
   overflow-y: auto;
+  color: var(--color-grey-700);
 `;
 const ModalHeader = styled.div`
   display: flex; justify-content: space-between; align-items: center;
   h4 { margin: 0; font-size: 1.1rem; }
 `;
 const InputGroup = styled.div`
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 4px;
+  
+  label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-grey-600);
+  }
 `;
 const Input = styled.input`
-  width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;
+  width: 100%; 
+  padding: 8px; 
+  border: 1px solid var(--color-border-element); 
+  border-radius: 4px;
+  background: var(--color-bg-input, var(--color-grey-50));
+  color: var(--color-text-primary);
+  
+  &::placeholder {
+    color: var(--color-grey-400);
+  }
 `;
 const ColorPickerRow = styled.div`
   display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;
 `;
 const PRESET_COLORS = [
-  "#3b82f6", "#ef4444", "#10b981", "#f59e0b",
+  "#3b82f6", "#ef4444", "#f59e0b",
   "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16", "#64748b"
 ];
 const ModalActions = styled.div`
@@ -165,6 +251,44 @@ const MemberSelectorWrapper = styled.div`
   border-radius: 4px;
 `;
 
+const SelectedMembersList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 4px 8px;
+  background: var(--color-bg-subtle, rgba(0,0,0,0.02));
+  border-radius: 4px;
+  border: 1px dashed var(--color-border-element);
+`;
+
+const MemberChip = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-element);
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+`;
+
+const RemoveMemberBtn = styled.button`
+    border: none;
+    background: transparent;
+    color: var(--color-grey-400);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin-left: 2px;
+    &:hover { color: var(--color-red-500); }
+`;
+
 // --- COMPONENT ---
 
 interface OperationalTeamsPanelProps {
@@ -173,7 +297,7 @@ interface OperationalTeamsPanelProps {
   selectedTeamIds: string[];
   onToggleSelect: (id: string) => void;
   onUpdateTeam: (id: string, data: UpdateTeamCommand) => void;
-  onDeleteTeam?: (id: string) => void; // Optional if unused
+  onDeleteTeam?: (id: string) => void;
   onAddTeam: () => void;
 }
 
@@ -183,16 +307,21 @@ export default function OperationalTeamsPanel({
   selectedTeamIds,
   onToggleSelect,
   onUpdateTeam,
-
+  onDeleteTeam,
   onAddTeam
 }: OperationalTeamsPanelProps) {
 
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; color: string; display_order: number }>({ name: "", color: "", display_order: 0 });
   const [showMemberManager, setShowMemberManager] = useState(false);
+  const [isManaging, setIsManaging] = useState(false);
+
+  // Popover State
+  const [popoverTeam, setPopoverTeam] = useState<{ team: Team; x: number; y: number } | null>(null);
 
   // Sort teams
   const sortedTeams = [...teams].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+  const activeTeams = sortedTeams.filter(t => t.is_active !== false);
 
   // Prepare Employee Options for VirtualizedSelector
   const empOptions = useMemo(() => {
@@ -200,7 +329,6 @@ export default function OperationalTeamsPanel({
       id: e.id,
       label: e.name,
       meta: e.department
-      // Avatar not supported by Option type as per VirtualizedSelector definition
     }));
   }, [employees]);
 
@@ -213,6 +341,17 @@ export default function OperationalTeamsPanel({
       display_order: t.display_order || 0
     });
     setShowMemberManager(false);
+    setPopoverTeam(null);
+  };
+
+  const openMembers = (t: Team, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPopoverTeam({
+      team: t,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom
+    });
   };
 
   const handleSave = () => {
@@ -225,11 +364,14 @@ export default function OperationalTeamsPanel({
     setEditingTeam(null);
   };
 
-  const handleDelete = () => {
-    if (!editingTeam) return;
-    if (confirm("Voulez-vous vraiment supprimer cette équipe (Soft Delete) ?")) {
-      onUpdateTeam(editingTeam.id, { is_active: false });
-      setEditingTeam(null);
+  const handleDelete = (team: Team) => {
+    if (confirm(`Voulez-vous vraiment supprimer l'équipe "${team.name}" ?`)) {
+      if (onDeleteTeam) {
+        onDeleteTeam(team.id);
+      } else {
+        // Fallback: soft delete via update
+        onUpdateTeam(team.id, { is_active: false });
+      }
     }
   };
 
@@ -237,7 +379,6 @@ export default function OperationalTeamsPanel({
     if (!editingTeam) return;
     const isMember = editingTeam.memberIds?.includes(userId);
 
-    // Optimistic Update locally
     let newMemberIds = [...(editingTeam.memberIds || [])];
 
     try {
@@ -249,7 +390,6 @@ export default function OperationalTeamsPanel({
         newMemberIds.push(userId);
       }
 
-      // Update Local State so UI reflects change immediately
       setEditingTeam({
         ...editingTeam,
         memberIds: newMemberIds
@@ -267,30 +407,75 @@ export default function OperationalTeamsPanel({
       <Separator />
 
       <TeamList>
-        {sortedTeams.map(t => {
+        {!isManaging && (
+          <AddButton onClick={onAddTeam} title="Nouvelle Équipe">
+            <HiPlus />
+          </AddButton>
+        )}
+
+        {activeTeams.map(t => {
           const isSelected = selectedTeamIds.includes(t.id);
-          const isActive = t.is_active !== false;
-          if (!isActive) return null;
 
           return (
             <TeamChip
               key={t.id}
               $selected={isSelected}
               $color={t.color || "#ccc"}
-              onClick={() => onToggleSelect(t.id)}
+              $isManaging={isManaging}
+              onClick={() => !isManaging && onToggleSelect(t.id)}
             >
+              {/* iOS-style delete badge */}
+              {isManaging && (
+                <DeleteBadge
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(t);
+                  }}
+                  title="Supprimer cette équipe"
+                >
+                  <HiMinus size={10} color="white" strokeWidth={3} />
+                </DeleteBadge>
+              )}
+
               {!isSelected && <ColorDot $color={t.color || "#ccc"} />}
               <span>{t.name}</span>
-              <IconButton onClick={(e) => openEdit(t, e)} title="Modifier">
-                <HiPencil />
-              </IconButton>
+
+              {!isManaging && (
+                <>
+                  <IconButton onClick={(e) => openMembers(t, e)} title="Voir les membres">
+                    <HiUserGroup />
+                  </IconButton>
+                  <IconButton onClick={(e) => openEdit(t, e)} title="Modifier">
+                    <HiPencil />
+                  </IconButton>
+                </>
+              )}
             </TeamChip>
           );
         })}
-        <AddButton onClick={onAddTeam} title="Nouvelle Équipe">
-          <HiPlus />
-        </AddButton>
       </TeamList>
+
+      <Separator />
+
+      <ManageButton
+        active={isManaging}
+        onClick={() => setIsManaging(!isManaging)}
+        title={isManaging ? "Terminer" : "Gérer les équipes"}
+      >
+        <HiCog6Tooth size={12} />
+        {isManaging ? 'Terminé' : 'Gérer'}
+      </ManageButton>
+
+      {/* POPOVER */}
+      {popoverTeam && (
+        <TeamMemberPopover
+          team={popoverTeam.team}
+          employees={employees}
+          x={popoverTeam.x}
+          y={popoverTeam.y}
+          onClose={() => setPopoverTeam(null)}
+        />
+      )}
 
       {/* EDIT MODAL */}
       {editingTeam && (
@@ -312,24 +497,6 @@ export default function OperationalTeamsPanel({
             </InputGroup>
 
             <InputGroup>
-              <label>Couleur</label>
-              <ColorPickerRow>
-                {PRESET_COLORS.map(c => (
-                  <ColorDot
-                    key={c}
-                    $color={c}
-                    style={{
-                      width: 24, height: 24, cursor: 'pointer',
-                      border: editForm.color === c ? '2px solid black' : 'none',
-                      transform: editForm.color === c ? 'scale(1.1)' : 'scale(1)'
-                    }}
-                    onClick={() => setEditForm({ ...editForm, color: c })}
-                  />
-                ))}
-              </ColorPickerRow>
-            </InputGroup>
-
-            <InputGroup>
               <label>Ordre d'affichage</label>
               <Input
                 type="number"
@@ -337,6 +504,29 @@ export default function OperationalTeamsPanel({
                 onChange={e => setEditForm({ ...editForm, display_order: Number(e.target.value) })}
                 style={{ width: '100px' }}
               />
+            </InputGroup>
+
+            <InputGroup>
+              <label>Couleur</label>
+              <ColorPickerRow>
+                {PRESET_COLORS.map(c => (
+                  <ColorDot
+                    key={c}
+                    $color={c}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      cursor: 'pointer',
+                      boxShadow: editForm.color === c
+                        ? `0 0 0 3px var(--color-grey-0), 0 0 0 5px ${c}`
+                        : 'none',
+                      transform: editForm.color === c ? 'scale(1.1)' : 'scale(1)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onClick={() => setEditForm({ ...editForm, color: c })}
+                  />
+                ))}
+              </ColorPickerRow>
             </InputGroup>
 
             {/* Members Management Section */}
@@ -353,9 +543,31 @@ export default function OperationalTeamsPanel({
 
               {showMemberManager && (
                 <>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
-                    Sélectionnez les employés à ajouter à cette équipe.
-                  </p>
+                  {/* Selected Members Legend / Chips */}
+                  {(editingTeam.memberIds && editingTeam.memberIds.length > 0) ? (
+                    <SelectedMembersList>
+                      {editingTeam.memberIds.map(memberId => {
+                        const emp = employees[memberId];
+                        if (!emp) return null;
+                        return (
+                          <MemberChip key={memberId}>
+                            <span>{emp.name}</span>
+                            <RemoveMemberBtn
+                              onClick={() => handleToggleMember(memberId)}
+                              title="Retirer de l'équipe"
+                            >
+                              <HiXMark size={14} />
+                            </RemoveMemberBtn>
+                          </MemberChip>
+                        );
+                      })}
+                    </SelectedMembersList>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                      Sélectionnez les employés à ajouter à cette équipe.
+                    </p>
+                  )}
+
                   <MemberSelectorWrapper>
                     <VirtualizedSelector
                       options={empOptions}
@@ -369,12 +581,9 @@ export default function OperationalTeamsPanel({
             </MembersSection>
 
             <ModalActions>
-              {/* Design System Danger Button */}
-              <Button variation="danger" onClick={handleDelete}>
+              <Button variation="danger" onClick={() => handleDelete(editingTeam)}>
                 <HiTrash /> Supprimer
               </Button>
-
-              {/* Design System Primary Button */}
               <Button variation="primary" onClick={handleSave}>
                 <HiCheck /> Enregistrer
               </Button>

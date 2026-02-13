@@ -20,14 +20,14 @@ const Avatar = styled.img`
   outline: 2px solid var(--color-grey-100);
 `;
 
-function UserAvatar() {
+function UserAvatar({ showName = true }: { showName?: boolean }) {
   const { user } = useUser();
   const fullName = user ? `${user.first_name} ${user.last_name}` : "User";
 
   return (
     <StyledUserAvatar>
       <Avatar src={"default-user.jpg"} alt={`Avatar of ${fullName}`} />
-      <span>{fullName}</span>
+      {showName && <span>{fullName}</span>}
     </StyledUserAvatar>
   );
 }

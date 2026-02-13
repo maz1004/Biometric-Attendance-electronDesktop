@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import {
   HiMagnifyingGlass,
   HiFunnel,
@@ -97,6 +98,7 @@ export default function AttendanceHeaderBar(props: {
   }) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <div style={{ position: "relative" }}>
@@ -106,7 +108,7 @@ export default function AttendanceHeaderBar(props: {
             <HiMagnifyingGlass />
           </SearchIcon>
           <SearchInput
-            placeholder="Search name, employee ID, department…"
+            placeholder={t("attendance.filters.search_placeholder")}
             value={props.search}
             onChange={(e) => props.onSearch(e.target.value)}
           />
@@ -114,7 +116,7 @@ export default function AttendanceHeaderBar(props: {
 
         <Group>
           <GhostBtn onClick={() => setOpen((v) => !v)}>
-            <HiFunnel /> Filters
+            <HiFunnel /> {t("attendance.filters.filter_btn")}
           </GhostBtn>
 
           <SelectMenu
@@ -122,9 +124,9 @@ export default function AttendanceHeaderBar(props: {
             value={props.period}
             onChange={(v) => props.onPeriod(v as PeriodFilter)}
             options={[
-              { value: "day", label: "Day" },
-              { value: "week", label: "Week" },
-              { value: "month", label: "Month" },
+              { value: "day", label: t("attendance.filters.period.day") },
+              { value: "week", label: t("attendance.filters.period.week") },
+              { value: "month", label: t("attendance.filters.period.month") },
             ]}
           />
 
@@ -133,12 +135,12 @@ export default function AttendanceHeaderBar(props: {
             value={props.sortBy}
             onChange={(v) => props.onSort(v as SortByOption)}
             options={[
-              { value: "date-desc", label: "Newest date" },
-              { value: "date-asc", label: "Oldest date" },
-              { value: "name-asc", label: "Name (A-Z)" },
-              { value: "name-desc", label: "Name (Z-A)" },
-              { value: "status-asc", label: "Status (A-Z)" },
-              { value: "status-desc", label: "Status (Z-A)" },
+              { value: "date-desc", label: t("attendance.filters.sort.date_newest") },
+              { value: "date-asc", label: t("attendance.filters.sort.date_oldest") },
+              { value: "name-asc", label: t("attendance.filters.sort.name_asc") },
+              { value: "name-desc", label: t("attendance.filters.sort.name_desc") },
+              { value: "status-asc", label: t("attendance.filters.sort.status_asc") },
+              { value: "status-desc", label: t("attendance.filters.sort.status_desc") },
             ]}
           />
 

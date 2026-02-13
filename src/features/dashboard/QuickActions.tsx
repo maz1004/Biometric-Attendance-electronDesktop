@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { HiUserAdd, HiCalendar, HiClipboardList } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 
@@ -63,23 +64,24 @@ const ActionCard = styled.button`
 `;
 
 function QuickActions() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   return (
     <StyledQuickActions>
-      <Title>⚡ Actions Rapides</Title>
+      <Title>⚡ {t("dashboard.quick_actions.title")}</Title>
       <ActionButtons>
         <ActionCard onClick={() => navigate("/employees")}>
           <HiUserAdd />
-          <span>Ajouter un employé</span>
+          <span>{t("dashboard.quick_actions.add_employee")}</span>
         </ActionCard>
         <ActionCard onClick={() => navigate("/planning")}>
           <HiCalendar />
-          <span>Voir planning</span>
+          <span>{t("dashboard.quick_actions.view_planning")}</span>
         </ActionCard>
         <ActionCard onClick={() => navigate("/attendance")}>
           <HiClipboardList />
-          <span>Présences du jour</span>
+          <span>{t("dashboard.quick_actions.todays_attendance")}</span>
         </ActionCard>
       </ActionButtons>
     </StyledQuickActions>

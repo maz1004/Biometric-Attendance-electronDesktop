@@ -9,6 +9,7 @@ import {
   HiDevicePhoneMobile,
   HiOutlineChartBar,
 } from "react-icons/hi2";
+import { useTranslation } from "react-i18next";
 
 
 const NavList = styled.ul`
@@ -56,50 +57,52 @@ const StyledNavLink = styled(NavLink)`
 `;
 
 function MainNav() {
+  const { t } = useTranslation();
+
   return (
     <nav>
       <NavList>
         <li>
           <StyledNavLink to="/dashboard">
             <HiOutlineHome />
-            <span>Dashboard</span>
+            <span>{t("sidebar.dashboard")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/attendance">
             <HiOutlineClipboardDocumentCheck />
             {/* Or <HiOutlineFingerPrint /> */}
-            <span>Attendance</span>
+            <span>{t("sidebar.attendance")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/employees">
             <HiOutlineUserGroup />
-            <span> Employees</span>
+            <span>{t("sidebar.employees")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/planning">
             <HiOutlineCalendarDays />
-            <span> Planning</span>
+            <span>{t("sidebar.planning")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/devices">
             <HiDevicePhoneMobile />
-            <span> Devices</span>
+            <span>{t("sidebar.devices")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/reports">
             <HiOutlineChartBar />
-            <span> Reports</span>
+            <span>{t("sidebar.reports")}</span>
           </StyledNavLink>
         </li>
         <li>
           <StyledNavLink to="/settings">
             <HiOutlineCog6Tooth />
-            <span> Settings</span>
+            <span>{t("sidebar.settings")}</span>
           </StyledNavLink>
         </li>
       </NavList>

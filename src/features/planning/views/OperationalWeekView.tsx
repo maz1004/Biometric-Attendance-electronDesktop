@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import styled from "styled-components";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Team, ComputedSchedule } from "../types";
 import MonthHoverPopover from "../components/popovers/MonthHoverPopover";
+import { computeDotVariant, DotVariant } from "../engine/dotRenderEngine";
 
 
 
@@ -18,34 +19,7 @@ const Container = styled.div`
   height: 100%;
 `;
 
-const LegendBar = styled.div`
-  display: flex;
-  gap: 1.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--color-grey-0);
-  border-bottom: 1px solid var(--color-border-element);
-  overflow-x: auto;
-  align-items: center;
-  flex-shrink: 0;
-  
-  .label { font-size: 0.75rem; font-weight: 600; color: var(--color-grey-500); text-transform: uppercase; margin-right: 0.5rem; }
-`;
 
-const LegendItem = styled.div<{ color: string }>`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-  
-  &::before {
-    content: '';
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: ${props => props.color};
-  }
-`;
 
 const GridArea = styled.div`
   flex: 1;
@@ -68,11 +42,10 @@ const TimeAxis = styled.div`
   display: flex;
   flex-direction: column;
   padding-top: 50px; /* Header Height */
-  min-height: 700px; /* Ensure 12 slots * 50px approx + spacing */
 `;
 
 const TimeSlotLabel = styled.div`
-  height: 60px; /* Fixed height per slot */
+  height: 40px; /* Half-hourly slot height */
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -86,7 +59,6 @@ const ColumnsContainer = styled.div`
   flex: 1;
   display: flex;
   overflow-x: auto;
-  min-height: 700px;
 `;
 
 const DayColumn = styled.div`
@@ -120,7 +92,7 @@ const Swimlane = styled.div`
 `;
 
 const SlotCell = styled.div`
-  height: 60px; /* MATCH TimeSlotLabel height */
+  height: 40px; /* MATCH TimeSlotLabel height */
   border-bottom: 1px solid var(--color-grey-100);
   box-sizing: border-box;
   width: 100%;
@@ -142,21 +114,52 @@ const SlotDots = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-height: calc(100% - 8px);
+  overflow-y: auto;
 `;
 
-const ShiftDot = styled.div<{ color: string }>`
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: ${props => props.color};
-  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+const ShiftDot = styled.div<{ color: string; $variant?: 'filled' | 'hollow' | 'line'; $hasWarning?: boolean }>`
+  width: ${props => props.$variant === 'line' ? '100%' : '14px'};
+  height: ${props => props.$variant === 'line' ? '4px' : '14px'};
+  border-radius: ${props => props.$variant === 'line' ? '2px' : '50%'};
+  background-color: ${props => props.$variant === 'hollow' ? 'transparent' : props.color};
+  border: ${props => props.$variant === 'hollow' ? `3px solid ${props.color}` : 'none'};
+  box-sizing: border-box;
+  box-shadow: ${props => props.$variant === 'line' ? 'none' : '0 1px 2px rgba(0,0,0,0.2)'};
   cursor: pointer;
   transition: transform 0.1s;
+  position: relative;
 
   &:hover {
     transform: scale(1.3);
     z-index: 10;
   }
+
+  /* Incomplete assignment indicator (check-in without check-out) */
+  ${props => props.$hasWarning && `
+    &::after {
+      content: '!';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 10px;
+      height: 10px;
+      background: #ef4444;
+      border-radius: 50%;
+      font-size: 7px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+  `}
 `;
 
 // ----- HELPERS -----
@@ -168,13 +171,29 @@ const parseTime = (t: string) => {
   return h + m / 60;
 };
 
+// Helper to extract hour from time string (e.g., "07:00" -> 7)
+const extractHour = (time: string | undefined, fallback: number): number => {
+  if (!time) return fallback;
+  const [h] = time.split(":").map(Number);
+  return h;
+};
+
 // ----- COMPONENT -----
+
+// Type for settings (minimal)
+interface PlanningSettings {
+  planning_day_start?: string;
+  planning_day_end?: string;
+  planning_night_start?: string;
+  planning_night_end?: string;
+}
 
 interface OperationalWeekGridProps {
   dates: Date[];
   teams: Team[];
   computedSchedule: ComputedSchedule[];
   timeSlot: "day" | "night";
+  settings?: PlanningSettings; // NEW: Settings for dynamic time ranges
 }
 
 export default function OperationalWeekGrid({
@@ -182,11 +201,12 @@ export default function OperationalWeekGrid({
   teams,
   computedSchedule,
   timeSlot,
+  settings,
 }: OperationalWeekGridProps) {
 
   // console.log(`[OpView] Render. Dates: ${dates.length}, Items: ${computedSchedule.length}`);
 
-  const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[] } | null>(null);
+  const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], alignment?: 'left' | 'right' } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const openTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -212,11 +232,14 @@ export default function OperationalWeekGrid({
     if (items.length > 0) {
       // Delay opening to avoid "gap crossing" issues
       openTimeoutRef.current = setTimeout(() => {
+        const isNearRightEdge = rect.right > window.innerWidth - 350;
+
         setHoverPopover({
-          x: rect.left + rect.width,
+          x: isNearRightEdge ? rect.left : rect.left + rect.width,
           y: rect.top,
           dateStr: format(date, "yyyy-MM-dd"),
-          items: items
+          items: items,
+          alignment: isNearRightEdge ? 'left' : 'right'
         });
       }, 150);
     }
@@ -233,29 +256,32 @@ export default function OperationalWeekGrid({
   // No color mapping needed, use t.color directly
   // teams.forEach((t, i) => teamColorMap.set(t.id, getTeamColor(i)));
 
-  // 1. Define Slots based on Mode
-  const startHour = timeSlot === "day" ? 6 : 19;
-  const endHour = timeSlot === "day" ? 20 : 31; // Adjusted end hour slightly to 20h (8pm)
-  const totalSlots = endHour - startHour;
+  // 1. Define Slots based on Mode - NOW DYNAMIC from settings
+  const dayStartHour = extractHour(settings?.planning_day_start, 7);
+  const dayEndHour = extractHour(settings?.planning_day_end, 19);
+  const nightStartHour = extractHour(settings?.planning_night_start, 19);
+  const nightEndHour = extractHour(settings?.planning_night_end, 7);
+
+  // Calculate actual start/end for the view
+  const startHour = timeSlot === "day" ? dayStartHour : nightStartHour;
+  // Night end is next day (add 24 to properly compute slot count)
+  const endHour = timeSlot === "day" ? dayEndHour : (nightEndHour + 24);
+  const totalSlots = (endHour - startHour) * 2; // Half-hourly: 2 slots per hour
 
   const slots = Array.from({ length: totalSlots }).map((_, i) => {
-    const hStart = (startHour + i) % 24;
+    const minuteOffset = i * 30;
+    const hStart = (startHour + Math.floor(minuteOffset / 60)) % 24;
+    const mStart = minuteOffset % 60;
     return {
-      label: `${hStart}h`,
-      hourPlain: startHour + i
+      label: mStart === 0 ? `${hStart}h` : `${hStart}h30`,
+      hourPlain: startHour + i * 0.5 // fractional hours for coverage
     };
   });
 
+  // Debug Logs
   return (
     <Container>
-      <LegendBar>
-        <span className="label">LÉGENDE EQUIPES:</span>
-        {teams.map(t => (
-          <LegendItem key={t.id} color={t.color || "#ccc"}>
-            {t.name}
-          </LegendItem>
-        ))}
-      </LegendBar>
+
 
       <GridArea>
         {/* Time Axis */}
@@ -282,40 +308,117 @@ export default function OperationalWeekGrid({
 
                 <Swimlane>
                   {slots.map((slot) => {
-                    // Filter items starting in this hour
+                    // Filter items OVERLAPPING this half-hour slot
                     const slotStart = slot.hourPlain;
-                    const slotEnd = slotStart + 1;
+                    const slotEnd = slotStart + 0.5; // 30-minute slot width
 
                     const slotItems = dayItems.filter(item => {
-                      let t = parseTime(item.startTime);
-                      // Normalize night times
-                      if (timeSlot === "night" && t < 12) t += 24;
-                      return t >= slotStart && t < slotEnd;
+                      let start = parseTime(item.startTime);
+                      let end = parseTime(item.endTime);
+
+                      // Handle Night Shift Crossing Midnight
+                      if (timeSlot === "night") {
+                        if (start < 12) start += 24;
+                        if (end < 12) end += 24;
+                        // Special case: end is 00:00 (next day) -> 24.0
+                        // If end < start (e.g. 22:00 -> 06:00), end is next day.
+                        if (end < start) end += 24;
+                      }
+
+                      // Check Overlap: Item Start < Slot End AND Item End >= Slot Start
+                      // (>= needed for zero-duration markers where start === end)
+                      return start < slotEnd && end >= slotStart;
                     });
 
-                    // Also include items spanning through this slot? 
-                    // User said "petit rond". Dots usually imply "Start". 
-                    // If we show coverage, we need blocks. 
-                    // Let's show dots for STARTS in this slot for now.
+                    // Update: Group by Team
+                    const itemsByTeam = slotItems.reduce((acc, item) => {
+                      const tid = item.teamId || "other";
+                      if (!acc[tid]) acc[tid] = [];
+                      acc[tid].push(item);
+                      return acc;
+                    }, {} as Record<string, typeof slotItems>);
+
+                    // 3. Sort Groups: Teams in Legend Order + Others
+                    const teamIds = new Set(teams.map(t => t.id));
+                    const sortedGroups = [
+                      ...teams.map(t => ({ id: t.id, team: t, items: itemsByTeam[t.id] })),
+                      ...Object.keys(itemsByTeam)
+                        .filter(k => !teamIds.has(k))
+                        .map(k => ({ id: k, team: undefined, items: itemsByTeam[k] }))
+                    ].filter(g => g.items && g.items.length > 0);
 
                     return (
                       <SlotCell
                         key={slot.label}
                         onMouseEnter={(e) => handleSlotMouseEnter(e, date, slotItems)}
                         onMouseLeave={handleSlotMouseLeave}
-                        onClick={() => {
-                          // Click logic to remain empty/disabled for now as per previous logic
-                        }}
+                        style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '2px' }}
                       >
-                        <SlotDots>
-                          {slotItems.map(item => (
-                            <ShiftDot
-                              key={item.id}
-                              color={item.color || "#ccc"}
-                              title={`${item.assigneeName || item.shiftName} (${item.startTime})`}
-                            />
-                          ))}
-                        </SlotDots>
+                        {sortedGroups.map(({ id: teamId, team, items }) => {
+                          const isPlaceholdersOnly = items.every(i => i.isPlaceholder);
+
+                          if (isPlaceholdersOnly) {
+                            // Just show a colored bar for placeholder
+                            return (
+                              <div key={teamId} style={{ width: '100%', height: '6px', backgroundColor: team?.color || items[0].color, borderRadius: 3, opacity: 0.5, marginBottom: 1 }} title={team?.name || "Placeholder"} />
+                            );
+                          }
+
+                          return (
+                            <div key={teamId} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              marginBottom: '2px',
+                              maxWidth: '100%',
+                              flexWrap: 'wrap'
+                            }}>
+                              <SlotDots>
+                                {items.map(item => {
+                                  // Use dot render engine for correct variant
+                                  const variant: DotVariant = computeDotVariant(
+                                    item.startTime,
+                                    item.endTime,
+                                    slot.hourPlain,
+                                    timeSlot,
+                                    item.isCheckoutMarker
+                                  );
+                                  if (variant === null) return null;
+
+                                  // Check if assignment is incomplete (has check-in but no check-out)
+                                  const hasIncompleteAssignment = item.isMissingCheckout;
+                                  return (
+                                    <div key={`${item.id}-${slot.hourPlain}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: team ? 4 : 0 }}>
+                                      {/* Tiny Team Indicator Bar - Behind & Peek Left */}
+                                      {team && variant !== 'line' && <div style={{
+                                        position: 'absolute',
+                                        left: -4,
+                                        top: 1,
+                                        width: 8,
+                                        height: 12,
+                                        backgroundColor: team.color,
+                                        borderRadius: 2,
+                                        zIndex: 0
+                                      }} title={team.name} />}
+
+                                      <ShiftDot
+                                        color={item.color || "#ccc"}
+                                        $variant={variant}
+                                        $hasWarning={hasIncompleteAssignment && variant === 'filled'}
+                                        style={{ position: 'relative', zIndex: 1 }}
+                                        title={variant === 'hollow'
+                                          ? `${item.assigneeName || item.shiftName} - Check-out ${item.endTime}`
+                                          : variant === 'filled'
+                                            ? `${item.assigneeName || item.shiftName} - Check-in ${item.startTime}`
+                                            : `${item.assigneeName || item.shiftName}`}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </SlotDots>
+                            </div>
+                          )
+                        })}
                       </SlotCell>
                     );
                   })}
@@ -332,6 +435,7 @@ export default function OperationalWeekGrid({
           y={hoverPopover.y}
           dateStr={hoverPopover.dateStr}
           items={hoverPopover.items}
+          alignment={hoverPopover.alignment}
           onMouseEnter={() => {
             clearHoverTimeout();
             clearOpenTimeout();

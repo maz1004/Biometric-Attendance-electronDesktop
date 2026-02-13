@@ -20,9 +20,12 @@ const Form = styled.form<FormProps>`
     props.type === "modal" &&
     css`
       width: 80rem;
+      /* Max Limit for Modal */
+      max-height: 80vh; 
     `}
     
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   font-size: 1.4rem;
 `;
 

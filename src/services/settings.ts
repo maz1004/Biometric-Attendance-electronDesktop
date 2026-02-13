@@ -10,13 +10,13 @@ export interface CompanySettings {
     id: string;
     company_name: string;
     company_logo?: string;
-    timezone: string;
-    date_format: string;
-    time_format: string;
     language: string;
     currency: string;
-    working_hours_start: string;
-    working_hours_end: string;
+    // Logic Configuration
+    enable_planning_based_attendance: boolean;
+    enable_global_late_tracking: boolean;
+
+    // Thresholds
     late_threshold_minutes: number;
     early_departure_threshold_minutes: number;
     // Planning Configuration
@@ -31,13 +31,12 @@ export interface CompanySettings {
 export interface UpdateSettingsRequest {
     company_name?: string;
     company_logo?: string;
-    timezone?: string;
-    date_format?: string;
-    time_format?: string;
     language?: string;
     currency?: string;
-    working_hours_start?: string;
-    working_hours_end?: string;
+    // Logic Configuration
+    enable_planning_based_attendance?: boolean;
+    enable_global_late_tracking?: boolean;
+
     late_threshold_minutes?: number;
     early_departure_threshold_minutes?: number;
     // Planning Configuration

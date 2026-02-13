@@ -39,6 +39,7 @@ const StyledRow = styled(CommonRow)`
 
 const StyledBody = styled.section`
   margin: 0.4rem 0;
+  padding-bottom: 2rem; /* Fix clipping on last row/FAB overlap */
 `;
 
 const Footer = styled.footer`

@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardInsights } from "../../services/apiDashboard";
 import { getEmployees } from "../../services/employees";
+import { getHistory } from "../../services/attendance";
+import { AttendanceRecord, StatusType } from "../attendance/AttendanceTypes";
 
 export function useDashboard() {
     // 1. Fetch Insights (currently mocked in backend)
@@ -17,6 +19,12 @@ export function useDashboard() {
     const { data: employeesData, isLoading: isLoadingEmployees } = useQuery({
         queryKey: ["employees", { limit: 1 }],
         queryFn: () => getEmployees({ limit: 1 }),
+    });
+
+    // 3. Fetch Recent Attendance for List
+    const { data: attendanceData, isLoading: isLoadingAttendance } = useQuery({
+        queryKey: ["attendance", "recent"],
+        queryFn: () => getHistory({ limit: 10 } as any),
     });
 
     const stats = insightsData?.team_metrics;
@@ -39,12 +47,28 @@ export function useDashboard() {
         total_team_size: realTotalEmployees,
     };
 
+    // Transform raw API history into UI AttendanceRecord
+    const rawAttendance = attendanceData as any;
+    const recentAttendance: AttendanceRecord[] = (rawAttendance?.data || rawAttendance?.records || []).map((r: any) => ({
+        id: r.id,
+        employeeId: r.user_id,
+        fullName: r.user_name || r.user_id,
+        department: r.department || "General",
+        dateISO: (r.timestamp || "").split('T')[0],
+        checkIn: r.check_in_time ? new Date(r.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+        checkOut: r.check_out_time ? new Date(r.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : undefined,
+        status: r.status as StatusType,
+        justification: r.notes,
+        deviceId: r.location
+    }));
+
     return {
-        isLoading: isLoadingInsights || isLoadingEmployees,
+        isLoading: isLoadingInsights || isLoadingEmployees || isLoadingAttendance,
         error: errorInsights,
         stats: (isLoadingInsights && !insightsData) ? undefined : enhancedStats,
         trends: insightsData?.attendance_trends || [],
         alerts: insightsData?.alerts || [],
+        recentAttendance,
         lastUpdated: insightsData?.last_updated || new Date().toISOString(),
     };
 }

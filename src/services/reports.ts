@@ -1,6 +1,6 @@
 // Service de rapports (reports)
 import { apiClient } from './api';
-import type { ReportData, ExportReportParams } from './types/api-types';
+import type { ReportData, UserReportData, ExportReportParams } from './types/api-types';
 
 // ============================================================================
 // REPORTS API
@@ -8,7 +8,8 @@ import type { ReportData, ExportReportParams } from './types/api-types';
 
 /**
  * Generate report with specified parameters
- * GET /api/v1/reports/generate?start_date=&end_date=&type=&department=
+ * Uses the real reports handler endpoint (GET /reports/generate)
+ * Backend returns data matching ReportData structure directly
  */
 export const generateReport = async (params: {
     start_date: string; // ISO 8601
@@ -16,8 +17,41 @@ export const generateReport = async (params: {
     type?: 'attendance' | 'performance' | 'planning' | 'summary';
     department?: string;
 }): Promise<ReportData> => {
-    const response = await apiClient.get<ReportData>('/reports/generate', { params });
-    return response.data;
+    const response = await apiClient.get('/reports/generate', {
+        params: {
+            start_date: params.start_date,
+            end_date: params.end_date,
+            type: params.type === 'summary' ? 'daily' : (params.type || 'daily'),
+            department: params.department && params.department !== 'all' ? params.department : undefined,
+        },
+    });
+
+    const data = response.data;
+
+    // The backend returns ReportData directly with matching fields
+    return {
+        generated_at: data.generated_at || new Date().toISOString(),
+        period: data.period || `${params.start_date} → ${params.end_date}`,
+        summary: {
+            total_users: data.summary?.total_users || 0,
+            total_work_days: data.summary?.total_work_days || 0,
+            average_attendance_rate: data.summary?.average_attendance_rate || 0,
+            total_late_arrivals: data.summary?.total_late_arrivals || 0,
+            total_absences: data.summary?.total_absences || 0,
+        },
+        users: (data.users || []).map((u: UserReportData) => ({
+            user_id: u.user_id,
+            user_name: u.user_name,
+            department: u.department || '',
+            efficiency_score: u.efficiency_score || 0,
+            attendance_rate: u.attendance_rate || 0,
+            present_days: u.present_days || 0,
+            absent_days: u.absent_days || 0,
+            late_arrivals: u.late_arrivals || 0,
+            early_departures: u.early_departures || 0,
+            total_work_hours: u.total_work_hours || '0h00',
+        })),
+    };
 };
 
 /**

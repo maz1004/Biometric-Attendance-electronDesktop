@@ -1,0 +1,250 @@
+{
+  "common": {
+    "cancel": "Sefsex",
+    "save": "Sekles",
+    "delete": "Kkes",
+    "edit": "Ẓreg",
+    "loading": "Asali...",
+    "search": "Nadi...",
+    "confirm": "Sentem",
+    "last_update": "Aleqqem aneggaru: ",
+    "field_required": "Urti-a ilaq"
+  },
+  "sidebar": {
+    "dashboard": "Tafelwit n usenqed",
+    "attendance": "Aḥḍir",
+    "employees": "Imahal",
+    "planning": "Aɣawas",
+    "devices": "Ibenkan",
+    "reports": "Ineɣmis",
+    "settings": "Iɣewwaren"
+  },
+  "header": {
+    "profile": "Amaɣnu",
+    "logout": "Ffeɣ"
+  },
+  "dashboard": {
+    "title": "Tafelwit n usenqed",
+    "welcome": "Anṣuf yis-k tikelt-nniḍen",
+    "stats": {
+      "total_employees": "Amḍan n imaḥal",
+      "presents_today": "Iḥḍren ass-a",
+      "presence_rate": "Afmiḍi n uḥḍir",
+      "late_rate": "Afmiḍi n usiweḍ"
+    },
+    "chart": {
+      "title": "Aḥḍir n ddurt n umalas",
+      "presence": "Aḥḍir",
+      "late": "Iweḍ s wugur"
+    },
+    "quick_actions": {
+      "title": "Tigawin tizrayanin",
+      "add_employee": "Rnu amahal",
+      "view_planning": "Wali aɣawas",
+      "todays_attendance": "Aḥḍir n wass-a"
+    },
+    "recent": {
+      "title": "Tigawin tineggura",
+      "no_activity": "Ulac tigawt tamaynut."
+    }
+  },
+  "settings": {
+    "title": "Iɣewwaren",
+    "appearance": "Timeẓri",
+    "language": "Tutlayt",
+    "theme": "Asentel",
+    "form": {
+      "company_name": "Isem n tkebbanit",
+      "company_name_required": "Urti-a ilaq",
+      "late_threshold": "Tilisa n usiweḍ (tisdatin)",
+      "late_threshold_min": "Azal adday meẓẓi 0",
+      "early_departure_threshold": "Iger n tuffɣa n zik (tuminutin)",
+      "early_departure_threshold_min": "Azal adday meẓẓi 0",
+      "day_schedule": "Aɣawas n wass",
+      "night_schedule": "Aɣawas n yiḍ",
+      "to": "ar",
+      "update_btn": "Leqqem iɣewwaren",
+      "updating": "Aleqqem..."
+    },
+    "logic": {
+      "title": "Tasertit n uḥḍir",
+      "enable_planning": "Sermed askar n uɣawas",
+      "enable_planning_tooltip": "Sermed aḥḍir s usuddes akked wakud n yal amahal.",
+      "track_global": "Ḍfer asiwed amatu",
+      "track_global_tooltip": "Ḍfer asiwed ɣef wakud n umahil amatu."
+    },
+    "verification": {
+      "overlap_day_end": "Yettwamezzi akked taggara n yiḍ",
+      "overlap_night_start": "Yettwamezzi akked tazwara n wass",
+      "warning_title": "Asmigel",
+      "restore_btn": "Err-d aɣawas",
+      "archive_btn": "Aḥrez u kemmel",
+      "success_updated": "Iɣewwaren ttwaleqqmen. {{count}} n uɣawas yettwaḥrez.",
+      "restored_msg": "Aɣawas yettwarra-d",
+      "archive_reason": "Ur yemsas ara akked aɣawas amaynut: {{range}}",
+      "current": "Amiran",
+      "new": "Amaynut"
+    }
+  },
+  "attendance": {
+    "header": {
+      "title": "Aḥḍir",
+      "description": "Aḥḍir, asiwed, tigri — sizdeg s wass / amalas / aggur."
+    },
+    "heatmap": {
+      "title": "Tafelwit n waggur (aḥḍir kan)"
+    },
+    "export": {
+      "csv": "Sifeḍ CSV",
+      "pdf": "Sifeḍ PDF",
+      "loading": "Asifeḍ..."
+    },
+    "table": {
+      "name": "Isem",
+      "department": "Agezdu",
+      "date": "Azemz",
+      "in": "Kcem",
+      "out": "Ffeɣ",
+      "status": "Addad"
+    },
+    "filters": {
+      "search_placeholder": "Nadi isem, ID, agezdu...",
+      "filter_btn": "Tisfifilt",
+      "period": {
+        "day": "Ass",
+        "week": "Amalas",
+        "month": "Aggur"
+      },
+      "sort": {
+        "date_newest": "Azemz amaynut",
+        "date_oldest": "Azemz aqbur",
+        "name_asc": "Isem (A-Z)",
+        "name_desc": "Isem (Z-A)",
+        "status_asc": "Addad (A-Z)",
+        "status_desc": "Addad (Z-A)"
+      }
+    },
+    "status": {
+      "present": "Yeḥḍer",
+      "late": "Iweḍ s wugur",
+      "absent": "Ur yeḥḍir ara",
+      "left_early": "Yeffeɣ zik",
+      "manual": "S ufus"
+    },
+    "validate_modal": {
+      "title": "Sentem / Seggem",
+      "employee": "Amahal",
+      "set_status": "Sbadu addad",
+      "justification": "Asefru (d ayen yellan)",
+      "justification_placeholder": "Sebba / Awennit..."
+    }
+  },
+  "planning": {
+    "actions": {
+      "manage_holidays": "Sefrek assen n tferka",
+      "manage_exceptions": "Sefrek tasurift"
+    },
+    "filters": {
+      "display_label": "Sken",
+      "show_shifts": "Aɣawas",
+      "show_exceptions": "Tasurift / Tigri",
+      "show_holidays": "Tiferka"
+    }
+  },
+  "employees": {
+    "table": {
+      "pic": "Tugna",
+      "employee": "AMAHAL",
+      "dept_role": "AGEZDU / TAWURI",
+      "enroll": "Asekles",
+      "status": "ADDAD",
+      "stats": "TIDDA (30W)"
+    },
+    "status": {
+      "active": "Urmid",
+      "inactive": "Urmid ara",
+      "enrolled": "Yettwasekles",
+      "not_enrolled": "Ur yettwasekles ara"
+    },
+    "role": {
+      "manager": "Amasay",
+      "employee": "Amahal",
+      "admin": "Anedbal",
+      "rh": "Tasdawit n wemdan (RH)"
+    },
+    "actions": {
+      "enroll_face": "Sekles udem",
+      "edit": "Ẓreg",
+      "delete": "Kkes",
+      "add_employee": "Rnu amahal"
+    },
+    "filters": {
+      "search_placeholder": "Nadi amahal, ID, agezdu...",
+      "filter_btn": "Tisfifilt",
+      "subtitle": "Sezdeg tabdart n imaḥal",
+      "role_label": "Tawuri",
+      "role_options": {
+        "all": "Akk tawuri",
+        "employee": "Imahal",
+        "manager": "Imasayen"
+      },
+      "enrolled_label": "Asekles",
+      "enrolled_options": {
+        "all": "Akk",
+        "enrolled": "Yettwasekles",
+        "not": "Ur yettwasekles ara"
+      },
+      "status_label": "Addad",
+      "status_options": {
+        "all": "Akk",
+        "active": "Urmid",
+        "inactive": "Urmid ara"
+      },
+      "apply": "Snes",
+      "clear": "Sfeḍ akk",
+      "sort": {
+        "newest": "Amaynut d amezwaru",
+        "oldest": "Aqbur d amezwaru",
+        "name_asc": "Isem (A-Z)",
+        "name_desc": "Isem (Z-A)",
+        "best_attendance": "Aḥḍir ifazen",
+        "lowest_attendance": "Aḥḍir adday"
+      }
+    },
+    "form": {
+      "create_employee": "Rnu amahal",
+      "create_admin": "Rnu anedbal / RH",
+      "update": "Leqqem",
+      "first_name": "Isem",
+      "last_name": "Taqbaylit",
+      "email": "Imayl",
+      "phone": "Tilifun",
+      "dob": "Azemz n tlalit",
+      "department": "Agezdu",
+      "role": "Tawuri",
+      "password": "Awal uffir",
+      "status": "Addad",
+      "cv": "CV (PDF)",
+      "placeholders": {
+        "email": "name@company.com",
+        "phone": "+213...",
+        "department": "Production / QA / RH...",
+        "password": "Drus 8 isekkilen"
+      }
+    },
+    "stats": {
+      "presence": "aḥḍir",
+      "late": "asiwed",
+      "absent": "tigri"
+    }
+  },
+  "devices": {
+    "alerts": {
+      "ip_conflict": "Asmigel n tɣellist: {{count}} ibenkan s umgired IP!"
+    },
+    "header": {
+      "title": "Ibenkan & Asentem",
+      "description": "Sefrek ibenkan n biométrie deg tuddsa."
+    }
+  }
+}

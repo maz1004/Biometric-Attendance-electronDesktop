@@ -491,14 +491,25 @@ export interface UnreadCountResponse {
 export interface Device {
     id: string;
     name: string;
-    type: 'mobile' | 'desktop' | 'tablet';
+    // type: 'mobile' | 'desktop' | 'tablet'; // Not in backend struct
     ip_address: string;
+    mobile_ip?: string;
     mac_address: string;
     is_active: boolean;
-    is_authorized: boolean;
+
+    // Security
+    trust_status: 'trusted' | 'pending_auth' | 'conflict' | 'blocked' | 'blacklisted';
+    conflict_id?: string;
+    blocked_reason?: string;
+    blocked_by?: string;
+
     location?: string;
     last_seen: string;
     created_at: string;
+
+    version?: string;
+    current_mode?: string;
+    status: 'online' | 'offline' | 'archived';
 }
 
 export interface DevicesResponse {

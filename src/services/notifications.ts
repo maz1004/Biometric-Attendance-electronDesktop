@@ -56,7 +56,7 @@ export const connectWebSocket = (token: string) => {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.type === "notification") {
+            if (data.type === "notification" || data.type === "attendance_update") {
                 handlers.forEach((handler) => handler(data.payload || data));
             }
         } catch (err) {

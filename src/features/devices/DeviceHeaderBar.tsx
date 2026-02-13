@@ -1,6 +1,9 @@
+import { useState } from "react";
 import styled from "styled-components";
 import { HiMagnifyingGlass, HiAdjustmentsHorizontal } from "react-icons/hi2";
 import { DevicesFilters } from "./DeviceTypes";
+import { useTranslation } from "react-i18next";
+import Select from "../../ui/Select";
 
 const Bar = styled.div`
   background: var(--color-toolbar-bg);
@@ -46,9 +49,9 @@ const Pop = styled.div`
   border: 1px solid var(--color-toolbar-border);
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
-  padding: 1rem;
+  padding: 1.5rem;
   display: grid;
-  gap: 0.8rem;
+  gap: 1.2rem;
 `;
 const Row = styled.div`
   display: grid;
@@ -57,13 +60,9 @@ const Row = styled.div`
 const Label = styled.label`
   font-size: 1.2rem;
   color: var(--color-text-dim);
-`;
-const Select = styled.select`
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--color-toolbar-input-border);
-  background: var(--color-toolbar-input-bg);
-  color: var(--color-text-strong);
-  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 export default function DeviceHeaderBar(props: {
@@ -71,13 +70,14 @@ export default function DeviceHeaderBar(props: {
   onChange: (patch: Partial<DevicesFilters>) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <Bar>
       <SearchWrap>
         <HiMagnifyingGlass />
         <input
-          placeholder="Search device, IP, location…"
+          placeholder={t("devices.filters.search_placeholder")}
           value={props.filters.q}
           onChange={(e) => props.onChange({ q: e.target.value })}
         />
@@ -85,43 +85,46 @@ export default function DeviceHeaderBar(props: {
 
       <div style={{ position: "relative", justifySelf: "end" }}>
         <Btn onClick={() => setOpen((v) => !v)}>
-          <HiAdjustmentsHorizontal /> Filters
+          <HiAdjustmentsHorizontal /> {t("devices.filters.filter_btn")}
         </Btn>
         {open && (
           <Pop>
             <Row>
-              <Label>Status</Label>
+              <Label>{t("devices.filters.status_label")}</Label>
               <Select
                 value={props.filters.status}
                 onChange={(e) =>
                   props.onChange({ status: e.target.value as any })
                 }
-              >
-                <option value="all">All</option>
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="error">Error</option>
-              </Select>
+                options={[
+                  { value: "all", label: t("devices.filters.status_options.all") },
+                  { value: "online", label: t("devices.filters.status_options.online") },
+                  { value: "offline", label: t("devices.filters.status_options.offline") },
+                  { value: "error", label: t("devices.filters.status_options.error") },
+                ]}
+              />
             </Row>
             <Row>
-              <Label>Sort</Label>
+              <Label>{t("devices.filters.sort_label")}</Label>
               <Select
                 value={props.filters.sort}
                 onChange={(e) =>
                   props.onChange({ sort: e.target.value as any })
                 }
-              >
-                <option value="lastsync-new">Last sync (newest)</option>
-                <option value="lastsync-old">Last sync (oldest)</option>
-                <option value="name-az">Name A → Z</option>
-                <option value="name-za">Name Z → A</option>
-              </Select>
+                options={[
+                  { value: "lastsync-new", label: t("devices.filters.sort.newest_sync") },
+                  { value: "lastsync-old", label: t("devices.filters.sort.oldest_sync") },
+                  { value: "name-az", label: t("devices.filters.sort.name_az") },
+                  { value: "name-za", label: t("devices.filters.sort.name_za") },
+                ]}
+              />
             </Row>
             <div
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
                 gap: ".6rem",
+                marginTop: "0.5rem"
               }}
             >
               <Btn
@@ -129,9 +132,9 @@ export default function DeviceHeaderBar(props: {
                   props.onChange({ q: "", status: "all", sort: "lastsync-new" })
                 }
               >
-                Clear
+                {t("devices.filters.clear")}
               </Btn>
-              <Btn onClick={() => setOpen(false)}>Apply</Btn>
+              <Btn onClick={() => setOpen(false)}>{t("devices.filters.apply")}</Btn>
             </div>
           </Pop>
         )}
@@ -139,4 +142,3 @@ export default function DeviceHeaderBar(props: {
     </Bar>
   );
 }
-import { useState } from "react";

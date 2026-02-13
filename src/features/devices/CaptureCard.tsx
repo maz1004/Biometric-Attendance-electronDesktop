@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import Button from "../../ui/Button";
 import { Capture, Device } from "./DeviceTypes";
+import { useTranslation } from "react-i18next";
 
 const Card = styled.div`
   border: 1px solid var(--color-border-card);
@@ -31,12 +32,13 @@ export default function CaptureCard(props: {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const c = props.capture;
+
   return (
     <Card>
       <Img src={c.imageUrl} alt="capture" />
       <Meta>
-        {/* Top Row: Guess (Left) and Timestamp (Right) */}
         {/* Top Section: Guess, Score/Liveness, Timestamp */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', position: 'relative' }}>
 
@@ -48,29 +50,28 @@ export default function CaptureCard(props: {
           {/* Guess */}
           {c.employeeNameGuess ? (
             <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--color-text-strong)", lineHeight: 1.2, paddingRight: '140px' /* Space for date */ }}>
-              guess: {c.employeeNameGuess}
+              {t("devices.validation.card.guess")}: {c.employeeNameGuess}
             </div>
           ) : (
             <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--color-text-dim)", paddingRight: '140px' }}>
-              Unknown
+              {t("devices.validation.card.unknown")}
             </div>
           )}
 
           {/* Meta Tags - Directly below Guess */}
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
-              score: <strong style={{ color: "var(--color-text-strong)" }}>{c.score ?? 0}</strong>
+              {t("devices.validation.card.score")}: <strong style={{ color: "var(--color-text-strong)" }}>{c.score ?? 0}</strong>
             </span>
             <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
-              liveness: <strong style={{ color: "var(--color-text-strong)" }}>{c.liveness ?? "pass"}</strong>
+              {t("devices.validation.card.liveness")}: <strong style={{ color: "var(--color-text-strong)" }}>{t(`devices.validation.card.values.${c.liveness}`)}</strong>
             </span>
             <span style={{ fontSize: "1.3rem", color: "var(--color-text-dim)" }}>
-              status: <strong style={{ color: "var(--color-text-strong)" }}>{c.status}</strong>
+              {t("devices.validation.card.status")}: <strong style={{ color: "var(--color-text-strong)" }}>{t(`devices.validation.card.values.${c.status}`)}</strong>
             </span>
           </div>
         </div>
 
-        {/* Buttons - Even Thinner and Controlled Width */}
         {/* Buttons - Bottom Anchored */}
         <div style={{ display: "flex", gap: "1rem", marginTop: "auto", paddingTop: "0.8rem" }}>
           <Button
@@ -87,7 +88,7 @@ export default function CaptureCard(props: {
               maxWidth: '120px'
             }}
           >
-            Accept
+            {t("devices.validation.card.accept")}
           </Button>
           <Button
             variation="danger"
@@ -101,7 +102,7 @@ export default function CaptureCard(props: {
               maxWidth: '120px'
             }}
           >
-            Reject
+            {t("devices.validation.card.reject")}
           </Button>
         </div>
       </Meta>

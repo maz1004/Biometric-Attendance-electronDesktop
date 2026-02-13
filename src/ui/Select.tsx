@@ -8,17 +8,17 @@ const StyledSelect = styled.select<{ $variant?: "white" | "default" }>`
     ${(props) =>
     props.$variant === "white"
       ? "var(--color-grey-100)"
-      : "var(--color-grey-300)"};
+      : "var(--color-toolbar-input-border)"};
   border-radius: var(--border-radius-sm);
-  background-color: var(--color-grey-0);
-  color: var(--color-grey-600);
+  background-color: var(--color-toolbar-input-bg);
+  color: var(--color-text-strong);
   font-weight: 500;
   box-shadow: var(--shadow-sm);
 
   /* Ensure options inherit the dark background in some browsers */
   & option {
-    background-color: var(--color-grey-0);
-    color: var(--color-grey-600);
+    background-color: var(--color-toolbar-input-bg);
+    color: var(--color-text-strong);
   }
 `;
 export type SelectOption = {

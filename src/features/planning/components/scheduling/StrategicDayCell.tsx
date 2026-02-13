@@ -55,45 +55,58 @@ const Container = styled.div<{ $bgColor?: string; $selectionState?: SelectionSta
     display: flex;
     flex-direction: column;
     padding: 2px 4px;
-    border-radius: 8px; /* ✅ FIX: Enforce rounded corners */
+    border-radius: 8px;
     cursor: pointer;
     position: relative;
     z-index: 10;
     transition: background-color 0.1s;
-    ${p => getSelectionStyles(p.$selectionState)}
     
-    // Class-based overrides for direct DOM manipulation (Performance)
-    &.is-start {
-        background-color: var(--color-brand-100, #dbeafe);
-        box-shadow: inset 0 0 0 2px var(--color-brand-600, #2563eb);
-        color: var(--color-brand-900);
-        z-index: 20;
+    /* SELECTION OVERLAY via Pseudo-element */
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 8px;
+        pointer-events: none;
+        transition: all 0.1s;
+        z-index: -1; /* Behind content but above background? No, background is on parent. */
+        /* Actually z-index -1 puts it behind the parent background if parent has no stacking context context...
+           But isolation: isolate?
+           Easier: Parent has BG color. Pseudo has BG color with opacity.
+           We want Pseudo ON TOP of Parent BG.
+        */
+        z-index: 1; 
+        ${p => getSelectionStyles(p.$selectionState)}
+        /* Ensure selection BG is semi-transparent to show underlying color */
+        opacity: 0.6; 
     }
-    &.is-end {
-        background-color: var(--color-brand-100, #dbeafe);
-        box-shadow: inset 0 0 0 2px var(--color-brand-600, #2563eb);
-        color: var(--color-brand-900);
-        z-index: 20;
+
+    /* Content z-index adjustment */
+    & > * {
+        z-index: 2;
+        position: relative;
     }
-    &.is-in-range {
+
+    /* Class-based overrides mapped to pseudo-element */
+    &.is-start::before {
+        background-color: var(--color-brand-100, #dbeafe);
+        box-shadow: inset 3px 0 0 0 var(--color-brand-600, #2563eb);
+    }
+    &.is-end::before {
+        background-color: var(--color-brand-100, #dbeafe);
+        box-shadow: inset -3px 0 0 0 var(--color-brand-600, #2563eb);
+    }
+    &.is-in-range::before {
          background-color: var(--color-brand-50, #eff6ff);
-         box-shadow: inset 0 0 0 1px var(--color-brand-400, #60a5fa);
-         color: var(--color-brand-900);
     }
-    &.is-single-selected {
+    &.is-single-selected::before {
         background-color: var(--color-brand-100, #dbeafe);
         box-shadow: inset 0 0 0 2px var(--color-brand-600, #2563eb);
-        color: var(--color-brand-900);
-        z-index: 20;
     }
 
     &:hover {
-        ${p => p.$selectionState === 'none' && css`
-            background-color: var(--color-brand-100, #dbeafe); /* ✅ FIX: Light BG on hover */
-            color: var(--color-brand-900); /* ✅ FIX: Dark text on hover */
-            box-shadow: inset 0 0 0 2px var(--color-brand-600);
-            z-index: 20;
-        `}
+        /* Hover effect on pseudo or parent? Parent is easier for border */
+        box-shadow: inset 0 0 0 1px var(--color-brand-400);
     }
 `;
 

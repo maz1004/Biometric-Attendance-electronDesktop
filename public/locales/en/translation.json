@@ -1,0 +1,382 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "search": "Search...",
+    "confirm": "Confirm",
+    "last_update": "Last update: ",
+    "field_required": "This field is required"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "attendance": "Attendance",
+    "employees": "Employees",
+    "planning": "Planning",
+    "devices": "Devices",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "header": {
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "stats": {
+      "total_employees": "Total Employees",
+      "presents_today": "Presents Today",
+      "presence_rate": "Presence Rate",
+      "late_rate": "Late Rate"
+    },
+    "chart": {
+      "title": "Weekly Punctuality",
+      "presence": "Presence",
+      "late": "Late"
+    },
+    "quick_actions": {
+      "title": "Quick Actions",
+      "add_employee": "Add an employee",
+      "view_planning": "View planning",
+      "todays_attendance": "Today's attendance"
+    },
+    "recent": {
+      "title": "Recent Activity",
+      "no_activity": "No recent activity."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "form": {
+      "company_name": "Company Name",
+      "company_name_required": "This field is required",
+      "late_threshold": "Late Threshold (minutes)",
+      "late_threshold_min": "Minimum value is 0",
+      "early_departure_threshold": "Early Departure Threshold (minutes)",
+      "early_departure_threshold_min": "Minimum value is 0",
+      "day_schedule": "Day Schedule (Planning)",
+      "night_schedule": "Night Schedule (Planning)",
+      "to": "to",
+      "update_btn": "Update settings",
+      "updating": "Updating..."
+    },
+    "logic": {
+      "title": "Attendance Logic",
+      "enable_planning": "Enable Planning Mode",
+      "enable_planning_tooltip": "Enable strict attendance tracking based on individual employee schedules (Planning). Late arrivals and absences will be calculated against their assigned shifts.",
+      "track_global": "Track Global Lateness",
+      "track_global_tooltip": "Enable global lateness tracking based on the 'General Work Hours'. This applies to all employees who do not have a specific schedule. Disabled if Planning is active to avoid conflicts."
+    },
+    "verification": {
+      "overlap_day_end": "Overlaps with Night start",
+      "overlap_night_start": "Overlaps with Day end",
+      "warning_title": "Warning",
+      "restore_btn": "Restore schedules",
+      "archive_btn": "Archive and continue",
+      "success_updated": "Settings updated. {{count}} shift(s) archived.",
+      "restored_msg": "Schedules restored to current values",
+      "archive_reason": "Incompatible with new schedules: {{range}}",
+      "current": "Current",
+      "new": "New"
+    }
+  },
+  "attendance": {
+    "header": {
+      "title": "Attendance",
+      "description": "Presence, lateness, absences — filter by day/week/month and validate anomalies."
+    },
+    "heatmap": {
+      "title": "Monthly heatmap (present only)"
+    },
+    "export": {
+      "csv": "Export CSV",
+      "pdf": "Export PDF",
+      "loading": "Exporting..."
+    },
+    "table": {
+      "name": "Name",
+      "department": "Department",
+      "date": "Date",
+      "in": "In",
+      "out": "Out",
+      "status": "Status"
+    },
+    "filters": {
+      "search_placeholder": "Search name, employee ID, department...",
+      "filter_btn": "Filters",
+      "period": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
+      "sort": {
+        "date_newest": "Newest date",
+        "date_oldest": "Oldest date",
+        "name_asc": "Name (A-Z)",
+        "name_desc": "Name (Z-A)",
+        "status_asc": "Status (A-Z)",
+        "status_desc": "Status (Z-A)"
+      }
+    },
+    "status": {
+      "present": "Present",
+      "late": "Late",
+      "absent": "Absent",
+      "left_early": "Left Early",
+      "manual": "Manual"
+    },
+    "validate_modal": {
+      "title": "Validate / Justify",
+      "employee": "Employee",
+      "set_status": "Set status",
+      "justification": "Justification (optional)",
+      "justification_placeholder": "Reason / note..."
+    }
+  },
+  "planning": {
+    "actions": {
+      "manage_holidays": "Manage Holidays",
+      "manage_exceptions": "Manage Exceptions"
+    },
+    "filters": {
+      "display_label": "Display",
+      "show_shifts": "Planning",
+      "show_exceptions": "Exceptions / Absences",
+      "show_holidays": "Holidays"
+    }
+  },
+  "employees": {
+    "table": {
+      "pic": "PIC",
+      "employee": "EMPLOYEE",
+      "dept_role": "DEPT / ROLE",
+      "enroll": "ENROLL",
+      "status": "STATUS",
+      "stats": "STATS (30D)"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "enrolled": "Enrolled",
+      "not_enrolled": "Not Enrolled"
+    },
+    "role": {
+      "manager": "Manager",
+      "employee": "Employee",
+      "admin": "Administrator",
+      "rh": "Human Resources (RH)"
+    },
+    "actions": {
+      "enroll_face": "Enroll face",
+      "edit": "Edit",
+      "delete": "Delete",
+      "add_employee": "Add Employee"
+    },
+    "filters": {
+      "search_placeholder": "Search employee, ID, department...",
+      "filter_btn": "Filters",
+      "subtitle": "Refine the employee list",
+      "role_label": "Role",
+      "role_options": {
+        "all": "All roles",
+        "employee": "Employees",
+        "manager": "Managers"
+      },
+      "enrolled_label": "Enrollment",
+      "enrolled_options": {
+        "all": "All enroll",
+        "enrolled": "Enrolled",
+        "not": "Not enrolled"
+      },
+      "status_label": "Status",
+      "status_options": {
+        "all": "All status",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "apply": "Apply",
+      "clear": "Clear all",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "name_asc": "Name (A-Z)",
+        "name_desc": "Name (Z-A)",
+        "best_attendance": "Best attendance",
+        "lowest_attendance": "Lowest attendance"
+      }
+    },
+    "form": {
+      "create_employee": "Create Employee",
+      "create_admin": "Create Admin / RH",
+      "update": "Update settings",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "dob": "Date of Birth",
+      "department": "Department",
+      "role": "Role",
+      "password": "Password",
+      "status": "Status",
+      "cv": "CV (PDF)",
+      "placeholders": {
+        "email": "name@company.com",
+        "phone": "+123...",
+        "department": "Production / QA / HR...",
+        "password": "Min 8 chars"
+      }
+    },
+    "stats": {
+      "presence": "presence",
+      "late": "late",
+      "absent": "absent"
+    }
+  },
+  "devices": {
+    "alerts": {
+      "ip_conflict": "Security Alert: {{count}} device(s) have IP conflicts!"
+    },
+    "header": {
+      "title": "Devices & Validation",
+      "description": "Manage and monitor your biometric terminals across the organization."
+    },
+    "table": {
+      "device": "Device",
+      "location": "Location",
+      "status": "Status",
+      "last_sync": "Last Sync",
+      "mode": "Mode",
+      "version": "Version"
+    },
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "error": "Error",
+      "pending_auth": "Pending Auth",
+      "conflict": "Conflict",
+      "blocked": "Blocked",
+      "trusted": "Trusted",
+      "blacklisted": "Blacklisted",
+      "unknown": "Unknown"
+    },
+    "mode": {
+      "recognition": "Recognition",
+      "enrollment": "Enrollment",
+      "idle": "Idle"
+    },
+    "actions": {
+      "sync": "Sync Now",
+      "switch_recognition": "Switch to Recognition",
+      "switch_enrollment": "Switch to Enrollment",
+      "resolve": "Resolve Security Issue",
+      "blacklist": "Blacklist IP",
+      "delete": "Delete Device"
+    },
+    "filters": {
+      "search_placeholder": "Search device, IP, location...",
+      "filter_btn": "Filters",
+      "status_label": "Status",
+      "sort_label": "Sort",
+      "clear": "Clear",
+      "apply": "Apply",
+      "sort": {
+        "newest_sync": "Last sync (newest)",
+        "oldest_sync": "Last sync (oldest)",
+        "name_az": "Name A → Z",
+        "name_za": "Name Z → A"
+      },
+      "status_options": {
+        "all": "All",
+        "online": "Online",
+        "offline": "Offline",
+        "error": "Error"
+      }
+    },
+    "modals": {
+      "block": {
+        "title": "Blacklist IP Address",
+        "confirm_text": "Are you sure you want to blacklist {{ip}}? All devices connecting from this IP will be blocked immediately.",
+        "reason_label": "Reason for blacklisting",
+        "confirm_btn": "Confirm Blacklist"
+      },
+      "conflict": {
+        "title_resolve": "Resolve Device Conflict",
+        "title_auth": "Authorize Device",
+        "alert_conflict": "Security Alert: IP Address Conflict",
+        "alert_auth": "Authorization Required",
+        "text_conflict": "This device is attempting to connect using an IP address that is currently associated with another trusted device.",
+        "text_auth": "This device is waiting for authorization. Please verify the device details before proceeding.",
+        "details_title": "Device Details",
+        "labels": {
+          "name": "Name",
+          "ip": "IP Address",
+          "mac": "MAC Address",
+          "trust_status": "Trust Status"
+        },
+        "btns": {
+          "block": "Block Device",
+          "approve": "Approve Replacement",
+          "authorize": "Authorize Device"
+        }
+      },
+      "details": {
+        "headers": {
+          "network": "Network Interfaces",
+          "system": "System Details",
+          "deployment": "Deployment",
+          "activity": "Activity"
+        },
+        "labels": {
+          "kiosk_ip": "Kiosk IP (Ethernet/WiFi)",
+          "tablet_ip": "Tablet IP (Mobile)",
+          "mac": "MAC Address",
+          "version": "Software Version",
+          "current_mode": "Current Mode",
+          "trust_status": "Trust Status",
+          "location": "Location",
+          "last_seen": "Last Seen"
+        },
+        "values": {
+          "unknown": "Unknown",
+          "unassigned": "Unassigned",
+          "never": "Never"
+        }
+      }
+    },
+    "validation": {
+      "title": "Unverified Captures",
+      "card": {
+        "guess": "guess",
+        "unknown": "Unknown",
+        "score": "score",
+        "liveness": "liveness",
+        "status": "status",
+        "accept": "Accept",
+        "reject": "Reject",
+        "values": {
+          "pending": "Pending",
+          "pass": "Pass",
+          "fail": "Fail"
+        }
+      },
+      "filters": {
+        "all_devices": "All devices",
+        "all_liveness": "All liveness",
+        "liveness_pass": "Liveness pass",
+        "liveness_fail": "Liveness fail",
+        "unknown": "Unknown",
+        "all_statuses": "All statuses",
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "min_score": "min score"
+      }
+    }
+  }
+}

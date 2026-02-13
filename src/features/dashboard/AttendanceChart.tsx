@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { useDashboard } from "./useDashboard";
 import {
     Area,
@@ -31,58 +32,37 @@ const ChartTitle = styled.h2`
 `;
 
 function AttendanceChart() {
+    const { t } = useTranslation();
     const { trends, stats } = useDashboard();
 
-    const teamSize = stats?.total_team_size || 1; // Avoid division by zero, but don't mock 50
+    const teamSize = stats?.total_team_size || 1;
 
     const data = trends?.map((t: any) => {
-        // t has value (present), late, absent (counts)
-        // We want to display percentages relative to teamSize
-        // Note: t.value (Present) includes Late in some definitions? 
-        // Backend: Value = DailyStats (Total Checkins). Late = DailyLateStats. 
-        // Typically Present includes Late.
-        // So Punctual = Present - Late.
-        // Stacked Chart: Punctual + Late + Absent = 100%?
-        // Current Chart areas: Presence, Late. 
-        // If not stacked, we just show Punctual Rate and Late Rate?
-        // Let's assume Present = Punctual + Late.
-
         const presentCount = t.value || 0;
         const lateCount = t.late || 0;
-        const absentCount = t.absent || (teamSize - presentCount); // Fallback if backend absent is 0
 
-        const total = teamSize || (presentCount + absentCount) || 1;
+        const total = teamSize || 1;
 
         const presencePct = Math.round((presentCount / total) * 100);
         const latePct = Math.round((lateCount / total) * 100);
-        const absencePct = 100 - presencePct; // Simplified
-
-        // For Area chart, validation usually expects:
-        // Presence (Total Present) = Punctual + Late
-        // Or separate? 
-        // The Chart has separate "presence" and "late".
-        // Let's pass them as is.
 
         return {
             label: t.day,
-            presence: presencePct, // This is total presence %
-            late: latePct,         // This is late %
-            absence: absencePct
+            presence: presencePct,
+            late: latePct,
         };
     }) || [];
 
-    const isDarkMode = false; // TODO: Get from context
+    const isDarkMode = false;
     const colors = isDarkMode
         ? {
             presence: { stroke: "#4f46e5", fill: "#4f46e5" },
-            absence: { stroke: "#ef4444", fill: "#ef4444" },
             late: { stroke: "#eab308", fill: "#eab308" },
             text: "#e5e7eb",
             background: "#18212f",
         }
         : {
             presence: { stroke: "#4f46e5", fill: "#c7d2fe" },
-            absence: { stroke: "#ef4444", fill: "#fecaca" },
             late: { stroke: "#eab308", fill: "#fef08a" },
             text: "#374151",
             background: "#fff",
@@ -90,7 +70,7 @@ function AttendanceChart() {
 
     return (
         <StyledChart>
-            <ChartTitle>Ponctualité de la semaine</ChartTitle>
+            <ChartTitle>{t("dashboard.chart.title")}</ChartTitle>
             <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={data}>
                     <XAxis
@@ -111,7 +91,7 @@ function AttendanceChart() {
                         stroke={colors.presence.stroke}
                         fill={colors.presence.fill}
                         strokeWidth={2}
-                        name="Présence"
+                        name={t("dashboard.chart.presence")}
                         unit="%"
                     />
                     <Area
@@ -120,7 +100,7 @@ function AttendanceChart() {
                         stroke={colors.late.stroke}
                         fill={colors.late.fill}
                         strokeWidth={2}
-                        name="Retard"
+                        name={t("dashboard.chart.late")}
                         unit="%"
                     />
                 </AreaChart>

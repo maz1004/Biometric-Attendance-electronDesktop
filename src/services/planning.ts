@@ -1,5 +1,5 @@
 import { apiClient as axios } from "./api"; // Aliased to keep existing code working
-import { CreateShiftDTO, UpdateShiftCommand, UpdateTeamCommand, CreateTeamCommand, Shift, Team, UserShift, Holiday, ShiftException, Schedule } from "../features/planning/types";
+import { CreateShiftDTO, UpdateShiftCommand, UpdateTeamCommand, CreateTeamCommand, Shift, Team, UserShift, Holiday, ShiftException, Schedule, WeeklyTemplate, WeeklySchedule } from "../features/planning/types";
 
 const API_URL = "/planning"; // Base URL is handled by apiClient, just need relative path from v1
 
@@ -58,8 +58,8 @@ export async function createShift(data: CreateShiftDTO): Promise<Shift> {
     description: data.description,
     week_key: data.week_key, // REQUIRED
     schedule_data: data.schedule_data,
-    color: data.color
-    // Legacy fields ignored by backend new logic: start_time, end_time, days_of_week, team_id
+    color: data.color,
+    template_id: data.template_id // Link to source template
   };
   const res = await axios.post(`${API_URL}/shifts`, payload);
 
@@ -116,7 +116,58 @@ export async function deleteShift(id: string): Promise<void> {
   await axios.delete(`${API_URL}/shifts/${id}`);
 }
 
+/**
+ * Archives a shift (soft delete) - keeps it selectable for future use
+ * when settings become compatible again
+ */
+export async function archiveShift(id: string, reason?: string): Promise<Shift> {
+  const payload = {
+    is_archived: true,
+    archived_at: new Date().toISOString(),
+    archived_reason: reason
+  };
+  const res = await axios.patch(`${API_URL}/shifts/${id}/archive`, payload);
+  const s = res.data;
+  return {
+    id: s.id,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    description: s.description,
+    isActive: s.is_active,
+    is_archived: s.is_archived,
+    archived_at: s.archived_at,
+    archived_reason: s.archived_reason,
+    teamId: s.team_id,
+    daysOfWeek: s.days_of_week || [],
+    maxMembers: s.max_members,
+    color: s.color,
+    schedule_data: s.schedule_data || {},
+    weekKey: s.week_key,
+    teamIds: s.team_ids || []
+  };
+}
+
 // TEAMS
+export async function getTemplates(): Promise<WeeklyTemplate[]> {
+  const res = await axios.get(`${API_URL}/templates`);
+  return Array.isArray(res.data) ? res.data : (res.data.data || []);
+}
+
+export async function createTemplate(data: { name: string; description?: string; schedule_data: WeeklySchedule }): Promise<WeeklyTemplate> {
+  const res = await axios.post(`${API_URL}/templates`, data);
+  return res.data;
+}
+
+export async function updateTemplate(id: string, data: { name?: string; description?: string; schedule_data?: WeeklySchedule }): Promise<WeeklyTemplate> {
+  const res = await axios.put(`${API_URL}/templates/${id}`, data);
+  return res.data;
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  await axios.delete(`${API_URL}/templates/${id}`);
+}
+
 export async function getTeams(): Promise<{ teams: Team[] }> {
   const res = await axios.get(`${API_URL}/teams`);
 
@@ -285,18 +336,57 @@ export async function getAssignments(startDate: string, endDate: string): Promis
       id: u.id,
       userId: u.user_id,
       shiftId: u.shift_id,
-      startTime: u.start_time,   // NEW: Time slot from backend
-      endTime: u.end_time,       // NEW: Time slot from backend
+      startTime: u.start_time,
+      endTime: u.end_time,
       assignedAt: u.assigned_at ? u.assigned_at.substring(0, 10) : "",
       isActive: u.is_active,
       notes: u.notes,
       shiftName: u.shift_name,
-      userName: u.user_name
+      userName: u.user_name,
+      color: u.color,
+      teamId: u.team_id, // CRITICAL: Map team_id for independent filtering
+      is_placeholder: u.is_placeholder // CRITICAL: Map placeholder flag
+    }));
+
+    console.log("PlanningService.getAssignments MAPPED:", mapped); // DEBUG
+    return { data: mapped };
+  } catch (err) {
+    console.error("PlanningService.getAssignments ERROR:", err);
+    return { data: [] };
+  }
+}
+
+// New: Context-Driven Batch Fetch
+export async function fetchAssignmentsBatch(payload: {
+  user_ids?: string[];
+  team_id?: string;
+  start_date: string;
+  end_date: string;
+}): Promise<{ data: UserShift[] }> {
+  try {
+    const res = await axios.post(`${API_URL}/assignments/fetch`, payload);
+    const raw = res.data.data || [];
+
+    // Reuse mapping logic (Refactor to helper if widely used)
+    const mapped = raw.map((u: any) => ({
+      id: u.id,
+      userId: u.user_id,
+      shiftId: u.shift_id,
+      startTime: u.start_time,
+      endTime: u.end_time,
+      assignedAt: u.assigned_at ? u.assigned_at.substring(0, 10) : "",
+      isActive: u.is_active,
+      notes: u.notes,
+      shiftName: u.shift_name,
+      userName: u.user_name,
+      color: u.color,
+      teamId: u.team_id,
+      is_placeholder: u.is_placeholder
     }));
 
     return { data: mapped };
   } catch (err) {
-    console.error("PlanningService.getAssignments ERROR:", err);
+    console.error("PlanningService.fetchAssignmentsBatch ERROR:", err);
     return { data: [] };
   }
 }
@@ -319,7 +409,12 @@ export const PlanningService = {
   createTeam,
   updateTeam,
   deleteTeam,
+  getTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
   getAssignments,
+  fetchAssignmentsBatch, // Export new method
   createAssignment,
   createAssignmentsBatch: async (data: { assignments: any[]; overwrite?: boolean }) => {
     return axios.post(`${API_URL}/assignments/batch`, data);
@@ -361,7 +456,7 @@ export const PlanningService = {
   },
 
   // Schedules (Strategic)
-  getSchedules: async (startDate: string, endDate: string, targetType?: 'TEAM' | 'USER', targetId?: string): Promise<Schedule[]> => {
+  getSchedules: async (_startDate: string, _endDate: string, _targetType?: 'TEAM' | 'USER', _targetId?: string): Promise<Schedule[]> => {
     // Not implemented in backend yet or uses Assignments logic?
     // For now, return empty or implement if backend has endpoint.
     // Backend has `ScheduleRecord` but no dedicated CRUD controller for "Schedules" aggregate yet, 
@@ -370,7 +465,7 @@ export const PlanningService = {
     console.warn("getSchedules not fully implemented in backend");
     return [];
   },
-  createSchedule: async (data: { team_id?: string, user_id?: string, shift_id: string, start_date: string, end_date: string }): Promise<Schedule> => {
+  createSchedule: async (_data: { team_id?: string, user_id?: string, shift_id: string, start_date: string, end_date: string }): Promise<Schedule> => {
     // This maps to "Strategic Assignment" which we might handle via CreateAssignmentsBatch or similar.
     // For now, throw or implement if we added endpoint.
     // I did not add POST /planning/schedules. 

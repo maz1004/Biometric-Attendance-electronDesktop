@@ -67,6 +67,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 // This ensures we get the persisted state
                 queryClient.invalidateQueries({ queryKey: ["notifications"] });
 
+                // Handle real-time attendance updates
+                if (notification.type === 'attendance_update') {
+                    queryClient.invalidateQueries({ queryKey: ["attendance"] });
+                    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+                    queryClient.invalidateQueries({ queryKey: ["stats"] });
+                }
+
                 // Show toast
                 toast(notification.message, {
                     icon: notification.type === 'error' ? '🔴' : notification.type === 'warning' ? '⚠️' : 'ℹ️',

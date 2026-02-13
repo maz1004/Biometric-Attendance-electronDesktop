@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shift } from "../types";
+import { Shift, WeeklyTemplate } from "../types";
 
 export type ViewMode = "week" | "month" | "cells";
 export type PlanningMode = "view" | "template";
@@ -21,7 +21,7 @@ export function usePlanningLayoutState() {
     const [viewAssignmentsDate, setViewAssignmentsDate] = useState<Date | null>(null);
 
     // Template specific selection
-    const [selectedTemplate, setSelectedTemplate] = useState<Shift | null>(null);
+    const [selectedTemplate, setSelectedTemplate] = useState<WeeklyTemplate | null>(null);
 
     return {
         mode, setMode,

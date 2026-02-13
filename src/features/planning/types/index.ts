@@ -14,6 +14,7 @@ export interface TimeSlot {
   assigned_id?: string; // UUID of Team or Employee
   assigned_type?: 'team' | 'employee';
   color?: string;
+  is_checkout?: boolean; // True for checkout-only markers (zero-duration, rendered as hollow)
 }
 
 export interface WeeklySchedule {
@@ -26,17 +27,28 @@ export interface WeeklySchedule {
   sunday: TimeSlot[];
 }
 
-export interface Shift {
+export interface WeeklyTemplate {
   id: string;
   name: string;
   description?: string;
   schedule_data: WeeklySchedule;
+  color?: string; // Template color for display
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Shift {
+  id: string;
+  name: string;
+  description?: string;
+  schedule_data?: WeeklySchedule; // Made optional as it might come from template
+  template_id?: string; // Link to template
   color?: string;
   created_at?: string;
   updated_at?: string;
   version?: number;
-  weekKey?: string; // New
-  teamIds?: string[]; // New
+  weekKey?: string;
+  teamIds?: string[];
 
   // Compatibility fields
   startTime?: string;
@@ -45,6 +57,24 @@ export interface Shift {
   teamId?: string; // specific default team
   isActive?: boolean;
   maxMembers?: number;
+
+  // Archiving (Phase 4)
+  is_archived?: boolean; // Shift archived due to settings incompatibility
+  archived_at?: string;  // When it was archived
+  archived_reason?: string; // Why it was archived
+}
+
+/**
+ * Result of checking if a shift is compatible with current settings
+ */
+export interface ShiftCompatibility {
+  shiftId: string;
+  shiftName: string;
+  isCompatible: boolean;
+  issue?: 'OUT_OF_DAY_RANGE' | 'OUT_OF_NIGHT_RANGE' | 'STRADDLES_BOUNDARY';
+  currentRange: string;  // e.g., "08:00 - 16:00"
+  settingsRange: string; // e.g., "07:00 - 19:00"
+  suggestedAction: 'KEEP' | 'ARCHIVE' | 'ADJUST';
 }
 
 
@@ -60,6 +90,8 @@ export interface UserShift {
   notes?: string;
   shiftName?: string;
   userName?: string;
+  color?: string; // from backend DTO
+  is_placeholder?: boolean;
 }
 
 export interface Team {
@@ -87,6 +119,7 @@ export interface CreateShiftDTO {
   color?: string;
   week_key: string;
   user_id?: string;
+  template_id?: string; // Link to source template
 }
 
 export interface UpdateShiftCommand {
@@ -104,7 +137,11 @@ export interface CreateTeamCommand {
   color?: string;
 }
 
-// ... (existing content)
+export type ViewContext =
+  | { type: 'GLOBAL_DEFAULT' }
+  | { type: 'TEAM'; teamId: string }
+  | { type: 'USER_LIST'; userIds: string[] };
+
 export interface UpdateTeamCommand {
   name?: string;
   department?: string;
@@ -164,4 +201,8 @@ export interface ComputedSchedule {
   assigneeId?: string;
   assigneeName?: string;
   assigneeType?: 'TEAM' | 'USER';
+  isPlaceholder?: boolean; // True if day has no assignments but is linked to template
+  isMissingCheckout?: boolean; // True if employee checked in but hasn't checked out yet
+  isCheckoutMarker?: boolean; // True for checkout-only markers (rendered as hollow dots)
 }
+

@@ -5,7 +5,8 @@ import {
   getPendingEnrollments,
   validateEnrollment,
   getDevices,
-  authorizeDevice,
+  resolveConflict,
+  blockIP,
   updateDeviceDetails,
   deleteDevice,
   syncDevice
@@ -56,11 +57,18 @@ export function useDevices() {
       id: d.id,
       name: d.name || "Unknown Device",
       location: d.location || "Unknown Location",
-      status: d.is_active ? "online" : "offline",
-      isAuthorized: d.is_authorized ?? true,
+      status: d.status || (d.is_active ? "online" : "offline"),
+      // isAuthorized removed from UI types
+      trustStatus: d.trust_status,
+      conflictId: d.conflict_id,
+      blockedReason: d.blocked_reason,
+      blockedBy: d.blocked_by,
+
       lastSyncISO: d.last_seen || new Date().toISOString(),
       ip: d.ip_address,
-      version: "1.0.0"
+      mobileIP: d.mobile_ip,
+      version: d.version || "1.0.0",
+      currentMode: (d.current_mode as any) || undefined
     })) : [];
   }, [apiDevices]);
 
@@ -237,13 +245,24 @@ export function useDevices() {
 
   // TODO: Add activate/deactivate mutations if UI supports it
 
-  const { mutate: authorizeDeviceMutation } = useMutation({
-    mutationFn: (id: string) => authorizeDevice(id),
+  const { mutate: resolveConflictMutation } = useMutation({
+    mutationFn: ({ id, resolution }: { id: string, resolution: 'approve_replacement' | 'block_device' | 'blacklist_device' }) =>
+      resolveConflict(id, resolution),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
-      toast.success("Device authorized");
+      toast.success("Device conflict resolved");
     },
-    onError: () => toast.error("Error authorizing device"),
+    onError: () => toast.error("Error resolving conflict"),
+  });
+
+  const { mutate: blockIPMutation } = useMutation({
+    mutationFn: ({ ip, reason }: { ip: string, reason: string }) =>
+      blockIP(ip, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      toast.success("IP Blacklisted");
+    },
+    onError: () => toast.error("Error blacklisting IP"),
   });
 
   const { mutate: updateDetailsMutation } = useMutation({
@@ -286,7 +305,8 @@ export function useDevices() {
     setDevFilters,
     setQFilters,
     setCaptureStatus,
-    authorizeDevice: authorizeDeviceMutation,
+    resolveConflict: resolveConflictMutation,
+    blockIP: blockIPMutation,
     updateDeviceDetails: updateDetailsMutation,
     removeDevice: removeDeviceMutation,
     resyncDevice: resyncDeviceMutation,

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -74,19 +75,41 @@ const InputGroup = styled.div`
 const Input = styled.input`
   padding: 8px;
   border: 1px solid var(--color-border-element);
-  background: var(--color-bg-subtle);
+  background: var(--color-grey-100);
   color: var(--color-text-main);
   border-radius: 4px;
   flex: 1;
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
 `;
 
 const Select = styled.select`
   padding: 8px;
   border: 1px solid var(--color-border-element);
-  background: var(--color-bg-subtle);
+  background: var(--color-grey-100);
   color: var(--color-text-main);
   border-radius: 4px;
   flex: 1;
+
+  option {
+    background: var(--color-bg-card);
+    color: var(--color-text-main);
+  }
+`;
+
+const FieldGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+`;
+
+const Label = styled.label`
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
 `;
 
 const Button = styled.button`
@@ -96,7 +119,22 @@ const Button = styled.button`
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  &:disabled { opacity: 0.5; }
+  transition: opacity 0.2s, background 0.2s;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  &:hover:not(:disabled) {
+    background: var(--color-primary-500);
+  }
+`;
+
+const ErrorText = styled.span`
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 4px;
 `;
 
 interface ExceptionManagerProps {
@@ -105,29 +143,85 @@ interface ExceptionManagerProps {
   employees: Record<string, EmployeeMini>;
 }
 
+const TimeOptions = Array.from({ length: 48 }).map((_, i) => {
+  const h = Math.floor(i / 2).toString().padStart(2, '0');
+  const m = (i % 2) * 30 === 0 ? '00' : '30';
+  return `${h}:${m}`;
+});
+
 export default function ExceptionManager({ isOpen, onClose, employees }: ExceptionManagerProps) {
   const { exceptions, createException } = usePlanning();
-  const { register, handleSubmit, reset } = useForm<any>();
+  const { register, handleSubmit, reset, watch, setValue, formState: { isValid } } = useForm<any>({
+    mode: "onChange",
+    defaultValues: {
+      type: "LEAVE"
+    }
+  });
+
+  const startDateDay = watch("start_date_day");
+  const endDateDay = watch("end_date_day");
+  const startTime = watch("start_time");
+  const endTime = watch("end_time");
+
+  // Auto-fill End Date when Start Date changes
+  useEffect(() => {
+    if (startDateDay) {
+      // Only update if end date is empty OR if user hasn't explicitly set a DIFFERENT end date?
+      // User requirement: "que mon end date prennent la mm valeur".
+      // Simple approach: When start date changes, sync end date to be at least start date.
+      // If end date was equal to OLD start date, move it to NEW start date.
+      // Simplest: Always sync end date to start date when start date changes.
+      setValue("end_date_day", startDateDay);
+    }
+  }, [startDateDay, setValue]);
+
+  // Auto-fill End Time when Start Time changes
+  useEffect(() => {
+    if (startTime) {
+      // Find index of start time
+      const startIndex = TimeOptions.indexOf(startTime);
+      if (startIndex !== -1) {
+        // Default to +2 slots (1 hour) later, or last slot if near end of day
+        const endIndex = Math.min(startIndex + 2, TimeOptions.length - 1);
+        setValue("end_time", TimeOptions[endIndex]);
+      }
+    }
+  }, [startTime, setValue]);
+
+  // Validation
+  let dateError = "";
+  if (startDateDay && endDateDay) {
+    // Simple string comparison works for ISO YYYY-MM-DD
+    if (endDateDay < startDateDay) {
+      dateError = "La date de fin ne peut pas être antérieure à la date de début.";
+    } else if (endDateDay === startDateDay && startTime && endTime) {
+      // Compare times if same day
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      if (eh < sh || (eh === sh && em <= sm)) {
+        dateError = "L'heure de fin doit être postérieure à l'heure de début.";
+      }
+    }
+  }
 
   if (!isOpen) return null;
 
   const onSubmit = (data: any) => {
-    if (!data.user_id || !data.start_date || !data.end_date) return;
+    if (dateError) return;
+    if (!data.user_id || !data.start_date_day || !data.start_time || !data.end_date_day || !data.end_time) return;
 
-    // Naive ISO string construction for simplicity in this MVP
-    // Assuming inputs are datetime-local or just date. Let's use datetime-local
-    // data.start_date is likely "YYYY-MM-DDTHH:mm"
-    const start = new Date(data.start_date).toISOString();
-    const end = new Date(data.end_date).toISOString();
+    // Combine Date and Time
+    const start = new Date(`${data.start_date_day}T${data.start_time}:00`).toISOString();
+    const end = new Date(`${data.end_date_day}T${data.end_time}:00`).toISOString();
 
     createException({
       user_id: data.user_id,
-      type: data.type,
+      type: data.type || "LEAVE",
       start_date: start,
       end_date: end,
       reason: data.reason
     });
-    reset();
+    reset({ type: "LEAVE" });
   };
 
   const getEmployeeName = (id: string) => employees[id]?.name || id;
@@ -171,12 +265,45 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
               <option value="OVERRIDE">Override</option>
             </Select>
           </InputGroup>
+
           <InputGroup>
-            <Input type="datetime-local" {...register("start_date", { required: true })} />
-            <Input type="datetime-local" {...register("end_date", { required: true })} />
+            <FieldGroup>
+              <Label>Start</Label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <Input type="date" {...register("start_date_day", { required: true })} style={{ flex: 2 }} />
+                <Select {...register("start_time", { required: true })} style={{ flex: 1 }}>
+                  {TimeOptions.map(t => <option key={`start-${t}`} value={t}>{t}</option>)}
+                </Select>
+              </div>
+            </FieldGroup>
+            <FieldGroup>
+              <Label>End</Label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <Input
+                  type="date"
+                  {...register("end_date_day", { required: true })}
+                  style={{ flex: 2, borderColor: dateError ? '#ef4444' : 'var(--color-border-element)' }}
+                />
+                <Select
+                  {...register("end_time", { required: true })}
+                  style={{ flex: 1, borderColor: dateError ? '#ef4444' : 'var(--color-border-element)' }}
+                >
+                  {TimeOptions.map(t => <option key={`end-${t}`} value={t}>{t}</option>)}
+                </Select>
+              </div>
+            </FieldGroup>
           </InputGroup>
-          <Input type="text" placeholder="Reason" {...register("reason")} />
-          <Button type="submit">Add Exception</Button>
+
+          {dateError && <ErrorText>{dateError}</ErrorText>}
+
+          <Input type="text" placeholder="Reason" {...register("reason", { required: true })} />
+          <Button
+            type="submit"
+            disabled={!isValid || !!dateError}
+            title={!isValid ? "Please fill all required fields" : ""}
+          >
+            Add Exception
+          </Button>
         </Form>
       </Dialog>
     </Overlay>

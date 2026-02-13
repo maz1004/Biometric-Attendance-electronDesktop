@@ -13,6 +13,7 @@ import UserDetailView from "./UserDetailView";
 import AbsenceHistoryView from "./AbsenceHistoryView";
 import { useDeleteEmployee, useEnrollFace } from "./useEmployees";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const NameBlock = styled.div`
   font-size: 1.4rem;
@@ -114,6 +115,7 @@ type EmployeeRowProps = {
 function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
   const { deleteEmployee, isDeleting } = useDeleteEmployee();
   const { enrollFace, isEnrolling } = useEnrollFace();
+  const { t } = useTranslation();
 
   const {
     id,
@@ -171,35 +173,35 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
           <DeptRoleBlock>
             <span className="dept">{department}</span>
             <span className="role">
-              {role === "manager" ? "Manager" : "Employee"}
+              {role === "manager" ? t("employees.role.manager") : t("employees.role.employee")}
             </span>
           </DeptRoleBlock>
 
           <div>
             {enrolled ? (
-              <Badge $type="success">Enrolled</Badge>
+              <Badge $type="success">{t("employees.status.enrolled")}</Badge>
             ) : (
-              <Badge $type="danger">Not Enrolled</Badge>
+              <Badge $type="danger">{t("employees.status.not_enrolled")}</Badge>
             )}
           </div>
 
           <div>
             {status === "active" ? (
-              <Badge $type="success">Active</Badge>
+              <Badge $type="success">{t("employees.status.active")}</Badge>
             ) : (
-              <Badge $type="muted">Inactive</Badge>
+              <Badge $type="muted">{t("employees.status.inactive")}</Badge>
             )}
           </div>
 
           <StatsGrid>
             <div>
-              <strong>{presence}%</strong> presence
+              <strong>{presence}%</strong> {t("employees.stats.presence")}
             </div>
             <div>
-              <strong>{late}</strong> late
+              <strong>{late}</strong> {t("employees.stats.late")}
             </div>
             <div>
-              <strong>{absent}</strong> absent
+              <strong>{absent}</strong> {t("employees.stats.absent")}
             </div>
           </StatsGrid>
 
@@ -212,17 +214,17 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
                 {!enrolled && (
                   <Modal.Open opens="enroll-face-modal">
                     <Menus.Button icon={<HiUserPlus />}>
-                      Enroll face
+                      {t("employees.actions.enroll_face")}
                     </Menus.Button>
                   </Modal.Open>
                 )}
 
                 <Modal.Open opens="edit-employee">
-                  <Menus.Button icon={<HiPencil />}>Edit</Menus.Button>
+                  <Menus.Button icon={<HiPencil />}>{t("employees.actions.edit")}</Menus.Button>
                 </Modal.Open>
 
                 <Modal.Open opens="delete-employee-modal">
-                  <Menus.Button icon={<HiTrash />}>Delete</Menus.Button>
+                  <Menus.Button icon={<HiTrash />}>{t("employees.actions.delete")}</Menus.Button>
                 </Modal.Open>
               </Menus.List>
             </Menus.Menu>

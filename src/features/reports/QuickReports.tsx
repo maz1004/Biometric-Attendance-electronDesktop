@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import styled, { css, keyframes } from "styled-components";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { HiCalendar, HiCalendarDays, HiClock } from "react-icons/hi2";
-import Button from "../../ui/Button";
 import Heading from "../../ui/Heading";
 import { useReports } from "./useReports";
 import { HoverPreviewPopover } from "./components/HoverPreviewPopover";
@@ -169,8 +168,12 @@ export default function QuickReports() {
             start = startOfDay(now);
             end = endOfDay(now);
         } else if (period === 'week') {
-            start = startOfWeek(now, { weekStartsOn: 1 });
-            end = endOfWeek(now, { weekStartsOn: 1 });
+            // Rolling 7 days
+            start = new Date(now);
+            start.setDate(now.getDate() - 6);
+            start.setHours(0, 0, 0, 0);
+
+            end = endOfDay(now);
         } else {
             start = startOfMonth(now);
             end = endOfMonth(now);

@@ -1,6 +1,8 @@
 import styled from "styled-components";
 import { Capture, Device, QueueFilters } from "./DeviceTypes";
 import CaptureCard from "./CaptureCard";
+import { useTranslation } from "react-i18next";
+
 
 const Panel = styled.div`
   border: 1px solid var(--color-border-card);
@@ -44,16 +46,18 @@ export default function ValidationQueue(props: {
   onAccept: (id: string) => void;
   onReject: (id: string) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Panel>
       <Head>
-        <strong>Unverified Captures</strong>
+        <strong>{t("devices.validation.title")}</strong>
         <Filters>
           <Select
             value={props.filters.device}
             onChange={(e) => props.onChange({ device: e.target.value })}
           >
-            <option value="all">All devices</option>
+            <option value="all">{t("devices.validation.filters.all_devices")}</option>
             {props.allDevices.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name}
@@ -67,26 +71,26 @@ export default function ValidationQueue(props: {
               props.onChange({ liveness: e.target.value as any })
             }
           >
-            <option value="all">All liveness</option>
-            <option value="pass">Liveness pass</option>
-            <option value="fail">Liveness fail</option>
-            <option value="unknown">Unknown</option>
+            <option value="all">{t("devices.validation.filters.all_liveness")}</option>
+            <option value="pass">{t("devices.validation.filters.liveness_pass")}</option>
+            <option value="fail">{t("devices.validation.filters.liveness_fail")}</option>
+            <option value="unknown">{t("devices.validation.filters.unknown")}</option>
           </Select>
 
           <Select
             value={props.filters.status}
             onChange={(e) => props.onChange({ status: e.target.value as any })}
           >
-            <option value="all">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="accepted">Accepted</option>
-            <option value="rejected">Rejected</option>
+            <option value="all">{t("devices.validation.filters.all_statuses")}</option>
+            <option value="pending">{t("devices.validation.filters.pending")}</option>
+            <option value="accepted">{t("devices.validation.filters.accepted")}</option>
+            <option value="rejected">{t("devices.validation.filters.rejected")}</option>
           </Select>
 
           <label
             style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            <span style={{ opacity: 0.75, fontSize: 12 }}>min score</span>
+            <span style={{ opacity: 0.75, fontSize: 12 }}>{t("devices.validation.filters.min_score")}</span>
             <Range
               value={props.filters.scoreMin}
               onChange={(e) =>

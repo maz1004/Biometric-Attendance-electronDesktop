@@ -1,0 +1,384 @@
+{
+    "common": {
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "loading": "Chargement...",
+        "search": "Rechercher...",
+        "confirm": "Confirmer",
+        "last_update": "Dernière mise à jour : ",
+        "field_required": "Ce champ est obligatoire"
+    },
+    "sidebar": {
+        "dashboard": "Tableau de bord",
+        "attendance": "Présence",
+        "employees": "Employés",
+        "planning": "Planning",
+        "devices": "Appareils",
+        "reports": "Rapports",
+        "settings": "Paramètres"
+    },
+    "header": {
+        "profile": "Profil",
+        "logout": "Déconnexion"
+    },
+    "dashboard": {
+        "title": "Tableau de bord",
+        "welcome": "Bon retour",
+        "stats": {
+            "total_employees": "Total Employés",
+            "presents_today": "Présents Aujourd'hui",
+            "presence_rate": "Taux de Présence",
+            "late_rate": "Taux de Retard"
+        },
+        "chart": {
+            "title": "Ponctualité de la semaine",
+            "presence": "Présence",
+            "late": "Retard"
+        },
+        "quick_actions": {
+            "title": "Actions Rapides",
+            "add_employee": "Ajouter un employé",
+            "view_planning": "Voir planning",
+            "todays_attendance": "Présences du jour"
+        },
+        "recent": {
+            "title": "Activité Récente",
+            "no_activity": "Aucune activité récente."
+        }
+    },
+    "settings": {
+        "title": "Paramètres",
+        "appearance": "Apparence",
+        "language": "Langue",
+        "theme": "Thème",
+        "form": {
+            "company_name": "Nom de l'entreprise",
+            "company_name_required": "Ce champ est obligatoire",
+            "late_threshold": "Seuil de retard (minutes)",
+            "late_threshold_min": "La valeur minimale est 0",
+            "early_departure_threshold": "Seuil de départ anticipé (minutes)",
+            "early_departure_threshold_min": "La valeur minimale est 0",
+            "day_schedule": "Horaire Jour (Planning)",
+            "night_schedule": "Horaire Nuit (Planning)",
+            "to": "à",
+            "update_btn": "Mettre à jour",
+            "updating": "Mise à jour..."
+        },
+        "logic": {
+            "title": "Logique de présence",
+            "enable_planning": "Activer le mode planning",
+            "enable_planning_tooltip": "Active le suivi strict basé sur les horaires individuels. Les retards et absences seront calculés par rapport aux shifts assignés.",
+            "track_global": "Suivre le retard global",
+            "track_global_tooltip": "Active le suivi basé sur les 'Heures Générales'. S'applique à tous ceux sans planning spécifique. Désactivé si le Planning est actif.",
+            "enable_planning_label": "Activer le mode planning",
+            "track_global_label": "Suivre le retard global"
+        },
+        "verification": {
+            "overlap_day_end": "Chevauche le début de la Nuit",
+            "overlap_night_start": "Chevauche la fin du Jour",
+            "warning_title": "Avertissement",
+            "restore_btn": "Restaurer horaires",
+            "archive_btn": "Archiver et continuer",
+            "success_updated": "Paramètres mis à jour. {{count}} shift(s) archivé(s).",
+            "restored_msg": "Horaires restaurés aux valeurs actuelles",
+            "archive_reason": "Incompatible avec nouveaux horaires: {{range}}",
+            "current": "Actuel",
+            "new": "Nouveau"
+        }
+    },
+    "attendance": {
+        "header": {
+            "title": "Présence",
+            "description": "Présence, retards, absences — filtrer par jour/semaine/mois et valider les anomalies."
+        },
+        "heatmap": {
+            "title": "Carte thermique mensuelle (présents uniquement)"
+        },
+        "export": {
+            "csv": "Exporter CSV",
+            "pdf": "Exporter PDF",
+            "loading": "Exportation..."
+        },
+        "table": {
+            "name": "Nom",
+            "department": "Département",
+            "date": "Date",
+            "in": "Entrée",
+            "out": "Sortie",
+            "status": "Statut"
+        },
+        "filters": {
+            "search_placeholder": "Rechercher nom, ID, département...",
+            "filter_btn": "Filtres",
+            "period": {
+                "day": "Jour",
+                "week": "Semaine",
+                "month": "Mois"
+            },
+            "sort": {
+                "date_newest": "Date la plus récente",
+                "date_oldest": "Date la plus ancienne",
+                "name_asc": "Nom (A-Z)",
+                "name_desc": "Nom (Z-A)",
+                "status_asc": "Statut (A-Z)",
+                "status_desc": "Statut (Z-A)"
+            }
+        },
+        "status": {
+            "present": "Présent",
+            "late": "En retard",
+            "absent": "Absent",
+            "left_early": "Parti tôt",
+            "manual": "Manuel"
+        },
+        "validate_modal": {
+            "title": "Valider / Justifier",
+            "employee": "Employé",
+            "set_status": "Définir statut",
+            "justification": "Justification (optionnel)",
+            "justification_placeholder": "Raison / note..."
+        }
+    },
+    "planning": {
+        "actions": {
+            "manage_holidays": "Gérer les jours fériés",
+            "manage_exceptions": "Gérer les exceptions"
+        },
+        "filters": {
+            "display_label": "Affichage",
+            "show_shifts": "Planning",
+            "show_exceptions": "Exceptions / Absences",
+            "show_holidays": "Jours Fériés"
+        }
+    },
+    "employees": {
+        "table": {
+            "pic": "PHOTO",
+            "employee": "EMPLOYÉ",
+            "dept_role": "DÉPT / RÔLE",
+            "enroll": "ENRÔLÉ",
+            "status": "STATUT",
+            "stats": "STATS (30J)"
+        },
+        "status": {
+            "active": "Actif",
+            "inactive": "Inactif",
+            "enrolled": "Enrôlé",
+            "not_enrolled": "Non enrôlé"
+        },
+        "role": {
+            "manager": "Manager",
+            "employee": "Employé",
+            "admin": "Administrateur",
+            "rh": "Ressources Humaines (RH)"
+        },
+        "actions": {
+            "enroll_face": "Enrôler visage",
+            "edit": "Modifier",
+            "delete": "Supprimer",
+            "add_employee": "Ajouter Employé"
+        },
+        "filters": {
+            "search_placeholder": "Rechercher employé, ID, département...",
+            "filter_btn": "Filtres",
+            "subtitle": "Affiner la liste des employés",
+            "role_label": "Rôle",
+            "role_options": {
+                "all": "Tous les rôles",
+                "employee": "Employés",
+                "manager": "Managers"
+            },
+            "enrolled_label": "Enrôlement",
+            "enrolled_options": {
+                "all": "Tous enrol",
+                "enrolled": "Enrôlé",
+                "not": "Non enrôlé"
+            },
+            "status_label": "Statut",
+            "status_options": {
+                "all": "Tous statuts",
+                "active": "Actif",
+                "inactive": "Inactif"
+            },
+            "apply": "Appliquer",
+            "clear": "Tout effacer",
+            "sort": {
+                "newest": "Plus récents",
+                "oldest": "Plus anciens",
+                "name_asc": "Nom (A-Z)",
+                "name_desc": "Nom (Z-A)",
+                "best_attendance": "Meilleure présence",
+                "lowest_attendance": "Pire présence"
+            }
+        },
+        "form": {
+            "create_employee": "Créer Employé",
+            "create_admin": "Créer Admin / RH",
+            "update": "Mettre à jour",
+            "first_name": "Prénom",
+            "last_name": "Nom",
+            "email": "Email",
+            "phone": "Téléphone",
+            "dob": "Date de naissance",
+            "department": "Département",
+            "role": "Rôle",
+            "password": "Mot de passe",
+            "status": "Statut",
+            "cv": "CV (PDF)",
+            "placeholders": {
+                "email": "nom@societe.com",
+                "phone": "+123...",
+                "department": "Production / QA / RH...",
+                "password": "Min 8 car."
+            }
+        },
+        "stats": {
+            "presence": "présence",
+            "late": "retard",
+            "absent": "absence"
+        }
+    },
+    "devices": {
+        "alerts": {
+            "ip_conflict": "Alerte de sécurité : {{count}} appareil(s) ont des conflits d'IP !"
+        },
+        "header": {
+            "title": "Appareils & Validation",
+            "description": "Gérez et surveillez vos terminaux biométriques dans toute l'organisation."
+        },
+        "table": {
+            "device": "Appareil",
+            "location": "Emplacement",
+            "status": "Statut",
+            "last_sync": "Dernière synchro",
+            "mode": "Mode",
+            "version": "Version"
+        },
+        "status": {
+            "online": "En ligne",
+            "offline": "Hors ligne",
+            "error": "Erreur",
+            "pending_auth": "En attente",
+            "conflict": "Conflit",
+            "blocked": "Bloqué",
+            "trusted": "Approuvé",
+            "blacklisted": "Liste noire",
+            "unknown": "Inconnu"
+        },
+        "mode": {
+            "recognition": "Reconnaissance",
+            "enrollment": "Enrôlement",
+            "idle": "Inactif"
+        },
+        "actions": {
+            "sync": "Synchroniser",
+            "switch_recognition": "Passer en reconnaissance",
+            "switch_enrollment": "Passer en enrôlement",
+            "resolve": "Résoudre problème de sécurité",
+            "blacklist": "Bloquer IP",
+            "delete": "Supprimer appareil"
+        },
+        "filters": {
+            "search_placeholder": "Rechercher appareil, IP, emplacement...",
+            "filter_btn": "Filtres",
+            "status_label": "Statut",
+            "sort_label": "Trier par",
+            "clear": "Effacer",
+            "apply": "Appliquer",
+            "sort": {
+                "newest_sync": "Dernière synchro (récent)",
+                "oldest_sync": "Dernière synchro (ancien)",
+                "name_az": "Nom A → Z",
+                "name_za": "Nom Z → A"
+            },
+            "status_options": {
+                "all": "Tous",
+                "online": "En ligne",
+                "offline": "Hors ligne",
+                "error": "Erreur"
+            }
+        },
+        "modals": {
+            "block": {
+                "title": "Mettre IP sur liste noire",
+                "confirm_text": "Êtes-vous sûr de vouloir bloquer l'IP {{ip}} ? Tous les appareils connectés depuis cette IP seront bloqués immédiatement.",
+                "reason_label": "Raison du blocage",
+                "confirm_btn": "Confirmer blocage"
+            },
+            "conflict": {
+                "title_resolve": "Résoudre conflit d'appareil",
+                "title_auth": "Autoriser appareil",
+                "alert_conflict": "Alerte de sécurité : Conflit d'adresse IP",
+                "alert_auth": "Autorisation requise",
+                "text_conflict": "Cet appareil tente de se connecter avec une adresse IP déjà associée à un autre appareil de confiance.",
+                "text_auth": "Cet appareil est en attente d'autorisation. Veuillez vérifier les détails avant de continuer.",
+                "details_title": "Détails de l'appareil",
+                "labels": {
+                    "name": "Nom",
+                    "ip": "Adresse IP",
+                    "mac": "Adresse MAC",
+                    "trust_status": "Statut de confiance"
+                },
+                "btns": {
+                    "block": "Bloquer appareil",
+                    "approve": "Approuver remplacement",
+                    "authorize": "Autoriser appareil"
+                }
+            },
+            "details": {
+                "headers": {
+                    "network": "Interfaces réseau",
+                    "system": "Détails système",
+                    "deployment": "Déploiement",
+                    "activity": "Activité"
+                },
+                "labels": {
+                    "kiosk_ip": "IP Kiosk (Ethernet/WiFi)",
+                    "tablet_ip": "IP Tablette (Mobile)",
+                    "mac": "Adresse MAC",
+                    "version": "Version logicielle",
+                    "current_mode": "Mode actuel",
+                    "trust_status": "Statut de confiance",
+                    "location": "Emplacement",
+                    "last_seen": "Dernière activité"
+                },
+                "values": {
+                    "unknown": "Inconnu",
+                    "unassigned": "Non assigné",
+                    "never": "Jamais"
+                }
+            }
+        },
+        "validation": {
+            "title": "Captures non vérifiées",
+            "card": {
+                "guess": "supposition",
+                "unknown": "Inconnu",
+                "score": "score",
+                "liveness": "vivacité",
+                "status": "statut",
+                "accept": "Accepter",
+                "reject": "Rejeter",
+                "values": {
+                    "pending": "En attente",
+                    "pass": "Réussi",
+                    "fail": "Échoué"
+                }
+            },
+            "filters": {
+                "all_devices": "Tous les appareils",
+                "all_liveness": "Tous tests vivacité",
+                "liveness_pass": "Vivacité réussie",
+                "liveness_fail": "Vivacité échouée",
+                "unknown": "Inconnu",
+                "all_statuses": "Tous statuts",
+                "pending": "En attente",
+                "accepted": "Accepté",
+                "rejected": "Rejeté",
+                "min_score": "score min"
+            }
+        }
+    }
+}

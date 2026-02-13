@@ -1,6 +1,6 @@
-import React from 'react';
 import styled from 'styled-components';
 import { HiEye, HiEyeSlash } from 'react-icons/hi2';
+import { useTranslation } from 'react-i18next';
 
 const Container = styled.div`
   display: flex;
@@ -46,9 +46,11 @@ interface PlanningFilterBarProps {
 }
 
 export default function PlanningFilterBar({ filters, onFilterChange }: PlanningFilterBarProps) {
+    const { t } = useTranslation();
+
     return (
         <Container>
-            <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600, marginRight: '0.5rem' }}>Affichage:</span>
+            <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600, marginRight: '0.5rem' }}>{t("planning.filters.display_label")}:</span>
 
             <FilterGroup>
                 <ToggleButton
@@ -57,7 +59,7 @@ export default function PlanningFilterBar({ filters, onFilterChange }: PlanningF
                     onClick={() => onFilterChange('showShifts', !filters.showShifts)}
                 >
                     {filters.showShifts ? <HiEye /> : <HiEyeSlash />}
-                    Planning
+                    {t("planning.filters.show_shifts")}
                 </ToggleButton>
 
                 <ToggleButton
@@ -66,7 +68,7 @@ export default function PlanningFilterBar({ filters, onFilterChange }: PlanningF
                     onClick={() => onFilterChange('showExceptions', !filters.showExceptions)}
                 >
                     {filters.showExceptions ? <HiEye /> : <HiEyeSlash />}
-                    Exceptions / Absences
+                    {t("planning.filters.show_exceptions")}
                 </ToggleButton>
 
                 <ToggleButton
@@ -75,7 +77,7 @@ export default function PlanningFilterBar({ filters, onFilterChange }: PlanningF
                     onClick={() => onFilterChange('showHolidays', !filters.showHolidays)}
                 >
                     {filters.showHolidays ? <HiEye /> : <HiEyeSlash />}
-                    Jours Fériés
+                    {t("planning.filters.show_holidays")}
                 </ToggleButton>
             </FilterGroup>
         </Container>

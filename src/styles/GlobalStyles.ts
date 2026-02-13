@@ -90,7 +90,21 @@ html, body {
   --shadow-md: 0px 0.6rem 2.4rem rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 2.4rem 3.2rem rgba(0, 0, 0, 0.12);
 
-   /* For dark mode */
+  --color-bg-card: var(--color-grey-0);
+  --color-bg-subtle: var(--color-grey-100);
+  --color-bg-hover: var(--color-grey-50);
+  --color-bg-elevated: var(--color-grey-0);
+  
+  --color-text-strong: var(--color-grey-900);
+  --color-text-dim: var(--color-grey-500);
+
+  --color-border-card: var(--color-grey-200);
+
+  --color-toolbar-bg: var(--color-grey-50);
+  --color-toolbar-border: var(--color-grey-200);
+  --color-toolbar-input-bg: var(--color-grey-0);
+  --color-toolbar-input-border: var(--color-grey-300);
+  
   --image-grayscale: 0;
   --image-opacity: 100%;
   }
@@ -150,6 +164,22 @@ html, body {
 
   --image-grayscale: 10%;
   --image-opacity: 90%;
+
+  /* Semantic Colors - Dark */
+  --color-bg-card: var(--color-grey-100);
+  --color-bg-subtle: var(--color-grey-200);
+  --color-bg-hover: var(--color-grey-200);
+  --color-bg-elevated: var(--color-grey-50);
+
+  --color-text-strong: var(--color-grey-900);
+  --color-text-dim: var(--color-grey-400);
+
+  --color-border-card: var(--color-grey-300);
+
+  --color-toolbar-bg: var(--color-grey-100);
+  --color-toolbar-border: var(--color-grey-300);
+  --color-toolbar-input-bg: var(--color-grey-50);
+  --color-toolbar-input-border: var(--color-grey-200);
 
   }
 

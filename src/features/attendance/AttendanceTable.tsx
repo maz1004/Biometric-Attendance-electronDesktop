@@ -1,22 +1,23 @@
 import Table from "../../ui/Table";
 import AttendanceRow from "./AttendanceRow";
 import { AttendanceRecord } from "./AttendanceTypes";
+import { useTranslation } from "react-i18next";
 
 export default function AttendanceTable({
   rows,
 }: {
   rows: AttendanceRecord[];
 }) {
+  const { t } = useTranslation();
   return (
     <Table columns="1.5fr 1fr 1fr 1fr 1fr 1fr">
       <Table.Header>
-        <div>Name</div>
-        <div>Department</div>
-        <div>Date</div>
-        <div>In</div>
-        <div>Out</div>
-        <div>Status</div>
-
+        <div>{t("attendance.table.name")}</div>
+        <div>{t("attendance.table.department")}</div>
+        <div>{t("attendance.table.date")}</div>
+        <div>{t("attendance.table.in")}</div>
+        <div>{t("attendance.table.out")}</div>
+        <div>{t("attendance.table.status")}</div>
       </Table.Header>
 
       <Table.Body

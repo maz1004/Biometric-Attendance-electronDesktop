@@ -97,6 +97,94 @@ export const RESERVED_COLORS = {
     INDEPENDENT: '#10b981'
 };
 
+// ============================================================================
+// PLACEHOLDER UTILITIES (PRIORITY 3 from audit)
+// Placeholders are visual-only entries that should NOT be counted in analytics
+// ============================================================================
+
+/**
+ * Filters out placeholder entries from computed schedule.
+ * Use this BEFORE any analytics, exports, or paie calculations.
+ */
+export function filterRealScheduleEntries(schedule: ComputedSchedule[]): ComputedSchedule[] {
+    return schedule.filter(entry => !entry.isPlaceholder);
+}
+
+/**
+ * Returns only placeholder entries (for debugging/display purposes)
+ */
+export function filterPlaceholderEntries(schedule: ComputedSchedule[]): ComputedSchedule[] {
+    return schedule.filter(entry => entry.isPlaceholder === true);
+}
+
+/**
+ * Type guard to check if an entry is a real schedule (not placeholder)
+ */
+export function isRealScheduleEntry(entry: ComputedSchedule): boolean {
+    return entry.isPlaceholder !== true && !!entry.startTime && !!entry.endTime;
+}
+
+// ============================================================================
+// TIME SLOT NORMALIZATION (PRIORITY 1 from audit)
+// ============================================================================
+
+/**
+ * Normalized time slot in minutes from midnight.
+ * If endMin < startMin, the slot crosses midnight (add 1440 for calculations)
+ */
+export interface NormalizedTimeSlot {
+    startMin: number;  // 0-1439
+    endMin: number;    // 0-1439 (or >1439 for explicit cross-day)
+    isCrossDay: boolean;
+}
+
+/**
+ * Converts HH:mm string to normalized time slot minutes
+ */
+export function normalizeTimeSlot(startTime: string, endTime: string): NormalizedTimeSlot {
+    const startMin = parseTimeToMinutes(startTime);
+    const endMin = parseTimeToMinutes(endTime);
+    const isCrossDay = endMin < startMin;
+
+    return {
+        startMin,
+        endMin: isCrossDay ? endMin + 1440 : endMin, // Add 24h for cross-day comparison
+        isCrossDay
+    };
+}
+
+/**
+ * Helper function to parse time string to minutes (moved to module level)
+ */
+function parseTimeToMinutes(time: string): number {
+    if (!time || typeof time !== 'string') return 0;
+    const [hours, minutes] = time.split(":").map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
+}
+
+/**
+ * Checks if two normalized time slots overlap
+ */
+export function doNormalizedSlotsOverlap(slot1: NormalizedTimeSlot, slot2: NormalizedTimeSlot): boolean {
+    // For cross-day comparison, we work with the normalized endMin
+    return slot1.startMin < slot2.endMin && slot2.startMin < slot1.endMin;
+}
+
+/**
+ * Checks if a date falls within an exception's date range.
+ * FIX for Bug #1: Proper date range comparison instead of startsWith
+ */
+export function isDateInExceptionRange(dateStr: string, exception: PlanningException): boolean {
+    // Parse all dates to midnight for comparison
+    const checkDate = new Date(dateStr + 'T00:00:00');
+    const exStart = new Date(exception.start_date.split('T')[0] + 'T00:00:00');
+    const exEnd = exception.end_date
+        ? new Date(exception.end_date.split('T')[0] + 'T00:00:00')
+        : exStart; // Single day exception
+
+    return checkDate >= exStart && checkDate <= exEnd;
+}
+
 /**
  * Resolves the display color based on standardized rules:
  * Priority:
@@ -118,8 +206,8 @@ export function resolveShiftColor(
         return RESERVED_COLORS.EXCEPTION; // Leave, Sick, etc.
     }
 
-    // Priority 2: Independent employees
-    if (isIndependent) return RESERVED_COLORS.INDEPENDENT;
+    // Priority 2: Independent employees (Use Shift Color if available for uniformity)
+    if (isIndependent && !shiftColor) return RESERVED_COLORS.INDEPENDENT;
 
     // Priority 3: Shift custom color (if not reserved)
     if (shiftColor &&
@@ -157,7 +245,7 @@ function _computeScheduleCore(
     shifts: Record<string, Shift>,
     userShifts: UserShift[],
     employees: Record<string, EmployeeMini>,
-    _teams: Record<string, Team>,
+    teams: Record<string, Team>,
     options: ScheduleOptions
 ): ComputedSchedule[] {
     const { weekDates, selectedTeamIds, exceptions = [] } = options;
@@ -168,13 +256,18 @@ function _computeScheduleCore(
     const dayUserCounts: Record<string, Record<string, number>> = {};
 
     // Helper to check collision with Priority: USER > TEAM
+    // BUG #1 FIX: Use proper date range comparison instead of startsWith
     const getApplicableException = (dateStr: string, userId: string, teamId: string) => {
-        // 1. User Specific (Leave, Sick)
-        const userEx = exceptions.find(ex => ex.start_date.startsWith(dateStr) && ex.user_id === userId);
+        // 1. User Specific (Leave, Sick) - check if date falls within exception range
+        const userEx = exceptions.find(ex =>
+            ex.user_id === userId && isDateInExceptionRange(dateStr, ex)
+        );
         if (userEx) return userEx;
 
         // 2. Team Specific
-        const teamEx = exceptions.find(ex => ex.start_date.startsWith(dateStr) && ex.team_id === teamId);
+        const teamEx = exceptions.find(ex =>
+            ex.team_id === teamId && isDateInExceptionRange(dateStr, ex)
+        );
         if (teamEx) return teamEx;
 
         return undefined;
@@ -193,19 +286,36 @@ function _computeScheduleCore(
         const dateStr = format(d, "yyyy-MM-dd");
 
         // Key: Rule allows same ID on different days, but NOT same ID on same day
-        const uniqueKey = `${us.id}_${dateStr}`;
+        // FIX: Include UserID in key because Team Schedules share the same ScheduleID for multiple users!
+        const uniqueKey = `${us.id}_${us.userId}_${dateStr}`;
         uniqueAssignmentsMap.set(uniqueKey, us);
     });
 
     Array.from(uniqueAssignmentsMap.values()).forEach(us => {
-        if (!us.isActive) return;
+        // DEBUG LOG
+        const dbgDate = new Date(us.assignedAt);
+        if (!isNaN(dbgDate.getTime()) && format(dbgDate, "yyyy-MM-dd") === '2026-02-05') {
+            console.log(`[LOOP_DEBUG] ENTRY UserID: ${us.userId}, Active: ${us.isActive}`);
+        }
+
+        if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') {
+            console.log(`[Flow Trace] Mimi Start. Date=${us.assignedAt}, Active=${us.isActive}, TeamID=${us.teamId}`);
+        }
+
+        if (!us.isActive) {
+            if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi Inactive`);
+            return;
+        }
 
         // Check if assignment falls within the visible week dates
         const d = new Date(us.assignedAt);
         const dateStr = format(d, "yyyy-MM-dd");
 
         const isInWeek = weekDates.some(wd => format(wd, "yyyy-MM-dd") === dateStr);
-        if (!isInWeek) return;
+        if (!isInWeek) {
+            if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi NotInWeek. DateStr=${dateStr}, WeekRange=${weekDates.length > 0 ? format(weekDates[0], 'yyyy-MM-dd') : 'empty'}...`);
+            return;
+        }
 
         // Resolving Template
         let template = shifts[us.shiftId];
@@ -221,10 +331,11 @@ function _computeScheduleCore(
                 template = {
                     id: us.shiftId,
                     name: us.shiftName,
-                    color: "#94a3b8", // Default Grey for unknown templates
+                    color: us.color || "#94a3b8", // Use backend color if available, else Default Grey
                     schedule_data: {}, // Empty schedule data
                 } as any; // Cast as Shift
             } else {
+                if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi No Template or ShiftName`);
                 // Log with Context
                 const contextPrefix = options.debugContext ? `[${options.debugContext}]` : '';
                 console.warn(`[PlanningEngine]${contextPrefix} Missing Template for Assignment ${us.id} (ShiftID: ${us.shiftId})`);
@@ -243,12 +354,25 @@ function _computeScheduleCore(
         // if (us.weekKey && template.weekKey && us.weekKey !== template.weekKey) return;
 
         // Team Fallback
-        const effectiveTeamId = us.teamId || template.teamIds?.[0] || "unassigned";
+        // FIX: For direct user assignments, if no team is explicitly linked to the assignment, 
+        // treat as 'unassigned' (Independent) rather than inheriting the template's default team.
+        let effectiveTeamId = us.teamId;
+        if (!effectiveTeamId) {
+            const hasUser = us.userId && us.userId !== "00000000-0000-0000-0000-000000000000";
+            if (hasUser) {
+                effectiveTeamId = "unassigned"; // Independent User Assignment remains Independent
+            } else {
+                effectiveTeamId = template.teamIds?.[0] || "unassigned"; // Placeholder/Team assignment falls back to template default
+            }
+        }
 
         // Team Filter - INCLUDE independents (GLOBAL/unassigned)
         if (selectedTeamIds && selectedTeamIds.length > 0) {
             const isIndependent = effectiveTeamId === 'unassigned' || effectiveTeamId === 'GLOBAL';
-            if (!isIndependent && !selectedTeamIds.includes(effectiveTeamId)) return;
+            if (!isIndependent && !selectedTeamIds.includes(effectiveTeamId)) {
+                if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi Team Filtered. Effective=${effectiveTeamId}, Filter=${selectedTeamIds}`);
+                return;
+            }
         }
 
         // CHECK EXCEPTIONS priority
@@ -265,36 +389,44 @@ function _computeScheduleCore(
         let slots: { start: string; end: string; color?: string }[] = [];
 
         // PRIORITY 1: Use direct times from assignment if available
-        if (us.startTime && us.endTime) {
+        if (us.startTime && us.endTime && us.startTime !== "00:00") {
             slots = [{ start: us.startTime, end: us.endTime, color: template.color }];
         } else {
             // PRIORITY 2: Template slots for the specific day
             slots = template.schedule_data?.[dayName] || [];
         }
 
-        // Fallback: If explicit day has no slots (e.g. assigning a "Monday" template to "Tuesday"),
-        // try to find ANY defined slots in the template to ensure visibility.
-        if (slots.length === 0) {
-            const allDays = Object.values(template.schedule_data || {});
-            const firstValidDay = allDays.find(s => s && s.length > 0);
-            if (firstValidDay) {
-                slots = firstValidDay;
-            } else {
-                // Ultimate Fallback: Template has NO slots at all (e.g. Auto-Created empty shift)
-                const s = options.settings;
-                const dayStart = s?.planning_day_start || "08:00";
-                const dayEnd = s?.planning_day_end || "16:00";
-                const nightStart = s?.planning_night_start || "21:00";
-                const nightEnd = s?.planning_night_end || "05:00";
+        // DEBUG SPECIFIC USER (Moved here for scope)
+        if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') {
+            console.log(`[TARGET_DEBUG] Processing MIMI on ${dateStr}. ShiftID: ${us.shiftId}, TeamID: ${effectiveTeamId} (Raw: ${us.teamId}), Slots: ${slots.length}, IsIndep: ${effectiveTeamId === 'unassigned' || effectiveTeamId === 'GLOBAL'}`);
+        }
 
-                // Smart Heuristic: Check name for "Nuit"
-                const isNight = template.name?.toLowerCase().includes("nuit");
-                if (isNight) {
-                    slots = [{ start: nightStart, end: nightEnd, color: template.color || "#6366f1" }];
-                } else {
-                    slots = [{ start: dayStart, end: dayEnd, color: template.color || "#3b82f6" }];
-                }
+        // FORCE PLACEHOLDER if backend flag is present or slots are empty
+        const isExplicitPlaceholder = (us as any).is_placeholder || (us as any).isPlaceholder;
+
+        // FIXED: If day is empty in template OR it is an explicit placeholder
+        if ((slots.length === 0 && !exception) || isExplicitPlaceholder) {
+            // Create a placeholder entry for visual indicator without employee data
+            if (dateStr >= '2026-02-11' && dateStr <= '2026-02-13') {
+                console.log(`[TARGET_DEBUG] Pushing Placeholder for ${dateStr}. Color: ${us.color || template.color}`);
             }
+            result.push({
+                // FIX: Include UserID to prevent collision for Team Schedules
+                id: `${us.id}-${us.userId}-${dateStr}-placeholder`,
+                date: dateStr,
+                teamId: us.teamId,
+                shiftId: us.shiftId,
+                shiftName: template.name,
+                color: us.color || template.color || '#3b82f6', // Use assignment color first
+                assigneeId: us.userId || us.teamId,
+                assigneeName: us.userName || (us.teamId ? teams[us.teamId]?.name : undefined),
+                startTime: "",
+                endTime: "",
+                source: "RULE",
+                hasConflict: false,
+                isPlaceholder: true // Marks this as template-only, no actual assignments
+            });
+            return; // Skip further processing for this assignment
         }
 
         // If blocked by exception, clear slots or mark as blocked
@@ -320,10 +452,12 @@ function _computeScheduleCore(
             if (!dayUserCounts[dateStr][us.userId]) dayUserCounts[dateStr][us.userId] = 0;
             dayUserCounts[dateStr][us.userId]++;
 
+
             result.push({
                 // Generate UNIQUE ID combining assignment ID + Date + Slot Index 
                 // to handle backend multi-day assignment ID reuse
-                id: `${us.id}-${dateStr}-${index}`,
+                // FIX: Include UserID to prevent collision for Team Schedules
+                id: `${us.id}-${us.userId}-${dateStr}-${index}`,
                 date: dateStr,
                 teamId: effectiveTeamId,
                 shiftId: us.shiftId,
@@ -334,7 +468,7 @@ function _computeScheduleCore(
                 color: resolveShiftColor(
                     source,
                     exception?.type,
-                    template.color,
+                    us.color || template.color, // Prioritize assignment color
                     !us.teamId || us.teamId === 'GLOBAL' || us.teamId === 'unassigned'
                 ),
                 assigneeId: us.userId,
@@ -342,7 +476,8 @@ function _computeScheduleCore(
                     console.warn(`[PlanningEngine] Unknown Employee ID: ${us.userId} (Type: ${typeof us.userId}). Available Keys: ${Object.keys(employees).length}`);
                     return "Unknown";
                 })(),
-                hasConflict: false // Computed later
+                hasConflict: false, // Computed later
+                isCheckoutMarker: (slot as any).is_checkout || false, // Propagate checkout flag from template
             });
 
         });
@@ -441,13 +576,7 @@ export function generateCloneCommands(
 // Un employé ne peut pas être assigné à plus d'une team sur le même créneau
 // ============================================================================
 
-/**
- * Parse time string "HH:mm" to minutes since midnight
- */
-function parseTimeToMinutes(time: string): number {
-    const [hours, minutes] = time.split(":").map(Number);
-    return hours * 60 + (minutes || 0);
-}
+// Note: parseTimeToMinutes is defined at module level near line 132
 
 /**
  * Check if two time ranges overlap
@@ -1024,3 +1153,115 @@ export type {
     ConflictDetectionResult,
     ComputeScheduleResult
 };
+
+// ============================================================================
+// SETTINGS CHANGE VALIDATION
+// ============================================================================
+
+export interface SettingsChangeValidation {
+    isValid: boolean;
+    hasWarnings: boolean;
+    affectedShifts: Array<{
+        shiftId: string;
+        shiftName: string;
+        issue: 'OUT_OF_DAY_RANGE' | 'OUT_OF_NIGHT_RANGE' | 'STRADDLES_BOUNDARY';
+        currentRange: string;
+        newRange: string;
+    }>;
+    summary: string;
+}
+
+/**
+ * Validates whether changing planning settings would affect existing shifts.
+ * 
+ * @param newSettings - The proposed new settings
+ * @param existingShifts - All existing shifts in the system
+ * @returns Validation result with affected shifts and recommendations
+ */
+export function validateSettingsChange(
+    newSettings: {
+        planning_day_start?: string;
+        planning_day_end?: string;
+        planning_night_start?: string;
+        planning_night_end?: string;
+    },
+    existingShifts: Shift[]
+): SettingsChangeValidation {
+    const affectedShifts: SettingsChangeValidation['affectedShifts'] = [];
+
+    // Parse new time ranges
+    const newDayStart = parseTimeToMinutes(newSettings.planning_day_start || '07:00');
+    const newDayEnd = parseTimeToMinutes(newSettings.planning_day_end || '19:00');
+    const newNightStart = parseTimeToMinutes(newSettings.planning_night_start || '19:00');
+    const newNightEnd = parseTimeToMinutes(newSettings.planning_night_end || '07:00');
+
+    // Check each shift
+    for (const shift of existingShifts) {
+        if (!shift.startTime || !shift.endTime) continue;
+
+        const shiftStart = parseTimeToMinutes(shift.startTime);
+        const shiftEnd = parseTimeToMinutes(shift.endTime);
+
+        // Determine if shift is Day or Night based on its start time
+        const isNightShift = shiftStart >= newNightStart || shiftStart < newNightEnd;
+
+        if (isNightShift) {
+            // Night shifts: check if they fit in the new night range
+            // Night is complex because it crosses midnight
+            const nightEndsNextDay = newNightEnd < newNightStart;
+
+            if (nightEndsNextDay) {
+                // Night range: 19:00 -> 07:00 (next day)
+                // A shift at 20:00 -> 04:00 should be valid
+                // A shift at 20:00 -> 08:00 would exceed the night end
+                if (shiftStart < newNightStart && shiftStart >= newNightEnd) {
+                    // Shift starts in "day" time but should be night
+                    affectedShifts.push({
+                        shiftId: shift.id,
+                        shiftName: shift.name || `Shift ${shift.startTime}-${shift.endTime}`,
+                        issue: 'OUT_OF_NIGHT_RANGE',
+                        currentRange: `${shift.startTime} - ${shift.endTime}`,
+                        newRange: `${newSettings.planning_night_start} - ${newSettings.planning_night_end}`
+                    });
+                }
+            }
+        } else {
+            // Day shifts: check if they fit in the new day range
+            if (shiftStart < newDayStart || shiftEnd > newDayEnd) {
+                affectedShifts.push({
+                    shiftId: shift.id,
+                    shiftName: shift.name || `Shift ${shift.startTime}-${shift.endTime}`,
+                    issue: 'OUT_OF_DAY_RANGE',
+                    currentRange: `${shift.startTime} - ${shift.endTime}`,
+                    newRange: `${newSettings.planning_day_start} - ${newSettings.planning_day_end}`
+                });
+            }
+
+            // Check if shift straddles the day/night boundary
+            if (shiftEnd > newNightStart && shiftStart < newNightStart) {
+                affectedShifts.push({
+                    shiftId: shift.id,
+                    shiftName: shift.name || `Shift ${shift.startTime}-${shift.endTime}`,
+                    issue: 'STRADDLES_BOUNDARY',
+                    currentRange: `${shift.startTime} - ${shift.endTime}`,
+                    newRange: `Day ends at ${newSettings.planning_day_end}, Night starts at ${newSettings.planning_night_start}`
+                });
+            }
+        }
+    }
+
+    // Build summary
+    let summary = '';
+    if (affectedShifts.length === 0) {
+        summary = 'Aucun conflit détecté. Les nouveaux paramètres sont compatibles avec tous les shifts existants.';
+    } else {
+        summary = `${affectedShifts.length} shift(s) affecté(s) par ce changement. Ces shifts seront en dehors des plages horaires définies.`;
+    }
+
+    return {
+        isValid: affectedShifts.length === 0,
+        hasWarnings: affectedShifts.length > 0,
+        affectedShifts,
+        summary
+    };
+}

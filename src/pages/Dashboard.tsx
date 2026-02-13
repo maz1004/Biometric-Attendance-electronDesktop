@@ -5,6 +5,7 @@ import DashboardStats from "../features/dashboard/DashboardStats";
 import AttendanceChart from "../features/dashboard/AttendanceChart";
 import QuickActions from "../features/dashboard/QuickActions";
 import AttendanceList from "../features/dashboard/AttendanceList";
+import { useTranslation } from "react-i18next";
 
 const StyledDashboardLayout = styled.div`
   display: grid;
@@ -13,11 +14,13 @@ const StyledDashboardLayout = styled.div`
 `;
 
 function Dashboard() {
+  const { t } = useTranslation();
+
   return (
     <>
       <Row type="horizontal">
-        <Heading as="h1">Dashboard</Heading>
-        <p>Dernière mise à jour: {new Date().toLocaleDateString()}</p>
+        <Heading as="h1">{t("dashboard.title")}</Heading>
+        <p>{t("common.last_update")}{new Date().toLocaleDateString()}</p>
       </Row>
 
       <QuickActions />

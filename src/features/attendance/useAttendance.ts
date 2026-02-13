@@ -24,11 +24,16 @@ function dateRange(
     return { start, end };
   }
   if (period === "week") {
-    const day = d.getDay() || 7; // Monday=1..Sunday=7
+    // Rolling 7 days (including today)
+    // Start = Today - 6 days
     const start = new Date(d);
-    start.setDate(d.getDate() - (day - 1));
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
+    start.setDate(d.getDate() - 6);
+    const end = new Date(d);
+    end.setDate(d.getDate() + 1); // End is exclusive in backend logic usually, or inclusive? 
+    // Backend uses BETWEEN start AND end. 
+    // If we want [Today-6, Today], we usually set end to Tomorrow start?
+    // Let's look at "day" logic: start=d, end=d+1.
+    // So for week: start=d-6, end=d+1.
     return { start, end };
   }
   // month
