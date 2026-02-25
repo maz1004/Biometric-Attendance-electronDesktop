@@ -15,6 +15,7 @@ export type Employee = {
   firstName: string;
   lastName: string;
   department: string;
+  profession?: string;
   role: EmployeeRole;
   enrolled: boolean;
   status: EmployeeStatus;
@@ -34,6 +35,7 @@ export type EmployeeFormValues = {
   email: string;
   phone: string;
   department: string;
+  profession: string;
   role: EmployeeRole;
   status: EmployeeStatus;
   avatar: FileList | string; // react-hook-form will give FileList

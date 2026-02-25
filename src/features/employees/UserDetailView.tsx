@@ -321,6 +321,7 @@ export default function UserDetailView({ employee }: UserDetailViewProps) {
     avatar,
     cv,
     stats,
+    profession,
   } = employee;
 
   const queryClient = useQueryClient();
@@ -486,6 +487,12 @@ export default function UserDetailView({ employee }: UserDetailViewProps) {
                 <Meta>
                   <Tag type="role">{role}</Tag>
                   <span>•</span>
+                  {profession && (
+                    <>
+                      <span style={{ fontSize: '1.4rem', fontWeight: 600, color: 'var(--color-text-strong)' }}>{profession}</span>
+                      <span>•</span>
+                    </>
+                  )}
                   <Tag type="dept">{department}</Tag>
                 </Meta>
               </Info>
@@ -536,6 +543,10 @@ export default function UserDetailView({ employee }: UserDetailViewProps) {
               <InfoItem>
                 <label>Phone Number</label>
                 <span>{employee.phoneNumber || 'N/A'}</span>
+              </InfoItem>
+              <InfoItem>
+                <label>Profession</label>
+                <span>{profession || 'N/A'}</span>
               </InfoItem>
             </IdentityInfoGrid>
 

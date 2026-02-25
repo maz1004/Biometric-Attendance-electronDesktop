@@ -117,7 +117,7 @@ export default function DeviceDetailsModal({ device, onClose }: DeviceDetailsMod
   // Map i18n codes to date-fns locales
   const getLocale = (lng: string) => {
     if (lng === 'ar') return locales.ar;
-    if (lng === 'kab') return (locales as any).kab || locales.fr; // Fallback to fr for kab if not in date-fns
+    if (lng === 'kab') return locales.fr; // Fallback to fr for kab (not in date-fns yet)
     if (lng === 'en') return locales.enUS;
     return locales.fr;
   }
@@ -146,8 +146,8 @@ export default function DeviceDetailsModal({ device, onClose }: DeviceDetailsMod
               <Value>{device.ip || "—"}</Value>
             </DetailRow>
             <DetailRow>
-              <Label>{t("devices.modals.details.labels.tablet_ip")}</Label>
-              <Value>{device.mobileIP || "—"}</Value>
+              <Label>{t("devices.modals.details.labels.mobile_device_id")}</Label>
+              <Value>{device.mobileDeviceId || "—"}</Value>
             </DetailRow>
             <DetailRow>
               <Label>{t("devices.modals.details.labels.mac")}</Label>

@@ -36,6 +36,7 @@ const mapApiUserToEmployee = (user: UserResponse): Employee => {
     lastName: user.last_name,
     email: user.email,
     department: user.department || "N/A",
+    profession: user.profession,
     role: user.role === 'admin' || user.role === 'rh' ? 'manager' : 'employee',
     enrolled: user.enrolled,
     status: user.is_active ? 'active' : 'inactive',
@@ -82,9 +83,25 @@ export const getEmployees = async (params?: {
   search?: string;
   status?: 'active' | 'inactive';
   role?: string;
+  sortBy?: string;
+  enrolled?: string;
 }): Promise<{ users: Employee[]; total: number }> => {
+  // Parse sortBy string (e.g. "createdAt-desc")
+  let sortParams = {};
+  if (params?.sortBy) {
+    const [field, order] = params.sortBy.split('-');
+    sortParams = {
+      sort_by: field === 'name' ? 'last_name' : field === 'createdAt' ? 'created_at' : field, // Map frontend fields to backend columns
+      order: order || 'asc'
+    };
+  }
+
   const response = await apiClient.get<SuccessResponse<GetUsersResponse>>('/users', {
-    params: { ...params },
+    params: {
+      ...params,
+      ...sortParams,
+      sortBy: undefined // Remove original sortBy from params sent to API
+    },
   });
 
   const rawData = response.data.data!;

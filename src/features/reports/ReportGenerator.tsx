@@ -3,6 +3,8 @@ import styled from "styled-components";
 import SelectUi from "../../ui/Select"; // Use the styled UI component
 import { ReportFilterState, ReportType, ReportPeriod, ReportData } from "../../services/types/api-types";
 import { ReportActionPanel } from "./components/ReportActionPanel";
+import { useReports } from "./useReports";
+import { useDepartments } from "../employees/useDepartments";
 
 const Container = styled.div`
   background: var(--color-bg-elevated);
@@ -47,14 +49,31 @@ interface ReportGeneratorProps {
     onGenerate: (filters: ReportFilterState) => void;
     isGenerating: boolean;
     reportData?: ReportData | null;
+    initialFilters?: Partial<ReportFilterState>;
 }
 
-export default function ReportGenerator({ onGenerate, isGenerating, reportData }: ReportGeneratorProps) {
-    const [type, setType] = useState<ReportType>("attendance");
-    const [period, setPeriod] = useState<ReportPeriod>("month");
-    const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-    const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
-    const [department, setDepartment] = useState("all");
+export default function ReportGenerator({ onGenerate, isGenerating, reportData, initialFilters }: ReportGeneratorProps) {
+    const { save, isSaving } = useReports();
+    const { departments } = useDepartments();
+
+    const [type, setType] = useState<ReportType>(initialFilters?.type || "attendance");
+    const [period, setPeriod] = useState<ReportPeriod>(initialFilters?.period || "month");
+    const [startDate, setStartDate] = useState(initialFilters?.dateRange?.start.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10));
+    const [endDate, setEndDate] = useState(initialFilters?.dateRange?.end.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10));
+    const [department, setDepartment] = useState(initialFilters?.department || "all");
+
+    // Update state when initialFilters changes (e.g. from history preview)
+    useEffect(() => {
+        if (initialFilters) {
+            if (initialFilters.type) setType(initialFilters.type);
+            if (initialFilters.period) setPeriod(initialFilters.period);
+            if (initialFilters.dateRange) {
+                setStartDate(initialFilters.dateRange.start.toISOString().slice(0, 10));
+                setEndDate(initialFilters.dateRange.end.toISOString().slice(0, 10));
+            }
+            if (initialFilters.department) setDepartment(initialFilters.department);
+        }
+    }, [initialFilters]);
 
     // "Live" preview title
     const [previewTitle, setPreviewTitle] = useState("");
@@ -105,18 +124,19 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData }
 
                 <FormGroup $flex={2} $minWidth="180px">
                     <Label>Département</Label>
-                    <SelectUi
-                        options={[
-                            { value: "all", label: "Tous Départements" },
-                            { value: "R&D", label: "R&D" },
-                            { value: "Operations", label: "Opérations" },
-                            { value: "Design", label: "Design" },
-                            { value: "QA", label: "QA" },
-                            { value: "HR", label: "RH" }
-                        ]}
+                    <Input
+                        type="text"
+                        list="report-departments-list"
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
+                        placeholder="Tous ou saisissez..."
                     />
+                    <datalist id="report-departments-list">
+                        <option value="all">Tous Départements</option>
+                        {departments?.map(d => (
+                            <option key={d.name} value={d.name} />
+                        ))}
+                    </datalist>
                 </FormGroup>
 
                 <FormGroup $flex={1} $minWidth="120px">
@@ -153,6 +173,8 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData }
                 onCancel={() => { }}
                 isGenerating={isGenerating}
                 data={reportData}
+                onSave={save}
+                isSaving={isSaving}
             />
         </Container>
     );

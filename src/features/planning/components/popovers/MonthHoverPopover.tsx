@@ -1,5 +1,6 @@
 import styled, { keyframes } from "styled-components";
 import { ComputedSchedule, PlanningException } from "../../types";
+import { usePlanning } from "../../hooks/usePlanning";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(5px); }
@@ -58,14 +59,7 @@ const Dot = styled.span<{ color: string }>`
   flex-shrink: 0;
 `;
 
-const EmployeeList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 120px;
-  overflow-y: auto;
-  font-size: 0.95rem;
-`;
+
 
 interface MonthHoverPopoverProps {
     x: number;
@@ -79,14 +73,14 @@ interface MonthHoverPopoverProps {
 }
 
 export default function MonthHoverPopover({ x, y, items, exception, alignment = 'right', onMouseEnter, onMouseLeave }: MonthHoverPopoverProps) {
+    const { teams: teamsDict } = usePlanning();
     // Separate Holidays from Regular Assignments
     const holidayItems = items.filter(i => i.shiftId === 'holiday');
     const regularItems = items.filter(i => i.shiftId !== 'holiday');
 
     // Unique teams/shifts/employees from REGULAR items only
-    const teams = Array.from(new Set(regularItems.map(i => i.teamId)));
-    const employees = Array.from(new Set(regularItems.map(i => i.assigneeName))).filter(Boolean);
-    const shiftNames = Array.from(new Set(regularItems.map(i => i.shiftName)));
+    const teamIds = Array.from(new Set(regularItems.map(i => i.teamId)));
+
 
     return (
         <PopoverContainer x={x} y={y} alignment={alignment} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
@@ -116,38 +110,66 @@ export default function MonthHoverPopover({ x, y, items, exception, alignment = 
                 <>
                     <Section>
                         <Label>Planning</Label>
-                        {shiftNames.map(s => (
-                            <Value key={s}>
-                                {s}
-                            </Value>
-                        ))}
+                        {Object.entries(
+                            regularItems.reduce((acc, item) => {
+                                if (!acc[item.shiftName]) acc[item.shiftName] = [];
+                                acc[item.shiftName].push(item);
+                                return acc;
+                            }, {} as Record<string, typeof regularItems>)
+                        ).map(([shiftName, groupItems]) => {
+                            // Group by Time Slot -> Employees
+                            const timeGroups = groupItems.reduce((acc, item) => {
+                                const timeKey = `${item.startTime} - ${item.endTime}`;
+                                if (!acc[timeKey]) acc[timeKey] = [];
+                                if (item.assigneeName) acc[timeKey].push(item.assigneeName);
+                                return acc;
+                            }, {} as Record<string, string[]>);
+
+                            return (
+                                <Value key={shiftName} style={{ alignItems: 'flex-start' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
+                                        <span style={{ fontWeight: 600, borderBottom: '1px solid var(--color-grey-200)', paddingBottom: '2px', marginBottom: '2px' }}>
+                                            {shiftName}
+                                        </span>
+                                        {Object.entries(timeGroups).map(([timeStr, employees], idx) => (
+                                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+                                                    {timeStr}
+                                                </span>
+                                                {employees.length > 0 ? (
+                                                    <div style={{ paddingLeft: '8px', fontSize: '0.8rem', color: 'var(--color-text-primary)' }}>
+                                                        {employees.map((emp, eIdx) => (
+                                                            <div key={eIdx}>• {emp}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ paddingLeft: '8px', fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>
+                                                        Non assigné
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Value>
+                            );
+                        })}
                     </Section>
 
-                    {teams.length > 0 && (
+                    {teamIds.length > 0 && (
                         <Section>
                             <Label>Équipes</Label>
-                            {teams.map(t => (
+                            {teamIds.map(t => (
                                 <div key={String(t)} style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)' }}>
-                                    • {!t || t === 'unassigned' || t === 'GLOBAL' ? 'Indépendants' : 'Équipe ' + (t.length > 8 ? t.substring(0, 8) : t) + '...'}
+                                    • {!t || t === 'unassigned' || t === 'GLOBAL' ? 'Indépendants' : (teamsDict[t]?.name || ('Équipe ' + t.substring(0, 8) + '...'))}
                                 </div>
                             ))}
                         </Section>
                     )}
 
-                    <Section>
-                        <Label>Employés ({employees.length})</Label>
-                        {employees.length > 0 ? (
-                            <EmployeeList>
-                                {employees.map((name, idx) => (
-                                    <div key={idx} style={{ color: 'var(--color-text-primary)' }}>• {name}</div>
-                                ))}
-                            </EmployeeList>
-                        ) : (
-                            <Value style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Aucun employé</Value>
-                        )}
-                    </Section>
+
                 </>
-            )}
-        </PopoverContainer>
+            )
+            }
+        </PopoverContainer >
     );
 }

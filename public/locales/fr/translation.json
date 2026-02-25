@@ -17,6 +17,7 @@
         "planning": "Planning",
         "devices": "Appareils",
         "reports": "Rapports",
+        "audit": "Audit",
         "settings": "Paramètres"
     },
     "header": {
@@ -55,6 +56,7 @@
         "theme": "Thème",
         "form": {
             "company_name": "Nom de l'entreprise",
+            "sector": "Secteur d'activité",
             "company_name_required": "Ce champ est obligatoire",
             "late_threshold": "Seuil de retard (minutes)",
             "late_threshold_min": "La valeur minimale est 0",
@@ -222,6 +224,7 @@
             "email": "Email",
             "phone": "Téléphone",
             "dob": "Date de naissance",
+            "profession": "Profession",
             "department": "Département",
             "role": "Rôle",
             "password": "Mot de passe",
@@ -230,6 +233,7 @@
             "placeholders": {
                 "email": "nom@societe.com",
                 "phone": "+123...",
+                "profession": "Profession / Métier / Poste...",
                 "department": "Production / QA / RH...",
                 "password": "Min 8 car."
             }
@@ -337,6 +341,7 @@
                 "labels": {
                     "kiosk_ip": "IP Kiosk (Ethernet/WiFi)",
                     "tablet_ip": "IP Tablette (Mobile)",
+                    "mobile_device_id": "ID Appareil Mobile",
                     "mac": "Adresse MAC",
                     "version": "Version logicielle",
                     "current_mode": "Mode actuel",

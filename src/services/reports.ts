@@ -1,6 +1,6 @@
 // Service de rapports (reports)
 import { apiClient } from './api';
-import type { ReportData, UserReportData, ExportReportParams } from './types/api-types';
+import type { ReportData, UserReportData, ExportReportParams, GetReportsResponse } from './types/api-types';
 
 // ============================================================================
 // REPORTS API
@@ -37,6 +37,7 @@ export const generateReport = async (params: {
             total_work_days: data.summary?.total_work_days || 0,
             average_attendance_rate: data.summary?.average_attendance_rate || 0,
             total_late_arrivals: data.summary?.total_late_arrivals || 0,
+            total_early_departures: data.summary?.total_early_departures || 0,
             total_absences: data.summary?.total_absences || 0,
         },
         users: (data.users || []).map((u: UserReportData) => ({
@@ -65,6 +66,84 @@ export const exportReport = async (params: ExportReportParams): Promise<Blob> =>
         responseType: 'blob', // Important for file download
     });
     return response.data;
+};
+
+/**
+ * Get Reports History
+ * GET /api/v1/reports/history
+ */
+export const getReportsHistory = async (params: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    start_date?: string;
+    end_date?: string;
+}): Promise<GetReportsResponse> => {
+    const response = await apiClient.get('/reports/history', { params });
+    return response.data;
+};
+
+/**
+ * Delete a report from history
+ * DELETE /api/v1/reports/history/:id
+ */
+export const deleteReport = async (id: string): Promise<void> => {
+    await apiClient.delete(`/reports/history/${id}`);
+};
+
+/**
+ * Download a specific report from history
+ * GET /api/v1/reports/history/:id/download
+ */
+export const downloadReportFile = async (id: string, filename: string): Promise<void> => {
+    const response = await apiClient.get(`/reports/history/${id}/download`, {
+        responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Rename a report in history
+ * PATCH /api/v1/reports/history/:id
+ */
+export const renameReport = async (id: string, newName: string): Promise<void> => {
+    await apiClient.patch(`/reports/history/${id}`, { file_name: newName });
+};
+
+/**
+ * Save a client-generated report (PDF) to history
+ * POST /api/v1/reports/history
+ */
+export const saveReport = async (file: Blob, metadata: {
+    type: string;
+    format: string; // 'pdf' | 'xlsx'
+    start_date: string;
+    end_date: string;
+    department?: string;
+    filename?: string;
+}): Promise<void> => {
+    const formData = new FormData();
+    // Pass filename to FormData so backend sees it instead of "blob"
+    formData.append('file', file, metadata.filename || 'report.pdf');
+    formData.append('type', metadata.type);
+    formData.append('format', metadata.format);
+    formData.append('start_date', metadata.start_date);
+    formData.append('end_date', metadata.end_date);
+    if (metadata.department) formData.append('department', metadata.department);
+
+    await apiClient.post('/reports/history', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        } as any
+    });
 };
 
 // ============================================================================

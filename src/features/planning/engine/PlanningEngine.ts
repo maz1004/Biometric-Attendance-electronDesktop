@@ -244,12 +244,14 @@ export function validateShiftColor(color: string, existingShiftColors: string[])
 function _computeScheduleCore(
     shifts: Record<string, Shift>,
     userShifts: UserShift[],
-    employees: Record<string, EmployeeMini>,
+    _employees: Record<string, EmployeeMini>,
     teams: Record<string, Team>,
     options: ScheduleOptions
 ): ComputedSchedule[] {
     const { weekDates, selectedTeamIds, exceptions = [] } = options;
     const result: ComputedSchedule[] = [];
+
+    console.debug(`[PlanningEngine] Initializing schedule computation for ${userShifts.length} assignments`);
 
     // 0. Pre-calc helpers
     // Conflict Map: Day -> UserId -> Count
@@ -292,18 +294,7 @@ function _computeScheduleCore(
     });
 
     Array.from(uniqueAssignmentsMap.values()).forEach(us => {
-        // DEBUG LOG
-        const dbgDate = new Date(us.assignedAt);
-        if (!isNaN(dbgDate.getTime()) && format(dbgDate, "yyyy-MM-dd") === '2026-02-05') {
-            console.log(`[LOOP_DEBUG] ENTRY UserID: ${us.userId}, Active: ${us.isActive}`);
-        }
-
-        if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') {
-            console.log(`[Flow Trace] Mimi Start. Date=${us.assignedAt}, Active=${us.isActive}, TeamID=${us.teamId}`);
-        }
-
         if (!us.isActive) {
-            if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi Inactive`);
             return;
         }
 
@@ -313,7 +304,6 @@ function _computeScheduleCore(
 
         const isInWeek = weekDates.some(wd => format(wd, "yyyy-MM-dd") === dateStr);
         if (!isInWeek) {
-            if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi NotInWeek. DateStr=${dateStr}, WeekRange=${weekDates.length > 0 ? format(weekDates[0], 'yyyy-MM-dd') : 'empty'}...`);
             return;
         }
 
@@ -335,7 +325,6 @@ function _computeScheduleCore(
                     schedule_data: {}, // Empty schedule data
                 } as any; // Cast as Shift
             } else {
-                if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi No Template or ShiftName`);
                 // Log with Context
                 const contextPrefix = options.debugContext ? `[${options.debugContext}]` : '';
                 console.warn(`[PlanningEngine]${contextPrefix} Missing Template for Assignment ${us.id} (ShiftID: ${us.shiftId})`);
@@ -366,11 +355,11 @@ function _computeScheduleCore(
             }
         }
 
+        const isIndependent = effectiveTeamId === 'unassigned' || effectiveTeamId === 'GLOBAL';
+
         // Team Filter - INCLUDE independents (GLOBAL/unassigned)
         if (selectedTeamIds && selectedTeamIds.length > 0) {
-            const isIndependent = effectiveTeamId === 'unassigned' || effectiveTeamId === 'GLOBAL';
             if (!isIndependent && !selectedTeamIds.includes(effectiveTeamId)) {
-                if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') console.log(`[Flow Trace] Mimi Team Filtered. Effective=${effectiveTeamId}, Filter=${selectedTeamIds}`);
                 return;
             }
         }
@@ -378,27 +367,54 @@ function _computeScheduleCore(
         // CHECK EXCEPTIONS priority
         const exception = getApplicableException(dateStr, us.userId, effectiveTeamId);
 
+        // DEBUG DUPLICATE PROCESSING
+        // console.log(`[PlanningEngine] Processing ${us.userId} on ${dateStr} - Shift: ${us.shiftId}`); 
+
         // Determine Slots - PRIORITY:
-        // 1. Direct startTime/endTime from assignment (stored in backend)
-        // 2. Template schedule_data for the day
-        // 3. Fallback to any day's slots
-        // 4. Ultimate fallback to settings defaults
+        // 1. Template schedule_data for the specific day (Auto-Sync: Model drives the schedule)
+        // 2. Direct startTime/endTime from assignment (Custom/Legacy/Fallback)
+        // 3. Fallback to defaults
         const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
         const dayName = days[d.getDay()] as keyof WeeklySchedule;
 
         let slots: { start: string; end: string; color?: string }[] = [];
+        const templateSlots = template.schedule_data?.[dayName];
 
-        // PRIORITY 1: Use direct times from assignment if available
         if (us.startTime && us.endTime && us.startTime !== "00:00") {
-            slots = [{ start: us.startTime, end: us.endTime, color: template.color }];
-        } else {
-            // PRIORITY 2: Template slots for the specific day
-            slots = template.schedule_data?.[dayName] || [];
-        }
+            // PRIORITY 1: Smart Sync (Assignment Match)
+            // Try to find a corresponding slot in the CURRENT template (e.g. 08:00 vs 08:30)
+            if (templateSlots && templateSlots.length > 0) {
+                // Find optimal slot
+                // RULES:
+                // 1. Employee-Specific: If template has a slot assigned to THIS user, force it.
+                const usStartMin = parseTimeToMinutes(us.startTime);
+                const specificSlot = templateSlots.find(s => s.assigned_id === us.userId);
 
-        // DEBUG SPECIFIC USER (Moved here for scope)
-        if (us.userId === '3febe6cc-894e-4969-a345-acb800f6c508') {
-            console.log(`[TARGET_DEBUG] Processing MIMI on ${dateStr}. ShiftID: ${us.shiftId}, TeamID: ${effectiveTeamId} (Raw: ${us.teamId}), Slots: ${slots.length}, IsIndep: ${effectiveTeamId === 'unassigned' || effectiveTeamId === 'GLOBAL'}`);
+                if (specificSlot) {
+                    slots = [{ start: specificSlot.start, end: specificSlot.end, color: template.color }];
+                } else {
+                    const bestMatch = templateSlots.reduce((best, slot) => {
+                        const slotStartMin = parseTimeToMinutes(slot.start);
+                        const diff = Math.abs(usStartMin - slotStartMin);
+                        if (diff < 15 && diff < best.diff) { // 15 mins tolerance
+                            return { slot, diff };
+                        }
+                        return best;
+                    }, { slot: null as any, diff: Infinity });
+
+                    if (bestMatch.slot) {
+                        slots = [{ start: bestMatch.slot.start, end: bestMatch.slot.end, color: template.color }];
+                    } else {
+                        slots = [{ start: us.startTime, end: us.endTime, color: template.color }];
+                    }
+                }
+            } else {
+                slots = [{ start: us.startTime, end: us.endTime, color: template.color }];
+            }
+        } else if (templateSlots && templateSlots.length > 0) {
+            // PRIORITY 2: Template
+            // Auto-Sync: If no specific time override, use the model's schedule
+            slots = templateSlots;
         }
 
         // FORCE PLACEHOLDER if backend flag is present or slots are empty
@@ -407,9 +423,6 @@ function _computeScheduleCore(
         // FIXED: If day is empty in template OR it is an explicit placeholder
         if ((slots.length === 0 && !exception) || isExplicitPlaceholder) {
             // Create a placeholder entry for visual indicator without employee data
-            if (dateStr >= '2026-02-11' && dateStr <= '2026-02-13') {
-                console.log(`[TARGET_DEBUG] Pushing Placeholder for ${dateStr}. Color: ${us.color || template.color}`);
-            }
             result.push({
                 // FIX: Include UserID to prevent collision for Team Schedules
                 id: `${us.id}-${us.userId}-${dateStr}-placeholder`,
@@ -452,11 +465,9 @@ function _computeScheduleCore(
             if (!dayUserCounts[dateStr][us.userId]) dayUserCounts[dateStr][us.userId] = 0;
             dayUserCounts[dateStr][us.userId]++;
 
-
             result.push({
                 // Generate UNIQUE ID combining assignment ID + Date + Slot Index 
                 // to handle backend multi-day assignment ID reuse
-                // FIX: Include UserID to prevent collision for Team Schedules
                 id: `${us.id}-${us.userId}-${dateStr}-${index}`,
                 date: dateStr,
                 teamId: effectiveTeamId,
@@ -467,30 +478,46 @@ function _computeScheduleCore(
                 source,
                 color: resolveShiftColor(
                     source,
-                    exception?.type,
-                    us.color || template.color, // Prioritize assignment color
-                    !us.teamId || us.teamId === 'GLOBAL' || us.teamId === 'unassigned'
+                    exception ? exception.type : undefined,
+                    us.color || template.color,
+                    isIndependent
                 ),
-                assigneeId: us.userId,
-                assigneeName: employees[us.userId]?.name || us.userName || (() => {
-                    console.warn(`[PlanningEngine] Unknown Employee ID: ${us.userId} (Type: ${typeof us.userId}). Available Keys: ${Object.keys(employees).length}`);
-                    return "Unknown";
-                })(),
+                assigneeId: us.userId || us.teamId,
+                assigneeName: us.userName || (us.teamId ? teams[us.teamId]?.name : undefined) || "Unknown",
                 hasConflict: false, // Computed later
-                isCheckoutMarker: (slot as any).is_checkout || false, // Propagate checkout flag from template
+                isPlaceholder: false
             });
-
         });
+    }) // End of UserShifts Loop
+
+    // CRITICAL FIX: Force Deduplication of Result Items
+    // Group by Assignee + Date + StartTime + EndTime to remove identical slots
+    const uniqueResultMap = new Map<string, ComputedSchedule>();
+    result.forEach(item => {
+        const key = `${item.assigneeId}-${item.date}-${item.startTime}-${item.endTime}`;
+        if (!uniqueResultMap.has(key)) {
+            uniqueResultMap.set(key, item);
+        } else {
+            console.warn(`[PlanningEngine] Duplicate Item Suppressed: ${key}`);
+            // Also decrement conflict count since we removed a duplicate?
+            if (dayUserCounts[item.date]?.[item.assigneeId || ""] > 0) {
+                dayUserCounts[item.date][item.assigneeId || ""]--;
+            }
+        }
     });
 
-    // 2. Mark Conflicts
-    result.forEach(item => {
+    const uniqueResult = Array.from(uniqueResultMap.values());
+
+    // 2. Mark Conflicts (based on remaining counts... slightly heuristic if deduped)
+    // Actually, deduplication might fix false conflicts too.
+    uniqueResult.forEach(item => {
         if (dayUserCounts[item.date]?.[item.assigneeId || ""] > 1) {
             item.hasConflict = true;
         }
     });
 
-    return result;
+    console.debug(`[PlanningEngine] Computation complete: generated ${uniqueResult.length} unique display items.`);
+    return uniqueResult;
 }
 
 /**
@@ -627,6 +654,19 @@ export function detectAssignmentConflicts(
     teams: Record<string, Team>
 ): ConflictDetectionResult {
     const conflicts: SlotConflict[] = [];
+
+    // DEBUG: Check if target employees exist in input
+    const targetNames = ['anes', 'ombat', 'nes', 'ali'];
+    const foundTargets = userShifts.filter(us => {
+        const name = (us.userName || employees[us.userId]?.name || "").toLowerCase();
+        return targetNames.some(t => name.includes(t));
+    }).map(us => `${us.userName || employees[us.userId]?.name} (${us.id})`);
+
+    if (foundTargets.length > 0) {
+        console.log(`[PlanningEngine] Found ${foundTargets.length} assignments matching targets:`, foundTargets);
+    } else {
+        console.log(`[PlanningEngine] NO TARGET ASSIGNMENTS FOUND! Input userShifts count: ${userShifts.length}`);
+    }
 
     // Group assignments by userId and date
     const userDateAssignments: Record<string, Array<{

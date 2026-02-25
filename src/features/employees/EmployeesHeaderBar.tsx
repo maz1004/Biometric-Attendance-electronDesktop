@@ -228,8 +228,8 @@ export default function EmployeesHeaderBar({
               <option value="createdAt-asc">{t("employees.filters.sort.oldest")}</option>
               <option value="name-asc">{t("employees.filters.sort.name_asc")}</option>
               <option value="name-desc">{t("employees.filters.sort.name_desc")}</option>
-              <option value="presenceRate-desc">{t("employees.filters.sort.best_attendance")}</option>
-              <option value="presenceRate-asc">{t("employees.filters.sort.lowest_attendance")}</option>
+              {/* <option value="presenceRate-desc">{t("employees.filters.sort.best_attendance")}</option>
+              <option value="presenceRate-asc">{t("employees.filters.sort.lowest_attendance")}</option> */}
             </SortSelect>
 
             <SortChevron>

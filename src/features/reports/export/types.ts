@@ -19,6 +19,7 @@ export interface ReportMeta {
     reportType: string;
     period?: string;
     generatedBy?: string;
+    sector?: string;
     [key: string]: unknown;
 }
 

@@ -30,17 +30,18 @@ export const adaptAttendanceRecordsToExportable = (
  * Rows = User List
  * Meta = Global Summary + Context
  */
-export const adaptReportDataToExportable = (data: ReportData): Exportable<UserReportData> => {
+export const adaptReportDataToExportable = (data: ReportData, companyName: string, sector?: string): Exportable<UserReportData> => {
     return {
         rows: data.users,
         meta: {
             reportType: "Rapport de Présence",
-            companyName: "Biometric Attendance System",
+            companyName: companyName || "Biometric Attendance System",
             reportDate: new Date(data.generated_at).toLocaleDateString('fr-FR'),
             // We pass the summary object into meta so it can be used by SummaryStatsBlock
             summary: data.summary,
             period: data.period,
             generatedBy: "System",
+            sector,
         }
     };
 };

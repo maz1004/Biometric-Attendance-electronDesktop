@@ -24,6 +24,8 @@ export interface EmployeeFilters {
   search?: string;
   status?: 'active' | 'inactive';
   role?: string;
+  sortBy?: string;
+  enrolled?: string;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {

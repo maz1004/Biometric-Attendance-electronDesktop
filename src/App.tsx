@@ -20,6 +20,7 @@ import Attendance from "./pages/Attendance";
 import Planning from "./pages/Planning";
 import Reports from "./pages/Reports";
 import Devices from "./pages/Devices";
+import AuditLogs from "./pages/AuditLogs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: "planning", element: <Planning /> },
       { path: "reports", element: <Reports /> },
       { path: "devices", element: <Devices /> },
+      { path: "audit", element: <AuditLogs /> },
     ],
   },
   {

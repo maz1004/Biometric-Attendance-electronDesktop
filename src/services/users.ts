@@ -10,6 +10,9 @@ import type {
   UserActivity,
   UserActivityResponse,
   UserAttendanceStats,
+  Department,
+  AuditLog,
+  AuditLogResponse,
 } from './types/api-types';
 import type { SuccessResponse } from './types';
 
@@ -156,6 +159,51 @@ export const getUserAttendanceStats = async (
 };
 
 // ============================================================================
+// AUDIT & DEPARTMENT API
+// ============================================================================
+
+/**
+ * Get audit logs
+ * GET /api/v1/admin/audit
+ */
+export const getAuditLogs = async (params?: {
+  page?: number;
+  limit?: number;
+  action?: string;
+  actor_id?: string;
+  target_id?: string;
+}): Promise<AuditLogResponse> => {
+  const response = await apiClient.get<SuccessResponse<AuditLogResponse>>('/admin/audit', { params });
+  return response.data.data!;
+};
+
+/**
+ * Get all departments
+ * GET /api/v1/departments
+ */
+export const getDepartments = async (): Promise<Department[]> => {
+  const response = await apiClient.get<SuccessResponse<Department[]>>('/departments');
+  return response.data.data!;
+};
+
+/**
+ * Create a new department
+ * POST /api/v1/admin/departments
+ */
+export const createDepartment = async (data: { name: string; description?: string }): Promise<Department> => {
+  const response = await apiClient.post<SuccessResponse<Department>>('/admin/departments', data);
+  return response.data.data!;
+};
+
+/**
+ * Delete a department
+ * DELETE /api/v1/admin/departments/:id
+ */
+export const deleteDepartment = async (id: string): Promise<void> => {
+  await apiClient.delete<SuccessResponse<void>>(`/admin/departments/${id}`);
+};
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
@@ -169,4 +217,7 @@ export type {
   UserActivity,
   UserActivityResponse,
   UserAttendanceStats,
+  Department,
+  AuditLog,
+  AuditLogResponse,
 };

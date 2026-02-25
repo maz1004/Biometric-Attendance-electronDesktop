@@ -84,36 +84,63 @@ export function usePlanning() {
         });
         return res.data;
       } else {
-        // Fallback to Global (Legacy)
         const res = await PlanningService.getAssignments(start, end);
         return res.data;
       }
-    },
-    // placeholderData: keepPreviousData, // Optional: keep data while fetching new context
+    }
   });
 
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ["users", "employee"],
     queryFn: () => getUsers({ limit: 1000 }), // Increased limit and removed role filter
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: settingsData } = useQuery({
     queryKey: ["settings"],
     queryFn: () => import("../../../services/settings").then(m => m.getSettings()),
+    staleTime: 5 * 60 * 1000,
   });
 
 
-  const userShifts: UserShift[] = Array.isArray(assignmentsData)
-    ? assignmentsData
-    : [];
+  const userShifts: UserShift[] = useMemo(() => {
+    if (!Array.isArray(assignmentsData)) return [];
+    // Deduplicate by ID just in case
+    const unique = new Map();
+    assignmentsData.forEach(a => unique.set(a.id, a));
+    if (unique.size !== assignmentsData.length) {
+      console.warn(`[usePlanning] Found ${assignmentsData.length - unique.size} duplicate assignments!`);
+    }
+    // DEBUG: Check assignment structure
+    const firstAss = Array.from(unique.values())[0];
+    if (firstAss) {
+      console.log(`[usePlanning] Debug First Assignment: ID=${firstAss.id} ShiftID=${firstAss.shiftId} Start=${firstAss.startTime} End=${firstAss.endTime}`);
+    }
+    return Array.from(unique.values());
+  }, [assignmentsData]);
 
   // Transform API data to internal state format
   const state: PlanningState = useMemo(() => {
     // Transform shifts array to records
     const shiftsRecord: Record<string, Shift> = {};
+
+    // 1. Add active week shifts
     if (shiftsData) {
       shiftsData.forEach((s) => {
         shiftsRecord[s.id] = s;
+      });
+    }
+
+    // 2. Add templates (as they act as shifts for assignments)
+    // This ensures Lookups in PlanningEngine work even if the specific shift instance isn't in 'shiftsData'
+    if (templatesData) {
+      templatesData.forEach((t) => {
+        // If template already exists as a shift (rare conflict), shift data takes precedence? 
+        // No, usually we want the detailed template definition if the shift one is partial.
+        // But let's assume keys are unique or we want to ensure availability.
+        if (!shiftsRecord[t.id]) {
+          shiftsRecord[t.id] = t as unknown as Shift; // Template structure is compatible with Shift for engine purposes
+        }
       });
     }
 
@@ -212,6 +239,17 @@ export function usePlanning() {
     mutationFn: (data: any) => PlanningService.createTemplate(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      // Delayed refetch: backend syncTemplateToSchedules runs async (~1-3s)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      }, 2000);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      }, 5000);
       toast.success("Modèle créé");
     },
     onError: () => toast.error("Erreur lors de la création du modèle"),
@@ -221,6 +259,17 @@ export function usePlanning() {
     mutationFn: ({ id, data }: { id: string; data: any }) => PlanningService.updateTemplate(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["templates"] });
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      // Delayed refetch: backend syncTemplateToSchedules runs async (~1-3s)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      }, 2000);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["assignments"] });
+        queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      }, 5000);
       toast.success("Modèle mis à jour");
     },
     onError: () => toast.error("Erreur lors de la mise à jour du modèle"),

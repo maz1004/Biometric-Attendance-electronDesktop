@@ -4,8 +4,9 @@ import Heading from "../ui/Heading";
 import Row from "../ui/Row";
 import ReportGenerator from "../features/reports/ReportGenerator";
 import QuickReports from "../features/reports/QuickReports";
+import ReportsHistoryTable from "../features/reports/ReportsHistoryTable";
 import { useReports } from "../features/reports/useReports";
-import { ReportFilterState } from "../services/types/api-types";
+import { ReportFilterState, GeneratedReport } from "../services/types/api-types";
 import { HiBolt, HiAdjustmentsHorizontal } from "react-icons/hi2";
 
 const Container = styled.div`
@@ -49,6 +50,19 @@ const Tab = styled.button<{ $active: boolean }>`
 export default function Reports() {
     const { generate, isGenerating, reportData } = useReports();
     const [activeTab, setActiveTab] = useState<'quick' | 'advanced'>('quick');
+    const [previewFilters, setPreviewFilters] = useState<Partial<ReportFilterState> | undefined>(undefined);
+
+    const handlePreview = (report: GeneratedReport) => {
+        setPreviewFilters({
+            type: report.type as any,
+            dateRange: {
+                start: new Date(report.period_start),
+                end: new Date(report.period_end)
+            },
+            department: 'all' // We might need to parse filter_tags if it contains department
+        });
+        setActiveTab('advanced');
+    };
 
     const handleGenerate = (filters: ReportFilterState) => {
         generate({
@@ -93,9 +107,12 @@ export default function Reports() {
                         onGenerate={handleGenerate}
                         isGenerating={isGenerating}
                         reportData={reportData}
+                        initialFilters={previewFilters}
                     />
                 </div>
             )}
+
+            <ReportsHistoryTable onPreview={handlePreview} />
 
         </Container>
     );

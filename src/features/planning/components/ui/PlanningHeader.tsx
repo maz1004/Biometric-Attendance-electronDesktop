@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { HiChevronLeft, HiChevronRight } from "react-icons/hi2";
+import { HiChevronLeft, HiChevronRight, HiSquares2X2 } from "react-icons/hi2";
 import Select from "../../../../ui/Select";
 
 // Type for settings (minimal, just what we need)
@@ -80,6 +80,8 @@ export interface PlanningHeaderProps {
   onViewChange: (mode: "week" | "month" | "cells") => void;
   timeSlot: "day" | "night";
   onTimeSlotChange: (slot: "day" | "night") => void;
+  interval: 30 | 60;
+  onIntervalChange: (interval: 30 | 60) => void;
   mode: "view" | "template";
   onModeChange: (m: "view" | "template") => void;
   settings?: PlanningSettings;
@@ -100,6 +102,8 @@ export default function PlanningHeader({
   onViewChange,
   timeSlot,
   onTimeSlotChange,
+  interval,
+  onIntervalChange,
   mode,
   onModeChange,
   settings
@@ -144,6 +148,18 @@ export default function PlanningHeader({
             onChange={handleViewChange}
             variant="default"
           />
+        )}
+
+        {/* Interval Toggle Button (Visible in Week View OR Template Mode) */}
+        {((mode === 'view' && viewMode === 'week') || mode === 'template') && (
+          <NavButton
+            onClick={() => onIntervalChange(interval === 30 ? 60 : 30)}
+            title={interval === 30 ? "Passer en vue horaire (00)" : "Passer en vue 30min (30)"}
+            style={{ width: 'auto', padding: '0 10px', gap: '6px', borderRadius: '6px' }}
+          >
+            <HiSquares2X2 size={18} />
+            <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{interval === 30 ? "30" : "00"}</span>
+          </NavButton>
         )}
       </div>
 

@@ -9,6 +9,7 @@ import type { SuccessResponse } from './types';
 export interface CompanySettings {
     id: string;
     company_name: string;
+    sector?: string;
     company_logo?: string;
     language: string;
     currency: string;
@@ -30,6 +31,7 @@ export interface CompanySettings {
 
 export interface UpdateSettingsRequest {
     company_name?: string;
+    sector?: string;
     company_logo?: string;
     language?: string;
     currency?: string;

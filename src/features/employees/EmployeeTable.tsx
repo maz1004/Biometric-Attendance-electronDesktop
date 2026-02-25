@@ -22,17 +22,26 @@ export type EmployeeTableProps = {
 export default function EmployeeTable({
   search,
   status,
+  sortBy,
   role,
+  enrolled,
 }: EmployeeTableProps) {
   const { t } = useTranslation();
   // Map status filter: 'all' is not supported by backend, so pass undefined
   const apiStatus = status === "all" ? undefined : status;
   const apiRole = role === "all" ? undefined : role;
 
+  // Map enrolled filter: backend expects "true" or "false"
+  let apiEnrolled: string | undefined;
+  if (enrolled === "enrolled") apiEnrolled = "true";
+  else if (enrolled === "not") apiEnrolled = "false";
+
   const { isLoading, employees: backendEmployees } = useEmployees({
     search,
     status: apiStatus as 'active' | 'inactive' | undefined,
     role: apiRole,
+    sortBy,
+    enrolled: apiEnrolled, // Added enrolled filter
   });
 
   if (isLoading) return <Spinner />;

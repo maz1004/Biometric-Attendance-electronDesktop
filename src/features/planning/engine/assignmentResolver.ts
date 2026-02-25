@@ -45,7 +45,8 @@ export type AssignmentAction =
     | { type: 'MODIFY_END'; slotIndex: number; newEnd: string }
     | { type: 'MODIFY_START'; slotIndex: number; newStart: string }
     | { type: 'CHECKOUT_INDIVIDUAL'; teamSlotIndex: number; employeeId: string; checkoutTime: string }
-    | { type: 'REMOVE_TEAM'; teamId: string };
+    | { type: 'REMOVE_TEAM'; teamId: string }
+    | { type: 'REMOVE_MEMBER_FROM_TEAM'; teamSlotIndex: number; employeeId: string };
 
 // ─── Core Functions ──────────────────────────────────────────────────────
 
@@ -94,22 +95,56 @@ export function findExistingAssignment(
     return null;
 }
 
-/**
- * Compute what actions are available when clicking a slot that has an existing assignment.
- */
+function d2ts(decimal: number): string {
+    const hours = Math.floor(decimal);
+    const minutes = Math.round((decimal - hours) * 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function ts2d(time: string): number {
+    const [h, m] = time.split(':').map(Number);
+    return h + m / 60;
+}
+
 export function computeAvailableActions(
     existing: ExistingAssignment,
     clickedHour: number
 ): AvailableActions {
-    const clickedTime = `${clickedHour.toString().padStart(2, '0')}:00`;
-    const existingStartHour = parseInt(existing.slot.start.split(':')[0], 10);
+    const clickedTime = d2ts(clickedHour);
+    // Use decimal for precise comparison
+    const existingStartDec = ts2d(existing.slot.start);
+    const existingEndDec = ts2d(existing.slot.end);
 
-    const isExactMatch = clickedTime === existing.slot.start;
-    const canCheckOut = clickedHour > existingStartHour;
-    const canCheckIn = clickedHour < existingStartHour;
-    const canToggleOff = isExactMatch;
+    // Check for "Point" (Start=End)
+    const hasCheckout = Math.abs(existingStartDec - existingEndDec) > 0.001;
 
-    return { canCheckOut, canCheckIn, canToggleOff, isExactMatch, existing };
+    // Exact matches (using string comparison is safe now that clickedTime is formatted correctly)
+    const isStartMatch = clickedTime === existing.slot.start;
+    const isEndMatch = clickedTime === existing.slot.end;
+
+    // Actions
+    // Can check out if clicked after (or equal) start
+    const canCheckOut = clickedHour >= existingStartDec;
+
+    // Can check in (move start) if:
+    // 1. Clicked before start
+    // 2. Clicked between start and end
+    // 3. Clicked after end (creating a new Gap? OR moving start forward).
+    // User says: "si entre le check in et le check out les 2 choix"
+    const canCheckIn = true; // Generally possible to move start, validation happens on apply
+
+    // Toggle Off meaning:
+    // If start clicked -> Remove entire slot
+    // If end clicked (and has checkout) -> Remove checkout only
+    const canToggleOff = isStartMatch || (isEndMatch && hasCheckout);
+
+    return {
+        canCheckOut,
+        canCheckIn,
+        canToggleOff,
+        isExactMatch: isStartMatch || isEndMatch,
+        existing
+    };
 }
 
 /**
@@ -159,6 +194,33 @@ export function applyAssignment(
             });
 
             return cleaned;
+        }
+
+
+        case 'REMOVE_MEMBER_FROM_TEAM': {
+            // "Explode" the team assignment into individual assignments for everyone EXCEPT the target member.
+            const teamSlot = slots[action.teamSlotIndex];
+            if (!teamSlot || !teamSlot.assigned_id) return slots;
+
+            const teamId = teamSlot.assigned_id;
+            const team = teams[teamId];
+            if (!team) return slots;
+
+            // 1. Remove the team slot
+            const withoutTeam = slots.filter((_, i) => i !== action.teamSlotIndex);
+
+            // 2. Add individual slots for all members EXCEPT the target
+            const otherMembers = team.memberIds.filter(mid => mid !== action.employeeId);
+
+            const newSlots = otherMembers.map(mid => ({
+                ...teamSlot,
+                assigned_id: mid,
+                assigned_type: 'employee' as const,
+                teamId: undefined, // No longer a strict team slot
+                color: '#10b981', // Individual color (green) or keep team color? User usually expects green for indiv.
+            }));
+
+            return [...withoutTeam, ...newSlots];
         }
 
         case 'REMOVE_TEAM': {

@@ -8,6 +8,7 @@ import {
   HiOutlineClipboardDocumentCheck,
   HiDevicePhoneMobile,
   HiOutlineChartBar,
+  HiOutlineListBullet,
 } from "react-icons/hi2";
 import { useTranslation } from "react-i18next";
 
@@ -97,6 +98,12 @@ function MainNav() {
           <StyledNavLink to="/reports">
             <HiOutlineChartBar />
             <span>{t("sidebar.reports")}</span>
+          </StyledNavLink>
+        </li>
+        <li>
+          <StyledNavLink to="/audit">
+            <HiOutlineListBullet />
+            <span>{t("sidebar.audit")}</span>
           </StyledNavLink>
         </li>
         <li>

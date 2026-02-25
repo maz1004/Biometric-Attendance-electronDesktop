@@ -10,6 +10,7 @@ export type Device = {
   lastSyncISO: string; // ISO datetime
   ip?: string;
   mobileIP?: string;
+  mobileDeviceId?: string;
   version?: string;
   currentMode?: "recognition" | "enrollment";
 

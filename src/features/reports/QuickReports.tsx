@@ -99,7 +99,7 @@ interface QuickCardProps {
     onClick: () => void;
 }
 
-const QuickCard = ({ period, icon, title, description, isActive, onClick }: QuickCardProps) => {
+const QuickCard = ({ icon, title, description, isActive, onClick }: QuickCardProps) => {
     const [showPopover, setShowPopover] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -150,7 +150,7 @@ const QuickCard = ({ period, icon, title, description, isActive, onClick }: Quic
 };
 
 export default function QuickReports() {
-    const { generate, isGenerating, reportData } = useReports();
+    const { generate, isGenerating, reportData, save, isSaving } = useReports();
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodType | null>(null);
 
     // Effect to generate report when period is selected (Auto-Fetch for Preview)
@@ -175,8 +175,8 @@ export default function QuickReports() {
 
             end = endOfDay(now);
         } else {
-            start = startOfMonth(now);
-            end = endOfMonth(now);
+            start = startOfDay(startOfMonth(now)); // Ensure start of day
+            end = endOfDay(endOfMonth(now));     // Ensure end of day
         }
 
         generate({
@@ -235,6 +235,8 @@ export default function QuickReports() {
                     onCancel={() => setSelectedPeriod(null)}
                     isGenerating={isGenerating}
                     data={reportData}
+                    onSave={save}
+                    isSaving={isSaving}
                 />
             )}
         </div>

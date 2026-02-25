@@ -114,7 +114,7 @@ type EmployeeRowProps = {
 
 function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
   const { deleteEmployee, isDeleting } = useDeleteEmployee();
-  const { enrollFace, isEnrolling } = useEnrollFace();
+  const { enrollFace } = useEnrollFace();
   const { t } = useTranslation();
 
   const {
@@ -128,6 +128,7 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
     createdAt,
     stats,
     avatar,
+    profession,
   } = employee;
 
   const presence = stats?.presenceRatePct ?? 0;
@@ -173,6 +174,7 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
           <DeptRoleBlock>
             <span className="dept">{department}</span>
             <span className="role">
+              {profession ? `${profession} • ` : ""}
               {role === "manager" ? t("employees.role.manager") : t("employees.role.employee")}
             </span>
           </DeptRoleBlock>

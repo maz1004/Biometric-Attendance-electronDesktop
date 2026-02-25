@@ -126,6 +126,7 @@ export function useTemplateManager(
             slots.forEach((slot, slotIndex) => {
                 // For employees, don't set teamId so they aren't filtered by team filter
                 const isEmployee = slot.assigned_type === 'employee';
+                const isTeam = slot.assigned_type === 'team';
 
                 // Compute checkout status using pure function
                 const missingCheckout = computeCheckoutStatus(
@@ -135,25 +136,103 @@ export function useTemplateManager(
                     teams
                 );
 
-                results.push({
-                    id: `draft-${dayKey}-${slotIndex}`,
-                    date: dateStr,
-                    teamId: isEmployee ? undefined : (slot.assigned_id || undefined),
-                    shiftId: "draft",
-                    shiftName: "Draft",
-                    startTime: slot.start,
-                    endTime: slot.end,
-                    source: 'RULE',
-                    color: slot.color,
-                    assigneeId: isEmployee ? slot.assigned_id : undefined,
-                    assigneeName: isEmployee
-                        ? employees[slot.assigned_id || ""]?.name
-                        : slot.assigned_type === 'team'
-                            ? teams[slot.assigned_id || ""]?.name
-                            : "Unknown",
-                    isMissingCheckout: missingCheckout,
-                    isCheckoutMarker: slot.is_checkout || false,
-                });
+                if (isTeam && slot.assigned_id && teams[slot.assigned_id]) {
+                    // TEAM EXPANSION: Create one ComputedSchedule per team member
+                    const team = teams[slot.assigned_id];
+                    const memberIds: string[] = team.memberIds || [];
+
+                    if (memberIds.length > 0) {
+                        memberIds.forEach((memberId: string, memberIndex: number) => {
+                            // Check if this member has an individual override (employee slot) on this day
+                            const memberOverride = slots.find(s =>
+                                s.assigned_type === 'employee' &&
+                                s.assigned_id === memberId &&
+                                !s.is_checkout
+                            );
+                            const memberCheckout = slots.find(s =>
+                                s.assigned_type === 'employee' &&
+                                s.assigned_id === memberId &&
+                                s.is_checkout
+                            );
+
+                            // Use member's personal times if override exists, else team times
+                            const effectiveStart = memberOverride ? memberOverride.start : slot.start;
+                            const effectiveEnd = memberCheckout ? memberCheckout.end : (memberOverride ? memberOverride.end : slot.end);
+
+                            results.push({
+                                id: `draft-${dayKey}-${slotIndex}-member-${memberIndex}`,
+                                date: dateStr,
+                                teamId: slot.assigned_id,
+                                shiftId: "draft",
+                                shiftName: "Draft",
+                                startTime: effectiveStart,
+                                endTime: effectiveEnd,
+                                source: 'RULE',
+                                color: slot.color || team.color,
+                                assigneeId: memberId,
+                                assigneeName: employees[memberId]?.name || "Membre",
+                                isMissingCheckout: missingCheckout,
+                                isCheckoutMarker: false,
+                            });
+                        });
+                    } else {
+                        // Team with no members - show single team dot as fallback
+                        results.push({
+                            id: `draft-${dayKey}-${slotIndex}`,
+                            date: dateStr,
+                            teamId: slot.assigned_id,
+                            shiftId: "draft",
+                            shiftName: "Draft",
+                            startTime: slot.start,
+                            endTime: slot.end,
+                            source: 'RULE',
+                            color: slot.color || team.color,
+                            assigneeId: undefined,
+                            assigneeName: team.name || "Unknown",
+                            isMissingCheckout: missingCheckout,
+                            isCheckoutMarker: slot.is_checkout || false,
+                        });
+                    }
+                } else {
+                    // EMPLOYEE or unknown type — render as-is (single dot)
+
+                    let assigneeName = "Inconnu";
+                    let isGhost = false;
+
+                    if (isEmployee) {
+                        if (employees[slot.assigned_id || ""]) {
+                            assigneeName = employees[slot.assigned_id || ""].name;
+                        } else if (slot.assigned_id) {
+                            assigneeName = `Employé Supprimé (${slot.assigned_id.substring(0, 4)}...)`;
+                            isGhost = true;
+                        }
+                    } else if (isTeam) { // Handle cases where team has no members, but team itself is missing
+                        if (teams[slot.assigned_id || ""]) {
+                            assigneeName = teams[slot.assigned_id || ""].name;
+                        } else if (slot.assigned_id) {
+                            assigneeName = `Équipe Supprimée (${slot.assigned_id.substring(0, 4)}...)`;
+                            isGhost = true;
+                        }
+                    }
+
+                    results.push({
+                        id: `draft-${dayKey}-${slotIndex}`,
+                        date: dateStr,
+                        teamId: isEmployee ? undefined : (slot.assigned_id || undefined),
+                        shiftId: "draft",
+                        shiftName: "Draft",
+                        startTime: slot.start,
+                        endTime: slot.end,
+                        source: 'RULE',
+                        color: isGhost ? '#ef4444' : slot.color, // Red if ghost
+                        assigneeId: isEmployee ? slot.assigned_id : undefined,
+                        assigneeName: assigneeName,
+                        isMissingCheckout: missingCheckout,
+                        isCheckoutMarker: slot.is_checkout || false,
+                        // @ts-ignore - Flag for rendering
+                        isGhostData: isGhost
+                    });
+                }
             });
         });
         return results;

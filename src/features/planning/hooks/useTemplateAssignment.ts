@@ -18,8 +18,8 @@ import {
     findExistingAssignment,
     computeAvailableActions,
     applyAssignment,
-    findSlotToDeselect,
     AvailableActions,
+    AssignmentAction,
 } from "../engine/assignmentResolver";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -70,6 +70,39 @@ export function useTemplateAssignment(
     const [popoverState, setPopoverState] = useState<PopoverState | null>(null);
     const [pendingOverride, setPendingOverride] = useState<PendingOverride | null>(null);
 
+    // ─── Helpers ───────────────────────────────────────────────────────────
+
+    function decimalToTimeStr(decimal: number): string {
+        const hours = Math.floor(decimal);
+        const minutes = Math.round((decimal - hours) * 60);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    function timeStrToDecimal(time: string): number {
+        const [h, m] = time.split(':').map(Number);
+        return h + m / 60;
+    }
+
+    const updatePopoverAssignedIds = useCallback((toggledId: string) => {
+        setPopoverState(prev => {
+            if (!prev) return null;
+            const ids = prev.assignedIds.includes(toggledId)
+                ? prev.assignedIds.filter(x => x !== toggledId)
+                : [...prev.assignedIds, toggledId];
+            return { ...prev, assignedIds: ids, collisionData: null };
+        });
+    }, []);
+
+    const closePopover = useCallback(() => {
+        setPopoverState(null);
+        setPendingOverride(null);
+    }, []);
+
+    const closeAll = useCallback(() => {
+        setPopoverState(null);
+        setPendingOverride(null);
+    }, []);
+
     // ─── 1. Cell Click → Open Popover ──────────────────────────────────────
 
     const handleCellClick = useCallback((
@@ -103,151 +136,144 @@ export function useTemplateAssignment(
         const { dayIndex, slotHour } = popoverState;
         const dayKey = DAYS_KEY_MAP[dayIndex] as keyof WeeklySchedule;
         const daySlots = draftSchedule[dayKey] || [];
-        const startStr = `${slotHour.toString().padStart(2, '0')}:00`;
+        // FIX: Use decimalToTimeStr
+        const startStr = decimalToTimeStr(slotHour);
 
-        // ── TEAM TOGGLE ──────────────────────────────────────────────────────
-        if (type === 'team') {
-            // Check if already assigned
-            const existingIdx = findSlotToDeselect(daySlots, id, 'team');
+        // Find existing assignment (works for both Team and Employee)
+        const existing = findExistingAssignment(id, type, daySlots, teams);
 
-            if (existingIdx >= 0) {
-                const existingSlot = daySlots[existingIdx];
-                const existingStartHour = parseInt(existingSlot.start.split(':')[0], 10);
+        if (existing) {
+            // FIX: Use decimal comparison instead of integer parsing
+            const existingStartDec = timeStrToDecimal(existing.slot.start);
+            const existingEndDec = timeStrToDecimal(existing.slot.end);
 
-                if (existingStartHour === slotHour) {
-                    // SAME hour clicked → Deselect: remove team + linked individual overrides
-                    setDraftSchedule(prev => {
-                        const newSchedule = { ...prev };
-                        newSchedule[dayKey] = applyAssignment(
-                            prev[dayKey] || [],
-                            { type: 'REMOVE_TEAM', teamId: id },
-                            teams
-                        );
-                        return newSchedule;
-                    });
-                } else {
-                    // DIFFERENT hour clicked → offer check-out/check-in
-                    const existing = { slot: existingSlot, slotIndex: existingIdx, source: 'team' as const, teamId: id };
-                    const actions = computeAvailableActions(existing, slotHour);
-                    const team = teams[id];
+            const isPoint = existing.slot.start === existing.slot.end;
+            // Use small epsilon for float comparison if needed, but exact should be fine for 0.5 steps
+            const isExactStart = Math.abs(slotHour - existingStartDec) < 0.01;
+            const isExactEnd = Math.abs(slotHour - existingEndDec) < 0.01;
 
-                    if (actions.canCheckOut) {
-                        // Show conflict popup for team check-out
-                        setPopoverState(prev => prev ? ({
-                            ...prev,
-                            collisionData: {
-                                employeeName: team?.name || 'Team',
-                                teamName: team?.name || 'Team',
-                                teamStart: existingSlot.start,
-                                teamEnd: existingSlot.end,
-                                clickedTime: startStr,
-                                canCheckIn: actions.canCheckIn,
-                                canCheckOut: actions.canCheckOut,
-                            }
-                        }) : null);
+            // 1. EXACT MATCHES -> Direct Action
+            if (isExactStart) {
+                // Remove entire assignment
+                setDraftSchedule(prev => {
+                    const newSchedule = { ...prev };
 
-                        setPendingOverride({
-                            employeeId: id,
-                            employeeName: team?.name || 'Team',
-                            teamId: id,
-                            teamName: team?.name || 'Team',
-                            teamSlotIndex: existingIdx,
-                            dayKey,
-                            clickedHour: slotHour,
-                            actions,
-                        });
-                        return;
+                    let action: AssignmentAction;
+                    if (existing.source === 'team' && type === 'team') {
+                        action = { type: 'REMOVE_TEAM', teamId: id };
+                    } else if (existing.source === 'team' && type === 'employee') {
+                        // User clicked an individual member of a team assignment -> Explode team, remove this member
+                        action = { type: 'REMOVE_MEMBER_FROM_TEAM', teamSlotIndex: existing.slotIndex, employeeId: id };
+                    } else {
+                        // Individual assignment or fallback
+                        action = { type: 'REMOVE', slotIndex: existing.slotIndex };
                     }
-                }
-            } else {
-                // Not assigned yet → Check-in marker (zero-duration)
+
+                    newSchedule[dayKey] = applyAssignment(prev[dayKey] || [], action, teams);
+                    return newSchedule;
+                });
+                setIsDirty(true);
+                updatePopoverAssignedIds(id);
+                return;
+            }
+
+            if (!isPoint && isExactEnd) {
+                // Remove Check-out (Reset to Point at Check-in)
                 setDraftSchedule(prev => {
                     const newSchedule = { ...prev };
                     newSchedule[dayKey] = applyAssignment(
                         prev[dayKey] || [],
-                        {
-                            type: 'ADD',
-                            slot: {
-                                start: startStr,
-                                end: startStr, // Zero-duration = check-in marker
-                                assigned_id: id,
-                                assigned_type: 'team',
-                                color: teams[id]?.color || '#3b82f6',
-                            }
-                        },
+                        { type: 'MODIFY_END', slotIndex: existing.slotIndex, newEnd: existing.slot.start },
                         teams
                     );
                     return newSchedule;
                 });
+                setIsDirty(true);
+                return;
             }
 
-            setIsDirty(true);
-            updatePopoverAssignedIds(id);
-            return;
-        }
+            // 2. POINT EXTENSION -> Direct Action (User Requirement for 9h -> 14h click)
+            if (isPoint) {
+                if (slotHour > existingStartDec) {
+                    // Extend End (Check-out)
+                    const actionType = existing.source === 'team' && type === 'team' ? 'team_modify' :
+                        existing.source === 'team' && type === 'employee' ? 'indiv_override' : 'indiv_modify';
 
-        // ── EMPLOYEE TOGGLE ──────────────────────────────────────────────────
-        if (type === 'employee') {
-            const employee = employees[id];
-
-            // Check if this employee has ANY existing assignment (direct or via team)
-            const existing = findExistingAssignment(id, 'employee', daySlots, teams);
-
-            if (existing) {
-                // Employee already assigned somewhere on this day
-
-                if (existing.source === 'team') {
-                    // Employee is assigned via team → offer individual override (check-out)
-                    const actions = computeAvailableActions(existing, slotHour);
-                    const teamName = existing.teamId ? teams[existing.teamId]?.name || 'Team' : 'Team';
-
-                    setPopoverState(prev => prev ? ({
-                        ...prev,
-                        collisionData: {
-                            employeeName: employee?.name || 'Employé',
-                            teamName,
-                            teamStart: existing.slot.start,
-                            teamEnd: existing.slot.end,
-                            clickedTime: startStr,
-                            canCheckIn: actions.canCheckIn,
-                            canCheckOut: actions.canCheckOut,
+                    setDraftSchedule(prev => {
+                        const ns = { ...prev };
+                        if (actionType === 'team_modify' || actionType === 'indiv_modify') {
+                            ns[dayKey] = applyAssignment(ns[dayKey] || [], { type: 'MODIFY_END', slotIndex: existing.slotIndex, newEnd: startStr }, teams);
+                        } else {
+                            // Individual override of Team Point
+                            ns[dayKey] = applyAssignment(ns[dayKey] || [], { type: 'CHECKOUT_INDIVIDUAL', teamSlotIndex: existing.slotIndex, employeeId: id, checkoutTime: startStr }, teams);
                         }
-                    }) : null);
-
-                    setPendingOverride({
-                        employeeId: id,
-                        employeeName: employee?.name || 'Employé',
-                        teamId: existing.teamId || '',
-                        teamName,
-                        teamSlotIndex: existing.slotIndex,
-                        dayKey,
-                        clickedHour: slotHour,
-                        actions,
+                        return ns;
                     });
+                    setIsDirty(true);
                     return;
                 }
-
-                if (existing.source === 'individual') {
-                    // Individual already assigned → try to deselect
-                    const deselectIdx = findSlotToDeselect(daySlots, id, 'employee');
-                    if (deselectIdx >= 0) {
-                        setDraftSchedule(prev => {
-                            const newSchedule = { ...prev };
-                            newSchedule[dayKey] = applyAssignment(
-                                prev[dayKey] || [],
-                                { type: 'REMOVE', slotIndex: deselectIdx },
-                                teams
-                            );
-                            return newSchedule;
-                        });
-                        setIsDirty(true);
-                        updatePopoverAssignedIds(id);
-                        return;
-                    }
+                if (slotHour < existingStartDec) {
+                    // Move Start (Check-in) - Direct? Or Popover?
+                    // "impossible de mettre un check out d 'une personne avant son check in" -> implies moving start is the only option.
+                    // Let's do direct move start.
+                    setDraftSchedule(prev => {
+                        const ns = { ...prev };
+                        if (existing.source === 'team' && type === 'employee') {
+                            // Override Team Start -> Add new Indiv Slot with new Start and Team End (which is same as Team Start if Point)
+                            // Basically new Indiv Slot.
+                            const cleaned = (ns[dayKey] || []).filter(s => !(s.assigned_id === id && s.assigned_type === 'employee'));
+                            cleaned.push({
+                                start: startStr,
+                                end: existing.slot.end,
+                                assigned_id: id,
+                                assigned_type: 'employee',
+                                color: '#10b981'
+                            });
+                            ns[dayKey] = cleaned;
+                        } else {
+                            // Modify existing
+                            ns[dayKey] = applyAssignment(ns[dayKey] || [], { type: 'MODIFY_START', slotIndex: existing.slotIndex, newStart: startStr }, teams);
+                        }
+                        return ns;
+                    });
+                    setIsDirty(true);
+                    return;
                 }
             }
 
-            // No existing → check-in marker (zero-duration)
+            // 3. RANGE MODIFICATION -> Popover Choices
+            // (Clicked Between, After, or Before a Range)
+            const actions = computeAvailableActions(existing, slotHour);
+            const entityName = type === 'team' ? teams[id]?.name : employees[id]?.name;
+            const teamName = existing.teamId ? teams[existing.teamId]?.name || 'Team' : 'Team';
+
+            setPopoverState(prev => prev ? ({
+                ...prev,
+                collisionData: {
+                    employeeName: entityName || (type === 'team' ? 'Team' : 'Employé'),
+                    teamName: type === 'team' ? (entityName || 'Team') : teamName,
+                    teamStart: existing.slot.start,
+                    teamEnd: existing.slot.end,
+                    clickedTime: startStr,
+                    canCheckIn: actions.canCheckIn,
+                    canCheckOut: actions.canCheckOut,
+                }
+            }) : null);
+
+            setPendingOverride({
+                employeeId: id,
+                employeeName: entityName || (type === 'team' ? 'Team' : 'Employé'),
+                teamId: existing.teamId || (type === 'team' ? id : ''),
+                teamName: type === 'team' ? (entityName || 'Team') : teamName,
+                teamSlotIndex: existing.slotIndex,
+                dayKey,
+                clickedHour: slotHour,
+                actions,
+            });
+            return;
+
+        } else {
+            // NEW ASSIGNMENT (Check-in marker)
             setDraftSchedule(prev => {
                 const newSchedule = { ...prev };
                 newSchedule[dayKey] = applyAssignment(
@@ -258,8 +284,8 @@ export function useTemplateAssignment(
                             start: startStr,
                             end: startStr, // Zero-duration = check-in marker
                             assigned_id: id,
-                            assigned_type: 'employee',
-                            color: '#10b981',
+                            assigned_type: type,
+                            color: type === 'team' ? (teams[id]?.color || '#3b82f6') : '#10b981',
                         }
                     },
                     teams
@@ -269,14 +295,16 @@ export function useTemplateAssignment(
             setIsDirty(true);
             updatePopoverAssignedIds(id);
         }
-    }, [popoverState, draftSchedule, teams, employees, setDraftSchedule, setIsDirty]);
+    }, [popoverState, draftSchedule, teams, employees, setDraftSchedule, setIsDirty, updatePopoverAssignedIds]);
 
     // ─── 3. Resolve Conflict ──────────────────────────────────────────────
 
     const handleResolveConflict = useCallback((mode: 'checkout' | 'checkin' | 'new') => {
         if (!pendingOverride) return;
         const { employeeId, teamSlotIndex, dayKey, clickedHour } = pendingOverride;
-        const clickedTime = `${clickedHour.toString().padStart(2, '0')}:00`;
+        // FIX: Use decimalToTimeStr
+        const clickedTime = decimalToTimeStr(clickedHour);
+
         const dayKeyTyped = dayKey as keyof WeeklySchedule;
         const daySlots = draftSchedule[dayKeyTyped] || [];
         const teamSlot = daySlots[teamSlotIndex];
@@ -317,9 +345,22 @@ export function useTemplateAssignment(
                 const cleaned = currentDaySlots.filter(s =>
                     !(s.assigned_id === employeeId && s.assigned_type === 'employee')
                 );
+
+                // Safety: If team slot is a point (Start=End) or ends before our new check-in, 
+                // we must treat this as a Point (Start=End) or extend to Team End if valid.
+                // Actually, if Team ends at 17h and we check-in at 14h, we want 14h-17h.
+                // If Team ends at 9h (Point) and we check-in at 14h, we want 14h-14h (Point).
+                const teamEndDec = timeStrToDecimal(teamSlot.end);
+                const newStartDec = clickedHour;
+
+                let newEnd = teamSlot.end;
+                if (teamEndDec <= newStartDec) {
+                    newEnd = clickedTime;
+                }
+
                 cleaned.push({
                     start: clickedTime,
-                    end: teamSlot.end,
+                    end: newEnd,
                     assigned_id: employeeId,
                     assigned_type: 'employee',
                     color: '#10b981',
@@ -327,7 +368,9 @@ export function useTemplateAssignment(
                 newSchedule[dayKeyTyped] = cleaned;
             } else {
                 // New independent shift (1-hour slot, unrelated to team)
-                const endStr = `${(clickedHour + 1).toString().padStart(2, '0')}:00`;
+                // FIX: Use decimal math for +1 hour
+                const endStr = decimalToTimeStr(clickedHour + 1);
+
                 newSchedule[dayKeyTyped] = applyAssignment(
                     currentDaySlots,
                     {
@@ -350,28 +393,6 @@ export function useTemplateAssignment(
         setIsDirty(true);
         closeAll();
     }, [pendingOverride, draftSchedule, teams, setDraftSchedule, setIsDirty]);
-
-    // ─── Helpers ───────────────────────────────────────────────────────────
-
-    const updatePopoverAssignedIds = useCallback((toggledId: string) => {
-        setPopoverState(prev => {
-            if (!prev) return null;
-            const ids = prev.assignedIds.includes(toggledId)
-                ? prev.assignedIds.filter(x => x !== toggledId)
-                : [...prev.assignedIds, toggledId];
-            return { ...prev, assignedIds: ids, collisionData: null };
-        });
-    }, []);
-
-    const closePopover = useCallback(() => {
-        setPopoverState(null);
-        setPendingOverride(null);
-    }, []);
-
-    const closeAll = useCallback(() => {
-        setPopoverState(null);
-        setPendingOverride(null);
-    }, []);
 
     // ─── Return ────────────────────────────────────────────────────────────
 

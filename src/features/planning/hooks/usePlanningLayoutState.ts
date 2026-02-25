@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shift, WeeklyTemplate } from "../types";
+import { WeeklyTemplate } from "../types";
 
 export type ViewMode = "week" | "month" | "cells";
 export type PlanningMode = "view" | "template";
@@ -9,6 +9,7 @@ export function usePlanningLayoutState() {
     const [mode, setMode] = useState<PlanningMode>("view");
     const [viewMode, setViewMode] = useState<ViewMode>("week");
     const [timeSlot, setTimeSlot] = useState<TimeSlot>("day");
+    const [interval, setInterval] = useState<30 | 60>(30); // NEW: Interval state
 
     // Filters
     const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
@@ -27,6 +28,7 @@ export function usePlanningLayoutState() {
         mode, setMode,
         viewMode, setViewMode,
         timeSlot, setTimeSlot,
+        interval, setInterval, // Export
         selectedTeamIds, setSelectedTeamIds,
 
         assignModalDate, setAssignModalDate,

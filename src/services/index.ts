@@ -24,6 +24,10 @@ export {
     getUserAttendanceStats,
     uploadUserPhoto,
     uploadUserCV,
+    getAuditLogs,
+    getDepartments,
+    createDepartment,
+    deleteDepartment,
 } from './users';
 
 // Attendance service

@@ -7,6 +7,7 @@ import { GenericAttendanceDoc } from "./export/pdf/documents/GenericAttendanceDo
 import Button from "../../ui/Button";
 import { HiDownload, HiEye } from "react-icons/hi";
 import { PDFDownloadLink, PDFViewer } from "@react-pdf/renderer";
+import { useSettings } from "../settings/useSettings";
 
 const Container = styled.div`
   background: var(--color-bg-elevated);
@@ -78,17 +79,19 @@ const reportColumns: ColumnDefinition<UserReportData>[] = [
         format: (_, row) => `${row.present_days}j (${row.attendance_rate.toFixed(0)}%)`
     },
     { header: "Retards", field: "late_arrivals", width: "10%", align: "center" },
+    { header: "Sorties Anticipées", field: "early_departures", width: "10%", align: "center" },
     { header: "Absences", field: "absent_days", width: "10%", align: "center", format: (v) => `${v}j` },
     { header: "Heures", field: "total_work_hours", width: "10%", align: "right" },
 ];
 
 export default function ReportPreview({ data }: ReportPreviewProps) {
     const [showPreview, setShowPreview] = useState(false);
+    const { settings } = useSettings();
 
     if (!data) return null;
 
     // Transform API data to Exportable format
-    const exportData = adaptReportDataToExportable(data);
+    const exportData = adaptReportDataToExportable(data, settings?.company_name || "Biometric Attendance System", settings?.sector);
 
     return (
         <Container>
@@ -134,6 +137,10 @@ export default function ReportPreview({ data }: ReportPreviewProps) {
                 <SummaryCard>
                     <SummaryLabel>Total Late</SummaryLabel>
                     <SummaryValue>{data.summary.total_late_arrivals}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                    <SummaryLabel>Total Early Dept.</SummaryLabel>
+                    <SummaryValue>{data.summary.total_early_departures}</SummaryValue>
                 </SummaryCard>
                 <SummaryCard>
                     <SummaryLabel>Total Absences</SummaryLabel>

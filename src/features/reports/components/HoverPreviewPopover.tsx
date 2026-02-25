@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import styled, { keyframes, css } from "styled-components";
-import { HiDocumentText } from "react-icons/hi2";
 
 const slideUp = keyframes`
   from { opacity: 0; transform: translateY(10px) translateX(-50%); }
@@ -73,30 +72,30 @@ const DocLine = styled.div<{ width: string; top: string }>`
 `;
 
 interface HoverPreviewProps {
-    title: string;
-    onMouseEnter: () => void;
-    onMouseLeave: () => void;
+  title: string;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 }
 
 export const HoverPreviewPopover: React.FC<HoverPreviewProps> = ({ title, onMouseEnter, onMouseLeave }) => {
-    // We handle the "exiting" state in the parent mostly, 
-    // but here we render content.
-    // Actually, the parent controls rendering, so we just need to style it.
-    // The parent (QuickReportCard) will toggle the 'exiting' prop on the wrapper usually,
-    // or we mount/unmount. 
-    // If we unmount, we can't play exit animation easily without a Transition group or logic.
-    // Simplified approach: Parent passes `isExiting`.
+  // We handle the "exiting" state in the parent mostly, 
+  // but here we render content.
+  // Actually, the parent controls rendering, so we just need to style it.
+  // The parent (QuickReportCard) will toggle the 'exiting' prop on the wrapper usually,
+  // or we mount/unmount. 
+  // If we unmount, we can't play exit animation easily without a Transition group or logic.
+  // Simplified approach: Parent passes `isExiting`.
 
-    return (
-        <PopoverContainer $exiting={false} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
-            <MiniDoc>
-                <div style={{ background: 'var(--color-brand-500)', height: '10px', width: '100%', opacity: 0.5 }}></div>
-                <DocLine width="60%" top="20px" />
-                <DocLine width="80%" top="28px" />
-                <DocLine width="80%" top="36px" />
-                <DocLine width="50%" top="44px" />
-            </MiniDoc>
-            <span style={{ fontSize: '1rem', fontWeight: 600 }}>{title}</span>
-        </PopoverContainer>
-    );
+  return (
+    <PopoverContainer $exiting={false} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+      <MiniDoc>
+        <div style={{ background: 'var(--color-brand-500)', height: '10px', width: '100%', opacity: 0.5 }}></div>
+        <DocLine width="60%" top="20px" />
+        <DocLine width="80%" top="28px" />
+        <DocLine width="80%" top="36px" />
+        <DocLine width="50%" top="44px" />
+      </MiniDoc>
+      <span style={{ fontSize: '1rem', fontWeight: 600 }}>{title}</span>
+    </PopoverContainer>
+  );
 };

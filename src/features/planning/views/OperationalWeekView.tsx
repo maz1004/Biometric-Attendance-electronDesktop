@@ -193,7 +193,8 @@ interface OperationalWeekGridProps {
   teams: Team[];
   computedSchedule: ComputedSchedule[];
   timeSlot: "day" | "night";
-  settings?: PlanningSettings; // NEW: Settings for dynamic time ranges
+  interval?: 30 | 60; // NEW
+  settings?: PlanningSettings;
 }
 
 export default function OperationalWeekGrid({
@@ -201,11 +202,11 @@ export default function OperationalWeekGrid({
   teams,
   computedSchedule,
   timeSlot,
+  interval = 30, // Default to 30
   settings,
 }: OperationalWeekGridProps) {
 
-  // console.log(`[OpView] Render. Dates: ${dates.length}, Items: ${computedSchedule.length}`);
-
+  // ... (popover state logic same as before) ...
   const [hoverPopover, setHoverPopover] = useState<{ x: number, y: number, dateStr: string, items: ComputedSchedule[], alignment?: 'left' | 'right' } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const openTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -253,9 +254,6 @@ export default function OperationalWeekGrid({
     }, 1000);
   };
 
-  // No color mapping needed, use t.color directly
-  // teams.forEach((t, i) => teamColorMap.set(t.id, getTeamColor(i)));
-
   // 1. Define Slots based on Mode - NOW DYNAMIC from settings
   const dayStartHour = extractHour(settings?.planning_day_start, 7);
   const dayEndHour = extractHour(settings?.planning_day_end, 19);
@@ -266,15 +264,33 @@ export default function OperationalWeekGrid({
   const startHour = timeSlot === "day" ? dayStartHour : nightStartHour;
   // Night end is next day (add 24 to properly compute slot count)
   const endHour = timeSlot === "day" ? dayEndHour : (nightEndHour + 24);
-  const totalSlots = (endHour - startHour) * 2; // Half-hourly: 2 slots per hour
+
+  // Dynamic slot count based on interval
+  const slotsPerHour = 60 / interval;
+  const totalSlots = (endHour - startHour) * slotsPerHour;
 
   const slots = Array.from({ length: totalSlots }).map((_, i) => {
-    const minuteOffset = i * 30;
-    const hStart = (startHour + Math.floor(minuteOffset / 60)) % 24;
+    // Offset in minutes
+    const minuteOffset = i * interval;
+    const hourFloat = startHour + (minuteOffset / 60);
+
+    // Display Label
+    const hStart = Math.floor(hourFloat) % 24;
     const mStart = minuteOffset % 60;
+
+    let label = "";
+    if (interval === 60) {
+      // "8h", "9h"
+      label = `${hStart}h`;
+    } else {
+      // "8h", "8h30"
+      label = mStart === 0 ? `${hStart}h` : `${hStart}h${mStart}`;
+    }
+
     return {
-      label: mStart === 0 ? `${hStart}h` : `${hStart}h30`,
-      hourPlain: startHour + i * 0.5 // fractional hours for coverage
+      label,
+      hourPlain: hourFloat,
+      duration: interval / 60 // duration in hours (0.5 or 1.0)
     };
   });
 
@@ -308,9 +324,9 @@ export default function OperationalWeekGrid({
 
                 <Swimlane>
                   {slots.map((slot) => {
-                    // Filter items OVERLAPPING this half-hour slot
+                    // Filter items OVERLAPPING this slot
                     const slotStart = slot.hourPlain;
-                    const slotEnd = slotStart + 0.5; // 30-minute slot width
+                    const slotEnd = slotStart + slot.duration; // Use dynamic duration
 
                     const slotItems = dayItems.filter(item => {
                       let start = parseTime(item.startTime);
@@ -381,14 +397,15 @@ export default function OperationalWeekGrid({
                                     item.endTime,
                                     slot.hourPlain,
                                     timeSlot,
-                                    item.isCheckoutMarker
+                                    item.isCheckoutMarker,
+                                    interval / 60
                                   );
                                   if (variant === null) return null;
 
                                   // Check if assignment is incomplete (has check-in but no check-out)
                                   const hasIncompleteAssignment = item.isMissingCheckout;
                                   return (
-                                    <div key={`${item.id}-${slot.hourPlain}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: team ? 4 : 0 }}>
+                                    <div key={`${item.id}-${item.assigneeId || "nouser"}-${slot.hourPlain}`} style={{ position: 'relative', display: 'flex', alignItems: 'center', marginLeft: team ? 4 : 0 }}>
                                       {/* Tiny Team Indicator Bar - Behind & Peek Left */}
                                       {team && variant !== 'line' && <div style={{
                                         position: 'absolute',

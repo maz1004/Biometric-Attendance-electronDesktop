@@ -104,7 +104,7 @@ const SlotDots = styled.div`
   gap: 4px;
 `;
 
-const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $isLinked?: boolean }>`
+const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $isLinked?: boolean; $isGhost?: boolean }>`
   width: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
   height: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
   border-radius: 50%;
@@ -121,8 +121,17 @@ const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $i
     z-index: 10;
   }
 
+  /* Ghost Data Indicator (Blinking Red Border) */
+  ${props => props.$isGhost && css`
+    border: 2px dashed #ef4444;
+    animation: blinker 1s linear infinite;
+    @keyframes blinker {
+        50% { opacity: 0.5; }
+    }
+  `}
+
   /* Linked Indicator (Left Bar) */
-  ${props => props.$isLinked && css`
+  ${props => props.$isLinked && !props.$isGhost && css`
     &::before {
       content: '';
       position: absolute;
@@ -183,13 +192,15 @@ interface GenericWeekGridProps {
   teams: Team[];
   timeSlot: "day" | "night";
   onCellClick: (dayIndex: number, slotHour: number, event: React.MouseEvent<HTMLDivElement>, currentAssignments: ComputedSchedule[]) => void;
+  interval?: 30 | 60; // New Prop
 }
 
 export default function GenericWeekView({
   computedSchedule,
   teams,
   timeSlot,
-  onCellClick
+  onCellClick,
+  interval = 60 // Default to 60 for backward compat
 }: GenericWeekGridProps) {
 
   const teamColorMap = new Map<string, string>();
@@ -238,15 +249,32 @@ export default function GenericWeekView({
     return true;
   });
 
-  // 1. Define Slots based on Mode
+  // 1. Define Slots based on Mode AND Interval
   const startHour = timeSlot === "day" ? 8 : 19;
   const endHour = timeSlot === "day" ? 19 : 31; // night starts 19:00, ends 07:00 (19+12=31) or similar logic
-  const totalSlots = endHour - startHour;
+
+  const totalMinutes = (endHour - startHour) * 60;
+  const totalSlots = Math.ceil(totalMinutes / interval);
 
   const slots = Array.from({ length: totalSlots }).map((_, i) => {
+    // Minute offset from start
+    const minuteOffset = i * interval;
+    const hourFloat = startHour + (minuteOffset / 60);
+
+    const hStart = Math.floor(hourFloat) % 24;
+    const mStart = minuteOffset % 60;
+
+    let label = "";
+    if (interval === 60) {
+      label = `${hStart}h`;
+    } else {
+      label = mStart === 0 ? `${hStart}h` : `${hStart}h${mStart}`;
+    }
+
     return {
-      label: `${(startHour + i) % 24}h`,
-      hourPlain: startHour + i
+      label,
+      hourPlain: hourFloat,
+      duration: interval / 60
     };
   });
 
@@ -287,7 +315,7 @@ export default function GenericWeekView({
                 <Swimlane>
                   {slots.map((slot) => {
                     const slotStart = slot.hourPlain;
-                    const slotEnd = slotStart + 1;
+                    const slotEnd = slotStart + (interval / 60);
 
                     const slotItems = dayItems.filter(item => {
                       let tStart = parseTime(item.startTime);
@@ -326,21 +354,22 @@ export default function GenericWeekView({
                               item.endTime,
                               slotStart,
                               timeSlot,
-                              item.isCheckoutMarker
+                              item.isCheckoutMarker,
+                              interval / 60
                             );
 
                             if (variant === null) return null;
 
                             if (variant === 'line') {
                               return (
-                                <div key={item.id} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div key={`${item.id}-${item.assigneeId || "nouser"}-${slotStart}-line`} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <ConnectorLine $color={item.color || "#ccc"} />
                                 </div>
                               );
                             }
 
                             return (
-                              <div key={item.id} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div key={`${item.id}-${item.assigneeId || "nouser"}-${slotStart}`} style={{ position: 'relative', width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {/* Connector for continuity */}
                                 {(variant === 'hollow' || variant === 'filled') && <ConnectorLine $color={item.color || "#ccc"} style={{ width: variant === 'filled' ? '50%' : '50%', left: variant === 'filled' ? '50%' : 0, right: 'auto' }} />}
 
@@ -348,6 +377,8 @@ export default function GenericWeekView({
                                   $color={item.color || teamColorMap.get(item.teamId || "") || "#ccc"}
                                   $variant={variant}
                                   $isLinked={!!item.teamId}
+                                  // @ts-ignore
+                                  $isGhost={item.isGhostData}
                                   title={`${item.assigneeName} (${item.startTime} - ${item.endTime})`}
                                 >
                                   {/* Bug #1 fix: Red badge for missing checkout */}

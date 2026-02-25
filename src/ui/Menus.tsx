@@ -37,7 +37,7 @@ const StyledToggle = styled.button`
   }
 `;
 
-type Position = { x: number; y: number };
+type Position = { x: number; y: number; placement?: 'top' | 'bottom' };
 
 const StyledList = styled.ul<{ position: Position }>`
   position: fixed;
@@ -47,7 +47,11 @@ const StyledList = styled.ul<{ position: Position }>`
   border-radius: var(--border-radius-md);
 
   right: ${(props) => props.position.x}px;
-  top: ${(props) => props.position.y}px;
+  /* If placement is top (showing above), use bottom property. Else use top. */
+  ${(props) => props.position.placement === 'top'
+    ? `bottom: ${props.position.y}px;`
+    : `top: ${props.position.y}px;`}
+  
   z-index: 2000;
 `;
 
@@ -118,9 +122,18 @@ function Toggle({ id, children }: ToggleProps) {
 
     const rect = btn.getBoundingClientRect();
 
+    // Check if menu would go off-screen (heuristic: assume menu height ~150px)
+    // If rect.bottom is close to window.innerHeight, show upwards
+    // Distance from bottom
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const shouldShowUpwards = spaceBelow < 250; // 250px buffer
+
+
+
     setPosition({
       x: window.innerWidth - rect.width - rect.x,
-      y: 8 + rect.height + rect.y,
+      y: shouldShowUpwards ? (window.innerHeight - rect.top + 8) : (rect.bottom + 8),
+      placement: shouldShowUpwards ? 'top' : 'bottom',
     });
 
     openId === "" || openId !== id ? open(id) : close();

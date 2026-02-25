@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { getUser } from "../../../../../services/users";
-import { getHistory } from "../../../../../services/attendance";
-import { UserResponse } from "../../../../../services/types/api-types";
+import { getUser } from "../../../../services/users";
+import { getHistory } from "../../../../services/attendance";
+import { UserResponse } from "../../../../services/types/api-types";
 import { subMonths } from "date-fns";
 
 export interface EmployeeHistoryData {

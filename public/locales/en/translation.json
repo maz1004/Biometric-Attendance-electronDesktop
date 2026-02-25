@@ -17,6 +17,7 @@
     "planning": "Planning",
     "devices": "Devices",
     "reports": "Reports",
+    "audit": "Audit",
     "settings": "Settings"
   },
   "header": {
@@ -220,6 +221,7 @@
       "email": "Email",
       "phone": "Phone",
       "dob": "Date of Birth",
+      "profession": "Profession",
       "department": "Department",
       "role": "Role",
       "password": "Password",
@@ -228,6 +230,7 @@
       "placeholders": {
         "email": "name@company.com",
         "phone": "+123...",
+        "profession": "Profession / Job / Title...",
         "department": "Production / QA / HR...",
         "password": "Min 8 chars"
       }
@@ -335,6 +338,7 @@
         "labels": {
           "kiosk_ip": "Kiosk IP (Ethernet/WiFi)",
           "tablet_ip": "Tablet IP (Mobile)",
+          "mobile_device_id": "Mobile Device ID",
           "mac": "MAC Address",
           "version": "Software Version",
           "current_mode": "Current Mode",

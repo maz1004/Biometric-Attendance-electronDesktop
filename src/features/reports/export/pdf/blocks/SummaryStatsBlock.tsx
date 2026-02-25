@@ -57,6 +57,12 @@ export const SummaryStatsBlock: React.FC<SummaryStatsBlockProps> = ({ summary })
                 </Text>
             </View>
             <View style={styles.card}>
+                <Text style={styles.label}>Départs Anticipés</Text>
+                <Text style={[styles.value, { color: summary.total_early_departures > 0 ? "#F59E0B" : colors.text.primary }]}>
+                    {summary.total_early_departures}
+                </Text>
+            </View>
+            <View style={styles.card}>
                 <Text style={styles.label}>Total Absences</Text>
                 <Text style={[styles.value, { color: summary.total_absences > 0 ? "#EF4444" : colors.text.primary }]}>
                     {summary.total_absences}

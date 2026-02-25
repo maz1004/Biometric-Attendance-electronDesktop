@@ -39,7 +39,8 @@ export function computeDotVariant(
     endTime: string,
     slotStart: number,
     timeSlotMode: 'day' | 'night',
-    isCheckout?: boolean
+    isCheckout?: boolean,
+    slotDuration: number = 1 // Default to 1 hour
 ): DotVariant {
     let tStart = parseTime(startTime);
     let tEnd = parseTime(endTime);
@@ -50,34 +51,42 @@ export function computeDotVariant(
     }
 
     // Zero-duration marker (start === end):
-    //   - is_checkout=true  → hollow (checkout marker)
-    //   - is_checkout=false → filled (check-in point, no checkout yet)
-    if (tStart === tEnd) {
-        if (Math.floor(tStart) === slotStart) {
+    if (Math.abs(tStart - tEnd) < 0.001) {
+        // Precise match with slotStart
+        if (Math.abs(tStart - slotStart) < 0.001) {
             return isCheckout ? 'hollow' : 'filled';
         }
         return null;
     }
 
-    const slotEnd = slotStart + 1;
+    const slotEnd = slotStart + slotDuration;
 
     // Check overlap
+    // Standard overlap: Start < SlotEnd AND End >= SlotStart
     if (!(tStart < slotEnd && tEnd >= slotStart)) {
         return null; // Not in this slot at all
     }
 
-    // Check-in: start hour matches this slot
-    if (Math.floor(tStart) === slotStart) {
+    // Check-in: start matches this slot's start
+    if (Math.abs(tStart - slotStart) < 0.001) {
         return 'filled';
     }
 
-    // Check-out: end hour matches this slot
-    // (With zero-duration check-ins, any start !== end is an explicit checkout)
-    if (Math.floor(tEnd) === slotStart) {
+    // Check-out: end matches this slot's start (Meaning the shift ENDS at the BEGINNING of this slot?)
+    // Wait. "Hollow" dot usually appears at the TIME of checkout.
+    // If I check out at 9:30. 9:30 is the START of the 9:30-10:00 slot.
+    // So if tEnd === slotStart, we render hollow.
+    if (Math.abs(tEnd - slotStart) < 0.001) {
         return 'hollow';
     }
 
-    // Continuation line between start and end
+    // Also, if checkout is at the END of the previous slot...
+    // But our grid renders dots AT the timestamp (slotStart).
+    // If shift is 8:30 - 9:30.
+    // 8:30 slot (8.5): Matches Start. Filled.
+    // 9:00 slot (9.0): Matches Line.
+    // 9:30 slot (9.5): Matches End. Hollow.
+
     return 'line';
 }
 
@@ -148,10 +157,11 @@ export function computeCheckoutStatus(
 export function computeSlotDots(
     items: Array<{ startTime: string; endTime: string; assigneeId?: string; assigneeType?: string }>,
     slotStart: number,
-    timeSlotMode: 'day' | 'night'
+    timeSlotMode: 'day' | 'night',
+    slotDuration: number = 1
 ): DotRenderInfo[] {
     return items.map(item => {
-        const variant = computeDotVariant(item.startTime, item.endTime, slotStart, timeSlotMode);
+        const variant = computeDotVariant(item.startTime, item.endTime, slotStart, timeSlotMode, item.assigneeType === 'employee' ? false : undefined, slotDuration);
         return {
             variant,
             isMissingCheckout: false, // Caller sets this from computeCheckoutStatus

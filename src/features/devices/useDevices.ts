@@ -67,6 +67,7 @@ export function useDevices() {
       lastSyncISO: d.last_seen || new Date().toISOString(),
       ip: d.ip_address,
       mobileIP: d.mobile_ip,
+      mobileDeviceId: d.mobile_device_id,
       version: d.version || "1.0.0",
       currentMode: (d.current_mode as any) || undefined
     })) : [];

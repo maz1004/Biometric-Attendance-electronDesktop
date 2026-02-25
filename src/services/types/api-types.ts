@@ -36,6 +36,7 @@ export interface UserResponse {
     last_name: string;
     role: 'admin' | 'rh' | 'employee';
     department?: string;
+    profession?: string;
     phone_number: string;
     date_of_birth?: string;
     hire_date?: string;
@@ -68,6 +69,7 @@ export interface CreateAdminRequest {
     password: string;
     role: 'admin' | 'rh';
     department?: string;
+    profession?: string;
     phone_number?: string;
     hire_date?: string; // ISO 8601
     is_active?: boolean;
@@ -78,6 +80,7 @@ export interface CreateEmployeeRequest {
     last_name: string;
     email: string;
     department?: string;
+    profession?: string;
     phone_number?: string;
     hire_date?: string;
     is_active?: boolean;
@@ -89,6 +92,7 @@ export interface UpdateUserRequest {
     email?: string;
     role?: 'admin' | 'rh' | 'employee';
     department?: string;
+    profession?: string;
     phone_number?: string;
     date_of_birth?: string; // ISO 8601
     is_active?: boolean;
@@ -143,6 +147,40 @@ export interface UserAttendanceStats {
     absence_rate: number;
     late_rate: number;
     monthly_comparison: MonthlyComparison;
+}
+
+// ============================================================================
+// AUDIT & DEPARTMENT TYPES
+// ============================================================================
+
+export interface Department {
+    id: string;
+    name: string;
+    description: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AuditLog {
+    id: string;
+    actor_id: string;
+    actor_name: string;
+    action: 'CREATE_ADMIN' | 'CREATE_EMPLOYEE' | 'UPDATE_USER' | 'DELETE_USER' | 'TOGGLE_STATUS' | 'RESET_PASSWORD' | 'CREATE_DEPARTMENT' | 'DELETE_DEPARTMENT';
+    target_id: string;
+    target_type: 'user' | 'department';
+    before_data?: string;
+    description: string;
+    ip_address: string;
+    user_agent: string;
+    created_at: string;
+}
+
+export interface AuditLogResponse {
+    logs: AuditLog[];
+    total: number;
+    page: number;
+    limit: number;
 }
 
 // ============================================================================
@@ -415,6 +453,7 @@ export interface ReportSummary {
     total_work_days: number;
     average_attendance_rate: number;
     total_late_arrivals: number;
+    total_early_departures: number;
     total_absences: number;
 }
 
@@ -459,6 +498,26 @@ export interface ExportReportParams {
     department?: string;
 }
 
+export interface GeneratedReport {
+    id: string;
+    type: string;
+    format: string;
+    period_start: string;
+    period_end: string;
+    generated_at: string;
+    file_name: string;
+    filter_tags: string;
+}
+
+export interface GetReportsResponse {
+    data: GeneratedReport[];
+    meta: {
+        current_page: number;
+        per_page: number;
+        total: number;
+    };
+}
+
 // ============================================================================
 // NOTIFICATIONS TYPES
 // ============================================================================
@@ -494,6 +553,7 @@ export interface Device {
     // type: 'mobile' | 'desktop' | 'tablet'; // Not in backend struct
     ip_address: string;
     mobile_ip?: string;
+    mobile_device_id?: string;
     mac_address: string;
     is_active: boolean;
 

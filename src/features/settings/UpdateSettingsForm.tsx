@@ -70,6 +70,7 @@ export default function CompanySettingsForm() {
         if (settings) {
             reset({
                 company_name: settings.company_name,
+                sector: settings.sector,
                 language: settings.language,
                 late_threshold_minutes: settings.late_threshold_minutes,
                 early_departure_threshold_minutes: settings.early_departure_threshold_minutes,
@@ -177,6 +178,16 @@ export default function CompanySettingsForm() {
                         id="company_name"
                         disabled={isUpdating}
                         {...register("company_name", { required: t("common.field_required") })}
+                    />
+                </FormRow>
+
+                <FormRow label={t("settings.form.sector")} error={errors?.sector?.message}>
+                    <Input
+                        type="text"
+                        id="sector"
+                        disabled={isUpdating}
+                        {...register("sector")}
+                        placeholder="Ex: BTP, Industrie, Services..."
                     />
                 </FormRow>
 

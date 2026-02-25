@@ -322,6 +322,11 @@ export async function createAssignment(data: {
   return res.data;
 }
 
+// New: Delete Assignment (Schedule)
+export async function deleteAssignment(id: string): Promise<void> {
+  await axios.delete(`${API_URL}/assignments/${id}`);
+}
+
 // New: Global Assignments
 export async function getAssignments(startDate: string, endDate: string): Promise<{ data: UserShift[] }> {
   try {
@@ -416,6 +421,7 @@ export const PlanningService = {
   getAssignments,
   fetchAssignmentsBatch, // Export new method
   createAssignment,
+  deleteAssignment, // Export new method
   createAssignmentsBatch: async (data: { assignments: any[]; overwrite?: boolean }) => {
     return axios.post(`${API_URL}/assignments/batch`, data);
   },

@@ -13,7 +13,7 @@ interface PlanningCalendarProps {
     onMonthChange: (date: Date) => void;
     metaMap: Record<string, MonthDayMeta>;
     templates?: Shift[];
-    onAssignTemplate?: (date: Date | Date[], template: Shift) => Promise<void>;
+    onAssignTemplate?: (date: Date | Date[], template: Shift | null) => Promise<void>;
     timeZone?: string;
 }
 
@@ -265,7 +265,7 @@ export default function PlanningCalendar({
 
 
     // 4. Action Handlers
-    const handleAssign = async (template: Shift) => {
+    const handleAssign = async (template: Shift | null) => {
         if (!clickPopover) return;
         const start = clickPopover.date;
         const end = clickPopover.endDate || start;
@@ -293,6 +293,11 @@ export default function PlanningCalendar({
 
 
     const handleClear = () => {
+        // Instead of just closing, we trigger an assignment with a null template to clear the days
+        handleAssign(null);
+    };
+
+    const handleClose = () => {
         setSelectionStart(null);
         setClickPopover(null);
         setHoverPopover(null);
@@ -340,7 +345,7 @@ export default function PlanningCalendar({
                         templates={templates}
                         onSelectTemplate={handleAssign}
                         onClear={handleClear}
-                        onClose={handleClear}
+                        onClose={handleClose}
                     />
                 )}
 

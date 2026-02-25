@@ -50,7 +50,7 @@ interface StrategicMonthManagerProps {
   userShifts?: UserShift[];
   shifts?: Record<string, Shift>;
   templates?: Shift[];
-  onAssignTemplate?: (date: Date, template: Shift) => void;
+  onAssignTemplate?: (date: Date | Date[], template: Shift | null) => void;
   selectedTeamIds?: string[]; // NEW
 }
 
@@ -69,6 +69,7 @@ export default function StrategicMonthManager({
     holidays,
     // exceptions: weekExceptions,
     employees,
+    teams: planningTeams,
     settings,
     templates: globalTemplates
   } = usePlanning();
@@ -83,12 +84,12 @@ export default function StrategicMonthManager({
 
   const { data: monthAssignments } = useQuery({
     queryKey: ["assignments", "year", format(yearStart, "yyyy")],
-    queryFn: () => PlanningService.getAssignments(format(yearStart, "yyyy-MM-dd"), format(yearEnd, "yyyy-MM-dd"))
+    queryFn: () => PlanningService.getAssignments(format(yearStart, "yyyy-MM-dd"), format(yearEnd, "yyyy-MM-dd")),
   });
 
   const { data: monthShifts, isLoading: shiftsLoading } = useQuery({
     queryKey: ["shifts", "year", format(yearStart, "yyyy")],
-    queryFn: async () => PlanningService.getShifts()
+    queryFn: async () => PlanningService.getShifts(),
   });
 
   // Fetch Exceptions for the whole year
@@ -155,7 +156,7 @@ export default function StrategicMonthManager({
     console.log(`[StrategicMonthView CHECK] Mimi in UserShifts? ${!!mimi}`, mimi);
 
     // Compute with validation
-    const result = computeScheduleWithValidation(shifts, userShifts, {}, {}, { weekDates: days, debugContext: 'MonthView', settings, selectedTeamIds });
+    const result = computeScheduleWithValidation(shifts, userShifts, employees, planningTeams, { weekDates: days, debugContext: 'MonthView', settings, selectedTeamIds });
 
     // Log any validation issues
     if (!result.validation.isValid) {
@@ -217,8 +218,33 @@ export default function StrategicMonthManager({
         console.log(`[StrategicMonthView DEBUG] Adding item to 2026-03-19:`, item);
       }
 
-      if (!dateMeta.color) {
-        dateMeta.color = (item.color || '#3b82f6') + '30';
+      // Fix "Random Colors": DO NOT hard-lock the cell color to the first item processed!
+      // Instead, we will resolve the color after adding all items by finding the dominant/template Shift color.
+      // We remove the dateMeta.color assignment here to let a post-processing step handle it uniformly.
+    });
+
+    // Post-Process: Determine correct cell background color
+    Object.keys(map).forEach(dateStr => {
+      const dateMeta = map[dateStr];
+      const items = dateMeta.items || [];
+
+      // If we have items from 'RULE' (Assignments), try to find the template color
+      const ruleItems = items.filter(i => i.source === 'RULE');
+      if (ruleItems.length > 0) {
+        // Find an item whose shiftId maps back to an active template in `shifts`
+        let dominantColor = '#3b82f6'; // default fallback
+
+        // Priority 1: Find a clear template color
+        const templateItem = ruleItems.find(i => shifts[i.shiftId]?.color);
+        if (templateItem) {
+          dominantColor = shifts[templateItem.shiftId].color!;
+        } else {
+          // Priority 2: Use the majority color if no direct template is found
+          // (Legacy fallback)
+          dominantColor = ruleItems[0].color || dominantColor;
+        }
+
+        dateMeta.color = dominantColor + '30'; // Apply 30% transparency
       }
     });
 
@@ -269,11 +295,15 @@ export default function StrategicMonthManager({
       });
     }
 
+    // Le remplissage automatique (Hole Filling) front-end a été supprimé ici car il générait
+    // des cellules fantômes (ex: "shift 1") sur toute l'année. Désormais seules les vraies
+    // assignations (ou placeholders explicites générés par le moteur) s'afficheront.
+
     return map;
-  }, [computedMonthData, holidays, exceptionsList, employees, filters]);
+  }, [computedMonthData, holidays, exceptionsList, employees, filters, shifts, yearStart, yearEnd]);
 
   // Adapter for onAssignTemplate promise wrapping if needed
-  const handleAssignTemplate = async (date: Date | Date[], template: Shift) => {
+  const handleAssignTemplate = async (date: Date | Date[], template: Shift | null) => {
     if (onAssignTemplate) {
       // @ts-ignore - Prop drilling flexible type
       onAssignTemplate(date, template);

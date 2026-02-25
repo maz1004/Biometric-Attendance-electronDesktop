@@ -12,6 +12,7 @@ import type { UpdateUserRequest } from "../../services";
 import AvatarUploader from "./components/AvatarUploader";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDepartments } from "./useDepartments";
 
 const TopSection = styled.div`
   display: grid;
@@ -70,6 +71,7 @@ function CreateEmployeeForm({
       ? "admin"
       : "employee"
   );
+  const { departments, isLoading: isLoadingDepts } = useDepartments();
 
   const { register, handleSubmit, reset, formState, setValue } =
     useForm<EmployeeFormValues>({
@@ -88,6 +90,7 @@ function CreateEmployeeForm({
             : "",
           avatar: "" as unknown as FileList,
           cv: "" as unknown as FileList,
+          profession: employeeToEdit?.profession ?? "",
         }
         : {
           firstName: "",
@@ -101,6 +104,7 @@ function CreateEmployeeForm({
           dateOfBirth: "",
           avatar: "" as unknown as FileList,
           cv: "" as unknown as FileList,
+          profession: "",
         },
     });
 
@@ -140,6 +144,7 @@ function CreateEmployeeForm({
         department: data.department,
         is_active: data.status === "active",
         role: data.role as "admin" | "rh" | "employee",
+        profession: data.profession,
       };
 
       (updateData as any).phone_number = data.phone;
@@ -165,6 +170,7 @@ function CreateEmployeeForm({
         department: data.department,
         role: data.role,
         password: data.password,
+        profession: data.profession,
         date_of_birth: data.dateOfBirth
           ? new Date(data.dateOfBirth).toISOString()
           : undefined,
@@ -278,14 +284,32 @@ function CreateEmployeeForm({
         />
       </FormRow>
 
-      <FormRow label={t("employees.form.department")} error={errors?.department?.message}>
+      <FormRow label={t("employees.form.profession")} error={errors?.profession?.message}>
         <Input
           type="text"
-          id="department"
+          id="profession"
           disabled={isWorking}
-          placeholder={t("employees.form.placeholders.department")}
-          {...register("department", { required: "Required" })}
+          placeholder={t("employees.form.placeholders.profession") || "Profession"}
+          {...register("profession")}
         />
+      </FormRow>
+
+      <FormRow label={t("employees.form.department")} error={errors?.department?.message}>
+        <div>
+          <Input
+            type="text"
+            id="department"
+            list="departments-list"
+            disabled={isWorking || isLoadingDepts}
+            placeholder="Saisissez ou sélectionnez un département"
+            {...register("department", { required: "Required" })}
+          />
+          <datalist id="departments-list">
+            {departments?.map(d => (
+              <option key={d.name} value={d.name} />
+            ))}
+          </datalist>
+        </div>
       </FormRow>
 
       {/* Role Selection - Only visible for Admin mode or if editing */}
