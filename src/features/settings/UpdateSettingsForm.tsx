@@ -16,6 +16,7 @@ import { validateSettingsChange, SettingsChangeValidation } from "../planning/en
 import toast from "react-hot-toast";
 import Switch from "../../ui/Switch";
 import Tooltip from "../../ui/Tooltip";
+import DepartmentManagement from "./DepartmentManagement";
 
 const Box = styled.div`
   background-color: var(--color-bg-elevated);
@@ -55,23 +56,19 @@ export default function CompanySettingsForm() {
     const { errors } = formState;
 
     const enablePlanning = watch("enable_planning_based_attendance");
-    const selectedLanguage = watch("language");
 
     // Sync form language change with i18n instance immediately
-    useEffect(() => {
-        if (selectedLanguage && selectedLanguage !== i18n.language) {
-            i18n.changeLanguage(selectedLanguage);
-            document.documentElement.dir = selectedLanguage === 'ar' ? 'rtl' : 'ltr';
-            document.documentElement.lang = selectedLanguage;
-        }
-    }, [selectedLanguage, i18n]);
+    const changeLanguage = (lang: string) => {
+        i18n.changeLanguage(lang);
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = lang;
+    };
 
     useEffect(() => {
         if (settings) {
             reset({
                 company_name: settings.company_name,
                 sector: settings.sector,
-                language: settings.language,
                 late_threshold_minutes: settings.late_threshold_minutes,
                 early_departure_threshold_minutes: settings.early_departure_threshold_minutes,
                 enable_planning_based_attendance: settings.enable_planning_based_attendance,
@@ -191,16 +188,22 @@ export default function CompanySettingsForm() {
                     />
                 </FormRow>
 
-                <FormRow label={t("settings.language")} error={errors?.language?.message}>
-                    <Select
-                        id="language"
-                        options={LANGUAGE_OPTIONS}
-                        disabled={isUpdating}
-                        {...register("language")}
-                    />
-                </FormRow>
+                <SectionDivider />
 
+                <div style={{
+                    display: 'grid',
+                    alignItems: 'center',
+                    gridTemplateColumns: '24rem 1fr 1.2fr',
+                    gap: '2.4rem',
+                    padding: '1.2rem 0',
+                    borderBottom: '1px solid var(--color-grey-100)'
+                }}>
+                    <label style={{ fontWeight: 500 }}>{t("settings.departments", "Départements")}</label>
+                    <DepartmentManagement />
+                    <div></div>
+                </div>
 
+                <SectionDivider />
 
                 <FormRow label={t("settings.form.late_threshold")} error={errors?.late_threshold_minutes?.message}>
                     <Input
@@ -292,6 +295,17 @@ export default function CompanySettingsForm() {
                             />
                         </LogicItem>
                     </LogicContainer>
+                </FormRow>
+
+                <SectionDivider />
+
+                <FormRow label={t("settings.language")}>
+                    <Select
+                        id="language"
+                        options={LANGUAGE_OPTIONS}
+                        value={i18n.language || 'fr'}
+                        onChange={(e) => changeLanguage(e.target.value)}
+                    />
                 </FormRow>
 
                 <FormRow>

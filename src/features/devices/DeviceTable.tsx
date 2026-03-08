@@ -194,7 +194,7 @@ export default function DeviceTable({
             <div>{t("devices.table.device")}</div>
             <div>{t("devices.table.location")}</div>
             <div>{t("devices.table.status")}</div>
-            <div>{t("devices.last_sync")}</div>
+            <div>{t("devices.table.last_sync")}</div>
             <div>{t("devices.table.mode")}</div>
             <div>{t("devices.table.version")}</div>
             <div></div>

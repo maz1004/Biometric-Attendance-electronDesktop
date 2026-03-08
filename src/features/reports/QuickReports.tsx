@@ -6,6 +6,7 @@ import Heading from "../../ui/Heading";
 import { useReports } from "./useReports";
 import { HoverPreviewPopover } from "./components/HoverPreviewPopover";
 import { ReportActionPanel } from "./components/ReportActionPanel";
+import { useDepartments } from "../employees/useDepartments";
 
 const Grid = styled.div`
   display: grid;
@@ -152,13 +153,16 @@ const QuickCard = ({ icon, title, description, isActive, onClick }: QuickCardPro
 export default function QuickReports() {
     const { generate, isGenerating, reportData, save, isSaving } = useReports();
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodType | null>(null);
+    const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+
+    const { departments } = useDepartments();
 
     // Effect to generate report when period is selected (Auto-Fetch for Preview)
     useEffect(() => {
         if (selectedPeriod) {
             handleGenerate(selectedPeriod);
         }
-    }, [selectedPeriod]);
+    }, [selectedPeriod, selectedDepartment]); // Also re-trigger if department changes while panel is open
 
     const handleGenerate = (period: PeriodType) => {
         const now = new Date();
@@ -183,22 +187,87 @@ export default function QuickReports() {
             type: 'summary',
             start_date: format(start, 'yyyy-MM-dd'),
             end_date: format(end, 'yyyy-MM-dd'),
-            department: 'all'
+            department: selectedDepartment
         });
     };
 
     const getPanelTitle = () => {
-        if (selectedPeriod === 'today') return "Rapport Aujourd'hui";
-        if (selectedPeriod === 'week') return "Rapport Semaine";
-        return "Rapport Mensuel";
+        let title = "";
+        if (selectedPeriod === 'today') title = "Rapport Aujourd'hui";
+        else if (selectedPeriod === 'week') title = "Rapport Semaine";
+        else title = "Rapport Mensuel";
+
+        return `${title} - ${selectedDepartment === 'all' ? 'Globale' : selectedDepartment}`;
     }
 
     return (
         <div>
-            <Heading as="h2">Rapports Rapides</Heading>
-            <p style={{ color: 'var(--color-grey-500)', marginBottom: '1.6rem' }}>
-                Survolez pour un aperçu, cliquez pour configurer.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.6rem' }}>
+                <div>
+                    <Heading as="h2">Rapports Rapides</Heading>
+                    <p style={{ color: 'var(--color-grey-500)' }}>
+                        Survolez pour un aperçu, cliquez pour configurer.
+                    </p>
+                </div>
+
+                <div style={{ minWidth: '200px', position: 'relative' }}>
+                    <label style={{ fontSize: '1.2rem', color: 'var(--color-grey-500)', marginBottom: '4px', display: 'block' }}>Filtrer par Département</label>
+                    <input
+                        type="text"
+                        style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--color-grey-300)', background: 'var(--color-grey-0)', color: 'var(--color-text-strong)', fontSize: '1.4rem' }}
+                        autoComplete="off"
+                        value={selectedDepartment === 'all' ? '' : selectedDepartment}
+                        onChange={(e) => setSelectedDepartment(e.target.value)}
+                        placeholder="Tous Départements"
+                        onFocus={(e) => {
+                            e.target.select();
+                            const el = document.getElementById('quick-report-dept-dropdown');
+                            if (el) el.style.display = 'block';
+                        }}
+                        onBlur={() => {
+                            setTimeout(() => {
+                                const el = document.getElementById('quick-report-dept-dropdown');
+                                if (el) el.style.display = 'none';
+                                // Revert to all if empty
+                                if (!selectedDepartment.trim()) setSelectedDepartment('all');
+                            }, 200);
+                        }}
+                    />
+                    <div style={{ position: 'absolute', right: '12px', top: '34px', pointerEvents: 'none', color: 'var(--color-grey-500)' }}>
+                        ▼
+                    </div>
+
+                    <div
+                        id="quick-report-dept-dropdown"
+                        style={{
+                            display: 'none', position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                            backgroundColor: 'var(--color-grey-0)', border: '1px solid var(--color-grey-200)',
+                            borderRadius: 'var(--border-radius-sm)', boxShadow: 'var(--shadow-md)',
+                            maxHeight: '200px', overflowY: 'auto', marginTop: '4px'
+                        }}
+                    >
+                        <div
+                            style={{ padding: '1rem 1.6rem', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--color-brand-600)', fontWeight: 500, borderBottom: '1px solid var(--color-grey-100)' }}
+                            onMouseDown={() => { setSelectedDepartment("all"); }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-brand-50)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                            Tous Départements
+                        </div>
+                        {departments?.map((d: { name: string }) => (
+                            <div
+                                key={d.name}
+                                style={{ padding: '1rem 1.6rem', cursor: 'pointer', fontSize: '1.4rem', color: 'var(--color-grey-700)', borderBottom: '1px solid var(--color-grey-100)' }}
+                                onMouseDown={() => { setSelectedDepartment(d.name); }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-grey-100)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                            >
+                                {d.name}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
 
             <Grid>
                 <QuickCard

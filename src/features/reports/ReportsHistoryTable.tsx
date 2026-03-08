@@ -16,6 +16,12 @@ import ConfirmDelete from "../../ui/ConfirmDelete";
 import Modal from "../../ui/Modal";
 import { HiPencil } from "react-icons/hi2";
 import RenameReportForm from "./components/RenameReportForm";
+import Filter from "../../ui/Filter";
+import SelectMenu from "../../ui/SelectMenu";
+import MultiSelectMenu from "../../ui/MultiSelectMenu";
+import { useEmployees } from "../employees/useEmployees";
+import { useQuery } from "@tanstack/react-query";
+import { PlanningService } from "../../services/planning";
 
 const Container = styled.div`
   margin-top: 3.2rem;
@@ -25,7 +31,7 @@ const Container = styled.div`
   padding-bottom: 30vh;
 `;
 
-const FilterBar = styled.div`
+const FiltersRow = styled.div`
   display: flex;
   gap: 1.2rem;
   align-items: center;
@@ -34,6 +40,13 @@ const FilterBar = styled.div`
   background-color: var(--color-grey-0);
   border: 1px solid var(--color-grey-100);
   border-radius: var(--border-radius-md);
+`;
+
+const DateFilters = styled.div`
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  margin-left: auto;
 `;
 
 const Select = styled.select`
@@ -57,6 +70,43 @@ const Label = styled.label`
     color: var(--color-grey-600);
 `;
 
+const ContextualFilters = styled.div`
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.8rem 1.2rem;
+  background-color: var(--color-grey-50);
+  border: 1px dashed var(--color-grey-200);
+  border-radius: var(--border-radius-sm);
+`;
+
+/* UNUSED COMPONENTS
+const DownloadSubmenu = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+`;
+
+const DownloadOption = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  background: transparent;
+  font-size: 1.3rem;
+  color: var(--color-grey-700);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  white-space: nowrap;
+
+  &:hover {
+    background-color: var(--color-grey-100);
+  }
+`;
+*/
+
 interface ReportsHistoryTableProps {
     onPreview?: (report: GeneratedReport) => void;
 }
@@ -65,11 +115,26 @@ function ReportsHistoryTable({ onPreview }: ReportsHistoryTableProps) {
     const [searchParams] = useSearchParams();
     const page = !searchParams.get("page") ? 1 : Number(searchParams.get("page"));
 
-    const [type, setType] = useState<string>("all");
+    // Main type filter from Filter component (uses URL params)
+    const typeFilter = searchParams.get("reportType") || "all";
+
+    // Contextual filters as local state
+    const [genre, _setGenre] = useState<string>("all");
+    const [employeeId, setEmployeeId] = useState<string>("");
+    const [modelIds, setModelIds] = useState<string[]>([]);
     const [month, setMonth] = useState<string>(String(new Date().getMonth() + 1));
     const [year, setYear] = useState<string>(String(new Date().getFullYear()));
 
-    // Calculate dates
+    // Data sources for contextual filters
+    const { employees } = useEmployees({ limit: 1000 });
+    const { data: templatesData } = useQuery({
+        queryKey: ['planning-templates'],
+        queryFn: PlanningService.getTemplates,
+        enabled: typeFilter === 'planning',
+    });
+    const templates = templatesData || [];
+
+    // Calculate dates from year/month
     let startDate: string | undefined;
     let endDate: string | undefined;
 
@@ -89,10 +154,24 @@ function ReportsHistoryTable({ onPreview }: ReportsHistoryTableProps) {
         }
     }
 
+    // Map Filter values to backend types
+    const getBackendType = (filterVal: string) => {
+        switch (filterVal) {
+            case 'presence': return 'attendance';
+            case 'resume': return 'summary';
+            case 'planning': return 'planning';
+            case 'personal': return 'personal_employee';
+            default: return undefined;
+        }
+    };
+
     const { reports, total, isLoading, removeReport, download, rename, isRenaming } = useReportsHistory(page, 10, {
-        type: type === "all" ? undefined : type,
+        type: typeFilter === "all" ? undefined : getBackendType(typeFilter),
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
+        genre: (typeFilter === 'presence' || typeFilter === 'resume') && genre !== 'all' ? genre : undefined,
+        employee_id: typeFilter === 'personal' ? employeeId || undefined : undefined,
+        model_ids: typeFilter === 'planning' && modelIds.length > 0 ? modelIds : undefined,
     });
 
     const years = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i));
@@ -111,6 +190,21 @@ function ReportsHistoryTable({ onPreview }: ReportsHistoryTableProps) {
         { value: "12", label: "Décembre" },
     ];
 
+    // For the type label display in table rows
+    const getTypeLabel = (type: string) => {
+        switch (type) {
+            case 'daily': return 'Journalier';
+            case 'weekly': return 'Hebdo';
+            case 'monthly': return 'Mensuel';
+            case 'attendance': return 'Présence';
+            case 'summary': return 'Résumé';
+            case 'planning': return 'Planning';
+            case 'personal_employee': return 'Personnalisé';
+            case 'custom': return 'Personnalisé';
+            default: return type;
+        }
+    };
+
     if (isLoading) return <Spinner />;
 
     return (
@@ -119,35 +213,89 @@ function ReportsHistoryTable({ onPreview }: ReportsHistoryTableProps) {
                 <Heading as="h2">Historique des Rapports</Heading>
             </Row>
 
-            <FilterBar>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <HiCalendarDays />
-                    <Label>Année:</Label>
-                    <Select value={year} onChange={(e) => setYear(e.target.value)}>
-                        <option value="all">Toutes</option>
-                        {years.map(y => <option key={y} value={y}>{y}</option>)}
-                    </Select>
-                </div>
+            {/* Primary Type Filter using UI button component */}
+            <FiltersRow>
+                <Filter
+                    filterField="reportType"
+                    options={[
+                        { value: "all", label: "Tous" },
+                        { value: "presence", label: "Présence" },
+                        { value: "resume", label: "Résumé" },
+                        { value: "planning", label: "Planning" },
+                        { value: "personal", label: "Employé Personnalisé" },
+                    ]}
+                />
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-                    <Label>Mois:</Label>
-                    <Select value={month} onChange={(e) => setMonth(e.target.value)} disabled={year === "all"}>
-                        <option value="all">Tous</option>
-                        {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </Select>
-                </div>
+                <DateFilters>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+                        <HiCalendarDays />
+                        <Label>Année:</Label>
+                        <Select value={year} onChange={(e) => setYear(e.target.value)}>
+                            <option value="all">Toutes</option>
+                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                        </Select>
+                    </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", marginLeft: "auto" }}>
-                    <HiDocumentText />
-                    <Label>Type:</Label>
-                    <Select value={type} onChange={(e) => setType(e.target.value)}>
-                        <option value="all">Tous les types</option>
-                        <option value="daily">Journalier</option>
-                        <option value="weekly">Hebdomadaire</option>
-                        <option value="monthly">Mensuel</option>
-                    </Select>
-                </div>
-            </FilterBar>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+                        <Label>Mois:</Label>
+                        <Select value={month} onChange={(e) => setMonth(e.target.value)} disabled={year === "all"}>
+                            <option value="all">Tous</option>
+                            {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </Select>
+                    </div>
+                </DateFilters>
+            </FiltersRow>
+
+            {/* Contextual Sub-Filters based on selected type */}
+            {(typeFilter === 'presence' || typeFilter === 'resume') && (
+                <ContextualFilters>
+                    <Label>Genre :</Label>
+                    <Filter
+                        filterField="reportGenre"
+                        options={[
+                            { value: "all", label: "Tous" },
+                            { value: "daily", label: "Jour" },
+                            { value: "weekly", label: "Semaine" },
+                            { value: "yearly", label: "Année" },
+                        ]}
+                    />
+                </ContextualFilters>
+            )}
+
+            {typeFilter === 'personal' && (
+                <ContextualFilters>
+                    <Label>Employé :</Label>
+                    <div style={{ minWidth: '250px' }}>
+                        <SelectMenu
+                            options={[
+                                { value: "", label: "Tous les employés" },
+                                ...employees.map(emp => ({
+                                    value: emp.id,
+                                    label: `${emp.firstName} ${emp.lastName}`
+                                }))
+                            ]}
+                            value={employeeId}
+                            onChange={(val) => setEmployeeId(val)}
+                            width="100%"
+                        />
+                    </div>
+                </ContextualFilters>
+            )}
+
+            {typeFilter === 'planning' && (
+                <ContextualFilters>
+                    <Label>Modèles :</Label>
+                    <div style={{ minWidth: '300px' }}>
+                        <MultiSelectMenu
+                            options={templates.map((t: any) => ({ value: t.id, label: t.name }))}
+                            values={modelIds}
+                            onChange={setModelIds}
+                            placeholder="Filtrer par modèles..."
+                            width="100%"
+                        />
+                    </div>
+                </ContextualFilters>
+            )}
 
             <Menus>
                 <Table columns="1.5fr 1fr 1fr 1fr 1fr 0.5fr">
@@ -195,9 +343,7 @@ function ReportsHistoryTable({ onPreview }: ReportsHistoryTableProps) {
                                         {format(new Date(report.period_start), 'dd/MM/yyyy')} - {format(new Date(report.period_end), 'dd/MM/yyyy')}
                                     </div>
                                     <div style={{ textTransform: 'capitalize' }}>
-                                        {report.type === 'daily' ? 'Journalier' :
-                                            report.type === 'weekly' ? 'Hebdo' :
-                                                report.type === 'monthly' ? 'Mensuel' : report.type}
+                                        {getTypeLabel(report.type)}
                                     </div>
                                     <div>{format(new Date(report.generated_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</div>
                                     <div style={{ fontSize: '1.2rem', color: 'var(--color-grey-500)' }}>

@@ -166,10 +166,11 @@ export interface AuditLog {
     id: string;
     actor_id: string;
     actor_name: string;
-    action: 'CREATE_ADMIN' | 'CREATE_EMPLOYEE' | 'UPDATE_USER' | 'DELETE_USER' | 'TOGGLE_STATUS' | 'RESET_PASSWORD' | 'CREATE_DEPARTMENT' | 'DELETE_DEPARTMENT';
+    action: string; // Dynamic: MODEL_CREATE, TEAM_UPDATE, LOGIN, DEVICE_REGISTER, etc.
     target_id: string;
-    target_type: 'user' | 'department';
+    target_type: string; // 'user' | 'department' | 'model' | 'team' | 'device' | 'report' | 'setting'
     before_data?: string;
+    after_data?: string;
     description: string;
     ip_address: string;
     user_agent: string;
@@ -263,6 +264,7 @@ export interface TeamResponse {
     is_active: boolean;
     shifts_count: number;
     members_count: number;
+    color?: string;
     created_at: string;
     updated_at: string;
 }
@@ -389,6 +391,7 @@ export interface CreateTeamCommand {
     description?: string;
     department: string;
     manager_id: string;
+    memberIds?: string[];
 }
 
 export interface UpdateTeamCommand {
@@ -397,6 +400,7 @@ export interface UpdateTeamCommand {
     department?: string;
     manager_id?: string;
     is_active?: boolean;
+    memberIds?: string[];
 }
 
 // ============================================================================
@@ -457,45 +461,84 @@ export interface ReportSummary {
     total_absences: number;
 }
 
+export interface DailyReportRecord {
+    date: string; // ISO
+    status: string; // Present, Absent, Weekend, LEAVE, etc.
+    check_in?: string;
+    check_out?: string;
+    work_duration_hours: number;
+    is_late: boolean;
+    is_early_departure: boolean;
+    justification?: string;
+}
+
 export interface UserReportData {
     user_id: string;
     user_name: string;
     department: string;
+    profession?: string;
+    email?: string;
+    phone?: string;
     efficiency_score: number;
     attendance_rate: number;
     present_days: number;
     absent_days: number;
     late_arrivals: number;
     early_departures: number;
+    absences: number;
     total_work_hours: string;
+    daily_records: DailyReportRecord[];
+}
+
+export interface AttendanceLogReportRecord {
+    id: string;
+    user_id: string;
+    user_name: string;
+    user_email: string;
+    department: string;
+    date: string; // ISO format (YYYY-MM-DD or full timestamp)
+    check_in_time?: string;
+    check_out_time?: string;
+    status: string;
+    method: string;
 }
 
 export interface ReportData {
+    type?: string;
     generated_at: string;
     period: string;
     summary: ReportSummary;
     users: UserReportData[];
+    attendance_logs?: AttendanceLogReportRecord[];
 }
 
-export type ReportType = 'attendance' | 'performance' | 'planning' | 'summary';
+export type ReportType = 'attendance' | 'planning' | 'summary' | 'personal_employee';
 export type ReportPeriod = 'day' | 'week' | 'month' | 'year';
 
 export interface ReportFilterState {
     type: ReportType;
-    period: ReportPeriod;
+    scope: 'all' | 'teams' | 'individuals' | 'employee';
+    period?: ReportPeriod;
     dateRange: {
         start: Date;
         end: Date;
     };
     department: string;
+    status?: string;
+    employee_id?: string;
+    team_ids?: string[];
+    user_ids?: string[];
 }
 
 export interface ExportReportParams {
     start_date: string;
     end_date: string;
-    format: 'pdf' | 'excel';
+    format: 'pdf' | 'excel' | 'xlsx' | 'docx';
     type?: string;
     department?: string;
+    employee_id?: string;
+    team_ids?: string[];
+    user_ids?: string[];
 }
 
 export interface GeneratedReport {

@@ -1,13 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { getAuditLogs } from "../../services";
 
-export function useAuditLogs(filters?: {
+export interface AuditLogFiltersParams {
     page?: number;
     limit?: number;
-    action?: string;
-    actor_id?: string;
+    actor_ids?: string[];
+    actions?: string[];
+    crud?: string[];
     target_id?: string;
-}) {
+}
+
+export function useAuditLogs(filters?: AuditLogFiltersParams) {
     const {
         isLoading,
         data,

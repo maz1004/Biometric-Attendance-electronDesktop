@@ -4,6 +4,7 @@ import {
 } from "react-icons/hi2";
 import { StatusType } from "./AttendanceTypes";
 import { useState } from "react";
+import { useEmployees } from "../employees/useEmployees";
 
 const Card = styled.div`
   position: absolute;
@@ -81,6 +82,10 @@ export default function AttendanceFiltersPopover(props: {
   const [department, setDepartment] = useState<string>(props.initialDepartment);
   const [status, setStatus] = useState<StatusType | "all">(props.initialStatus);
 
+  const { employees } = useEmployees({ limit: 1000 });
+
+  const uniqueDepartments = Array.from(new Set(employees.map((emp: any) => emp.department).filter(Boolean))) as string[];
+
   return (
     <Card>
       <Row>
@@ -96,12 +101,12 @@ export default function AttendanceFiltersPopover(props: {
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
         >
-          <option value="all">All</option>
-          <option value="R&D">R&amp;D</option>
-          <option value="Operations">Operations</option>
-          <option value="Design">Design</option>
-          <option value="QA">QA</option>
-          <option value="HR">HR</option>
+          <option value="all">Tous</option>
+          {uniqueDepartments.map((dept) => (
+            <option key={dept} value={dept}>
+              {dept}
+            </option>
+          ))}
         </Select>
       </div>
 

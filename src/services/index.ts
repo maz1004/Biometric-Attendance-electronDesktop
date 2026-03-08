@@ -27,6 +27,7 @@ export {
     getAuditLogs,
     getDepartments,
     createDepartment,
+    updateDepartment,
     deleteDepartment,
 } from './users';
 

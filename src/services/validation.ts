@@ -25,8 +25,17 @@ export const getValidationCount = async (): Promise<number> => {
     return response.data.count;
 };
 
-export const getPendingValidations = async (): Promise<ManualValidationRequest[]> => {
-    const response = await api.get<ValidationListResponse>("/biometric/hr/validations/pending?limit=20");
+/**
+ * Obtenir les validations manuelles récupérées par statut
+ * GET /api/v1/biometric/hr/validations/pending?status={status}
+ */
+export const getPendingValidations = async (status: string = "pending", limit: number = 50, offset: number = 0): Promise<ManualValidationRequest[]> => {
+    let apiStatus = status;
+    if (status === "accepted") apiStatus = "approved";
+
+    const response = await api.get<ValidationListResponse>('/biometric/hr/validations/pending', {
+        params: { limit, offset, status: apiStatus }
+    });
     return response.data.data;
 };
 

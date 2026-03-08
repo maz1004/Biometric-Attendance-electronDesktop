@@ -169,11 +169,21 @@ export const getUserAttendanceStats = async (
 export const getAuditLogs = async (params?: {
   page?: number;
   limit?: number;
-  action?: string;
-  actor_id?: string;
+  actor_ids?: string[];
+  actions?: string[];
+  crud?: string[];
   target_id?: string;
 }): Promise<AuditLogResponse> => {
-  const response = await apiClient.get<SuccessResponse<AuditLogResponse>>('/admin/audit', { params });
+  const response = await apiClient.get<SuccessResponse<AuditLogResponse>>('/admin/audit', {
+    params: {
+      page: params?.page,
+      limit: params?.limit,
+      target_id: params?.target_id,
+      "actor_id[]": params?.actor_ids,
+      "action[]": params?.actions,
+      "crud[]": params?.crud,
+    },
+  });
   return response.data.data!;
 };
 
@@ -201,6 +211,15 @@ export const createDepartment = async (data: { name: string; description?: strin
  */
 export const deleteDepartment = async (id: string): Promise<void> => {
   await apiClient.delete<SuccessResponse<void>>(`/admin/departments/${id}`);
+};
+
+/**
+ * Update a department
+ * PUT /api/v1/admin/departments/:id
+ */
+export const updateDepartment = async (id: string, data: { name: string; description?: string }): Promise<Department> => {
+  const response = await apiClient.put<SuccessResponse<Department>>(`/admin/departments/${id}`, data);
+  return response.data.data!;
 };
 
 // ============================================================================

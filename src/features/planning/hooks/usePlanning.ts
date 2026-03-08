@@ -284,6 +284,52 @@ export function usePlanning() {
     onError: () => toast.error("Erreur lors de la suppression du modèle"),
   });
 
+  /* ===== TEAM MUTATIONS ===== */
+  const { mutate: createTeam } = useMutation({
+    mutationFn: PlanningService.createTeam,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success("Équipe créée avec succès");
+    },
+    onError: () => toast.error("Erreur lors de la création de l'équipe"),
+  });
+
+  const { mutate: updateTeam } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => PlanningService.updateTeam(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success("Équipe mise à jour avec succès");
+    },
+    onError: () => toast.error("Erreur lors de la mise à jour de l'équipe"),
+  });
+
+  const { mutate: deleteTeam } = useMutation({
+    mutationFn: PlanningService.deleteTeam,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      toast.success("Équipe supprimée avec succès");
+    },
+    onError: () => toast.error("Erreur lors de la suppression de l'équipe"),
+  });
+
+  const { mutateAsync: addMemberToTeam } = useMutation({
+    mutationFn: ({ teamId, userId }: { teamId: string; userId: string }) => PlanningService.addMemberToTeam(teamId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] }); // Auto-sync
+    },
+    onError: () => toast.error("Erreur lors de l'ajout du membre"),
+  });
+
+  const { mutateAsync: removeMemberFromTeam } = useMutation({
+    mutationFn: ({ teamId, userId }: { teamId: string; userId: string }) => PlanningService.removeMemberFromTeam(teamId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["assignments"] }); // Auto-sync
+    },
+    onError: () => toast.error("Erreur lors du retrait du membre"),
+  });
+
   /* ===== helpers ===== */
   const employees = state.employees;
   const teams = state.teams;
@@ -338,10 +384,16 @@ export function usePlanning() {
   const { mutate: createAssignmentsBatch } = useMutation({
     mutationFn: (data: { assignments: any[]; overwrite?: boolean }) =>
       PlanningService.createAssignmentsBatch(data),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       queryClient.invalidateQueries({ queryKey: ["shifts"] }); // CRITICAL: Batch might create new shift templates!
-      toast.success("Assignments batch created");
+
+      const msg = res?.data?.message || "Assignments batch created";
+      if (res?.status === 207) {
+        toast(msg, { icon: '⚠️', duration: 7000 });
+      } else {
+        toast.success(msg);
+      }
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to batch assign");
@@ -406,11 +458,18 @@ export function usePlanning() {
     createHoliday,
     deleteHoliday,
     createException,
+    addMemberToTeam,
+    removeMemberFromTeam,
 
     // Templates
     createTemplate,
     updateTemplate,
     deleteTemplate,
+
+    // Teams
+    createTeam,
+    updateTeam,
+    deleteTeam,
 
     // Navigation
     nextWeek: () => setWeekState(iso(addWeeks(new Date(week), 1))),

@@ -295,20 +295,79 @@ function CreateEmployeeForm({
       </FormRow>
 
       <FormRow label={t("employees.form.department")} error={errors?.department?.message}>
-        <div>
+        <div style={{ position: 'relative' }}>
           <Input
             type="text"
             id="department"
-            list="departments-list"
             disabled={isWorking || isLoadingDepts}
+            autoComplete="off"
             placeholder="Saisissez ou sélectionnez un département"
             {...register("department", { required: "Required" })}
+            onFocus={(e) => {
+              // Call the RHF register onFocus if it exists
+              e.target.select();
+              const el = document.getElementById('custom-dept-dropdown');
+              if (el) el.style.display = 'block';
+            }}
+            onBlur={() => {
+              // Delay hiding to allow click events on options to fire
+              setTimeout(() => {
+                const el = document.getElementById('custom-dept-dropdown');
+                if (el) el.style.display = 'none';
+              }, 200);
+            }}
           />
-          <datalist id="departments-list">
+          {/* Custom Dropdown Arrow (Pure CSS) */}
+          <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-grey-500)' }}>
+            ▼
+          </div>
+
+          <div
+            id="custom-dept-dropdown"
+            style={{
+              display: 'none',
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              zIndex: 50,
+              backgroundColor: 'var(--color-grey-0)',
+              border: '1px solid var(--color-grey-200)',
+              borderRadius: 'var(--border-radius-sm)',
+              boxShadow: 'var(--shadow-md)',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              marginTop: '4px'
+            }}
+          >
             {departments?.map(d => (
-              <option key={d.name} value={d.name} />
+              <div
+                key={d.name}
+                style={{
+                  padding: '1rem 1.6rem',
+                  cursor: 'pointer',
+                  fontSize: '1.4rem',
+                  color: 'var(--color-grey-700)',
+                  borderBottom: '1px solid var(--color-grey-100)'
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevent input blurring before click registers
+                  setValue("department", d.name, { shouldValidate: true, shouldDirty: true });
+                  const el = document.getElementById('custom-dept-dropdown');
+                  if (el) el.style.display = 'none';
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-grey-100)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                {d.name}
+              </div>
             ))}
-          </datalist>
+            {(!departments || departments.length === 0) && (
+              <div style={{ padding: '1rem 1.6rem', fontSize: '1.4rem', color: 'var(--color-grey-500)', fontStyle: 'italic' }}>
+                Aucun département existant
+              </div>
+            )}
+          </div>
         </div>
       </FormRow>
 

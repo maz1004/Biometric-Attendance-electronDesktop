@@ -135,6 +135,7 @@ export interface CreateTeamCommand {
   department: string;
   manager_id?: string;
   color?: string;
+  memberIds?: string[];
 }
 
 export type ViewContext =
@@ -148,6 +149,7 @@ export interface UpdateTeamCommand {
   color?: string;
   display_order?: number;
   is_active?: boolean;
+  memberIds?: string[];
 }
 
 export interface Holiday {

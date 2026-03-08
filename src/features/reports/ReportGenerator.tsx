@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import SelectUi from "../../ui/Select"; // Use the styled UI component
-import { ReportFilterState, ReportType, ReportPeriod, ReportData } from "../../services/types/api-types";
+import SelectMenu from "../../ui/SelectMenu";
+import { ReportFilterState, ReportType, ReportData } from "../../services/types/api-types";
 import { ReportActionPanel } from "./components/ReportActionPanel";
 import { useReports } from "./useReports";
-import { useDepartments } from "../employees/useDepartments";
+import { useEmployees } from "../employees/useEmployees";
+import { useQuery } from "@tanstack/react-query";
+import { PlanningService } from "../../services/planning";
+import MultiSelectMenu from "../../ui/MultiSelectMenu";
 
 const Container = styled.div`
   background: var(--color-bg-elevated);
@@ -54,24 +58,49 @@ interface ReportGeneratorProps {
 
 export default function ReportGenerator({ onGenerate, isGenerating, reportData, initialFilters }: ReportGeneratorProps) {
     const { save, isSaving } = useReports();
-    const { departments } = useDepartments();
 
     const [type, setType] = useState<ReportType>(initialFilters?.type || "attendance");
-    const [period, setPeriod] = useState<ReportPeriod>(initialFilters?.period || "month");
+    const [scope, setScope] = useState<'all' | 'teams' | 'individuals' | 'employee'>(initialFilters?.scope || 'all');
     const [startDate, setStartDate] = useState(initialFilters?.dateRange?.start.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10));
     const [endDate, setEndDate] = useState(initialFilters?.dateRange?.end.toISOString().slice(0, 10) || new Date().toISOString().slice(0, 10));
-    const [department, setDepartment] = useState(initialFilters?.department || "all");
+    const [employeeId, setEmployeeId] = useState<string | undefined>(initialFilters?.employee_id);
+    const [teamIds, setTeamIds] = useState<string[]>(initialFilters?.team_ids || []);
+    const [userIds, setUserIds] = useState<string[]>(initialFilters?.user_ids || []);
+    const [department, setDepartment] = useState<string>(initialFilters?.department || "all");
+    const [status, setStatus] = useState<string>(initialFilters?.status || "all");
+
+    const { employees } = useEmployees({ limit: 1000 });
+    const { data: teamsData } = useQuery({ queryKey: ['planning-teams'], queryFn: PlanningService.getTeams });
+    const teams = teamsData?.teams || [];
+    const uniqueDepartments = Array.from(new Set(employees.map(t => t.department).filter(Boolean)));
+
+    // Fetch all effective assignments for the selected period to accurately determine assigned users
+    const { data: assignmentsData } = useQuery({
+        queryKey: ['planning-assignments', startDate, endDate],
+        queryFn: () => PlanningService.getAssignments(startDate, endDate),
+        enabled: type === 'planning'
+    });
+
+    // Precalculate assigned users for warnings in Planning mode based on actual schedules
+    const assignedUserIds = new Set<string>();
+    if (type === 'planning' && assignmentsData?.data) {
+        assignmentsData.data.forEach(a => assignedUserIds.add(a.userId));
+    }
 
     // Update state when initialFilters changes (e.g. from history preview)
     useEffect(() => {
         if (initialFilters) {
             if (initialFilters.type) setType(initialFilters.type);
-            if (initialFilters.period) setPeriod(initialFilters.period);
+            if (initialFilters.scope) setScope(initialFilters.scope);
             if (initialFilters.dateRange) {
                 setStartDate(initialFilters.dateRange.start.toISOString().slice(0, 10));
                 setEndDate(initialFilters.dateRange.end.toISOString().slice(0, 10));
             }
+            if (initialFilters.employee_id) setEmployeeId(initialFilters.employee_id);
+            if (initialFilters.team_ids) setTeamIds(initialFilters.team_ids);
+            if (initialFilters.user_ids) setUserIds(initialFilters.user_ids);
             if (initialFilters.department) setDepartment(initialFilters.department);
+            if (initialFilters.status) setStatus(initialFilters.status);
         }
     }, [initialFilters]);
 
@@ -80,9 +109,13 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
 
     useEffect(() => {
         const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-        const depLabel = department === 'all' ? 'Globale' : department;
-        setPreviewTitle(`${typeLabel} - ${depLabel} (${period})`);
-    }, [type, period, department, startDate, endDate]);
+        let scopeLabel = "Globale";
+        if (scope === "teams") scopeLabel = `${teamIds.length} Équipe(s)`;
+        if (scope === "individuals") scopeLabel = `${userIds.length} Individus`;
+        if (scope === "employee" && employeeId) scopeLabel = `1 Employé`;
+
+        setPreviewTitle(`${typeLabel} - ${scopeLabel} (${startDate} au ${endDate})`);
+    }, [type, scope, teamIds, userIds, employeeId, startDate, endDate]);
 
     // Live Data Fetch: Debounce generation when filters change
     useEffect(() => {
@@ -91,17 +124,21 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
         }, 800); // 800ms delay to avoid spamming while typing/picking
 
         return () => clearTimeout(timer);
-    }, [type, period, startDate, endDate, department]);
+    }, [type, scope, startDate, endDate, teamIds, userIds, employeeId, department, status]);
 
     const handleSubmit = () => {
         onGenerate({
             type,
-            period,
+            scope,
             dateRange: {
                 start: new Date(startDate),
                 end: new Date(endDate),
             },
-            department,
+            department: (type === 'attendance' || type === 'summary') ? department : "all",
+            status: (type === 'attendance' || type === 'summary') ? status : undefined,
+            employee_id: scope === 'employee' ? employeeId : undefined,
+            team_ids: scope === 'teams' ? teamIds : undefined,
+            user_ids: scope === 'individuals' ? userIds : undefined,
         });
     };
 
@@ -113,45 +150,82 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
                     <SelectUi
                         options={[
                             { value: "attendance", label: "Présence" },
-                            { value: "performance", label: "Performance" },
                             { value: "planning", label: "Planning" },
-                            { value: "summary", label: "Résumé" }
+                            { value: "summary", label: "Résumé" },
+                            { value: "personal_employee", label: "Employé (Personnalisé)" }
                         ]}
                         value={type}
                         onChange={(e) => setType(e.target.value as ReportType)}
                     />
                 </FormGroup>
 
-                <FormGroup $flex={2} $minWidth="180px">
-                    <Label>Département</Label>
-                    <Input
-                        type="text"
-                        list="report-departments-list"
-                        value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                        placeholder="Tous ou saisissez..."
-                    />
-                    <datalist id="report-departments-list">
-                        <option value="all">Tous Départements</option>
-                        {departments?.map(d => (
-                            <option key={d.name} value={d.name} />
-                        ))}
-                    </datalist>
-                </FormGroup>
+                {type !== 'attendance' && (
+                    <FormGroup $flex={2} $minWidth="180px">
+                        <Label>Cible (Scope)</Label>
+                        <SelectUi
+                            options={[
+                                { value: "all", label: "Tous (Globale)" },
+                                { value: "teams", label: "Équipes" },
+                                { value: "individuals", label: "Individus multiples" },
+                                { value: "employee", label: "Employé spécifique" }
+                            ]}
+                            value={scope}
+                            onChange={(e) => setScope(e.target.value as any)}
+                        />
+                    </FormGroup>
+                )}
 
-                <FormGroup $flex={1} $minWidth="120px">
-                    <Label>Période</Label>
-                    <SelectUi
-                        options={[
-                            { value: "day", label: "Jour" },
-                            { value: "week", label: "Semaine" },
-                            { value: "month", label: "Mois" },
-                            { value: "year", label: "Année" }
-                        ]}
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value as ReportPeriod)}
-                    />
-                </FormGroup>
+                {type !== 'attendance' && scope === "employee" && (
+                    <FormGroup $flex={2} $minWidth="200px">
+                        <Label>Employé</Label>
+                        <SelectMenu
+                            options={[
+                                { value: "", label: "Sélectionnez un employé..." },
+                                ...employees.map(emp => ({
+                                    value: emp.id,
+                                    label: `${emp.firstName} ${emp.lastName} (${emp.profession || 'Sans profession'})`
+                                }))
+                            ]}
+                            value={employeeId || ""}
+                            onChange={(val) => setEmployeeId(val)}
+                            width="100%"
+                        />
+                    </FormGroup>
+                )}
+
+                {type !== 'attendance' && scope === "teams" && (
+                    <FormGroup $flex={2} $minWidth="200px">
+                        <Label>Équipes</Label>
+                        <MultiSelectMenu
+                            options={teams.map(t => ({ value: t.id, label: t.name }))}
+                            values={teamIds}
+                            onChange={setTeamIds}
+                            placeholder="Sélectionner équipes..."
+                            width="100%"
+                        />
+                    </FormGroup>
+                )}
+
+                {type !== 'attendance' && scope === "individuals" && (
+                    <FormGroup $flex={2} $minWidth="200px">
+                        <Label>Employés</Label>
+                        <MultiSelectMenu
+                            options={employees.map(emp => {
+                                const isUnassigned = type === "planning" && !assignedUserIds.has(emp.id);
+                                return {
+                                    value: emp.id,
+                                    label: `${emp.firstName} ${emp.lastName}`,
+                                    hasWarning: isUnassigned,
+                                    warningMessage: isUnassigned ? "Cet employé n'est assigné à aucun modèle de planning et n'apparaîtra pas dans le rapport." : undefined
+                                };
+                            })}
+                            values={userIds}
+                            onChange={setUserIds}
+                            placeholder="Sélectionner employés..."
+                            width="100%"
+                        />
+                    </FormGroup>
+                )}
             </InlineFilters>
 
             <InlineFilters>
@@ -164,6 +238,38 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
                     <Label>Date Fin</Label>
                     <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </FormGroup>
+
+                {(type === 'attendance' || type === 'summary') && (
+                    <FormGroup $flex={1.5}>
+                        <Label>Département</Label>
+                        <SelectUi
+                            options={[
+                                { value: "all", label: "Tous" },
+                                ...uniqueDepartments.map(dept => ({ value: dept, label: dept }))
+                            ]}
+                            value={department}
+                            onChange={(e) => setDepartment(e.target.value)}
+                        />
+                    </FormGroup>
+                )}
+
+                {(type === 'attendance' || type === 'summary') && (
+                    <FormGroup $flex={1.5}>
+                        <Label>Statut</Label>
+                        <SelectUi
+                            options={[
+                                { value: "all", label: "Tous" },
+                                { value: "present", label: "Présent" },
+                                { value: "absent", label: "Absent" },
+                                { value: "late", label: "En retard" },
+                                { value: "left_early", label: "Départ anticipé" },
+                                { value: "manual", label: "Manuel" }
+                            ]}
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                        />
+                    </FormGroup>
+                )}
             </InlineFilters>
 
             <ReportActionPanel
@@ -176,6 +282,6 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
                 onSave={save}
                 isSaving={isSaving}
             />
-        </Container>
+        </Container >
     );
 }

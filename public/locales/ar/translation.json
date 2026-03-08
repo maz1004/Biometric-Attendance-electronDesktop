@@ -363,7 +363,11 @@
                 "values": {
                     "pending": "قيد الانتظار",
                     "pass": "ناجح",
-                    "fail": "فاشل"
+                    "fail": "فاشل",
+                    "accepted": "مقبول",
+                    "approved": "مقبول",
+                    "rejected": "مرفوض",
+                    "unknown": "غير معروف"
                 }
             },
             "filters": {

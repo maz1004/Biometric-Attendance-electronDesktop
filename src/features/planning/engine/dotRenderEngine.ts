@@ -67,16 +67,14 @@ export function computeDotVariant(
         return null; // Not in this slot at all
     }
 
-    // Check-in: start matches this slot's start
-    if (Math.abs(tStart - slotStart) < 0.001) {
+    // Check-in: start falls within this slot
+    if (tStart >= slotStart && tStart < slotEnd) {
         return 'filled';
     }
 
-    // Check-out: end matches this slot's start (Meaning the shift ENDS at the BEGINNING of this slot?)
-    // Wait. "Hollow" dot usually appears at the TIME of checkout.
-    // If I check out at 9:30. 9:30 is the START of the 9:30-10:00 slot.
-    // So if tEnd === slotStart, we render hollow.
-    if (Math.abs(tEnd - slotStart) < 0.001) {
+    // Check-out: end falls within this slot but after the start
+    // Or exactly at the start of the slot (backward compatibility)
+    if ((tEnd > slotStart && tEnd < slotEnd) || Math.abs(tEnd - slotStart) < 0.001) {
         return 'hollow';
     }
 

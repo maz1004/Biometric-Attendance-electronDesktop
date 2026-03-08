@@ -29,7 +29,7 @@ const Toggle = styled.button`
   line-height: 1.5;
 `;
 
-const List = styled.ul`
+const List = styled.div`
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -39,9 +39,29 @@ const List = styled.ul`
   border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-lg);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  max-height: 30rem;
+`;
+
+const ScrollableList = styled.ul`
+  max-height: 25rem;
   overflow-y: auto;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 1rem 1.2rem;
+  border: none;
+  border-bottom: 1px solid var(--color-grey-200);
+  background-color: transparent;
+  color: var(--color-grey-900);
+  font-size: 1.35rem;
+
+  &:focus {
+    outline: none;
+    background-color: var(--color-grey-50);
+  }
 `;
 
 const Item = styled.li<{ $active: boolean }>`
@@ -71,13 +91,19 @@ interface SelectMenuProps {
 
 export default function SelectMenu({ options, value, onChange, width = "18rem" }: SelectMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
     const ref = useOutSideClick<HTMLDivElement>(() => setIsOpen(false));
 
     const currentLabel = options.find((o) => o.value === value)?.label || value;
 
+    const filteredOptions = options.filter(opt =>
+        opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     function handleSelect(val: string) {
         onChange(val);
         setIsOpen(false);
+        setSearchQuery(""); // clear search on select
     }
 
     return (
@@ -89,15 +115,29 @@ export default function SelectMenu({ options, value, onChange, width = "18rem" }
 
             {isOpen && (
                 <List>
-                    {options.map((opt) => (
-                        <Item
-                            key={opt.value}
-                            $active={opt.value === value}
-                            onClick={() => handleSelect(opt.value)}
-                        >
-                            {opt.label}
-                        </Item>
-                    ))}
+                    <SearchInput
+                        type="text"
+                        placeholder="Rechercher..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                    <ScrollableList>
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((opt) => (
+                                <Item
+                                    key={opt.value}
+                                    $active={opt.value === value}
+                                    onClick={() => handleSelect(opt.value)}
+                                >
+                                    {opt.label}
+                                </Item>
+                            ))
+                        ) : (
+                            <Item $active={false} style={{ color: 'var(--color-grey-400)', cursor: 'default' }}>Aucun résultat</Item>
+                        )}
+                    </ScrollableList>
                 </List>
             )}
         </StyledSelectMenu>

@@ -65,15 +65,16 @@ const PaginationButton = styled.button<PaginationButtonProps>`
 
 type PaginationProps = {
   count: number;
+  pageSize?: number;
 };
 
-function Pagination({ count }: PaginationProps) {
+function Pagination({ count, pageSize = PAGE_SIZE }: PaginationProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = !searchParams.get("page")
     ? 1
     : Number(searchParams.get("page"));
 
-  const pageCount = Math.ceil(count / PAGE_SIZE);
+  const pageCount = Math.ceil(count / pageSize);
 
   function prevPage() {
     const prev = currentPage === 1 ? currentPage : currentPage - 1;
@@ -91,9 +92,9 @@ function Pagination({ count }: PaginationProps) {
   return (
     <StyledPagination>
       <P>
-        Showing <span>{(currentPage - 1) * PAGE_SIZE + 1}</span> to{" "}
+        Showing <span>{(currentPage - 1) * pageSize + 1}</span> to{" "}
         <span>
-          {currentPage === pageCount ? count : currentPage * PAGE_SIZE}
+          {currentPage === pageCount ? count : currentPage * pageSize}
         </span>{" "}
         of <span>{count}</span> results
       </P>

@@ -3,7 +3,6 @@ import styled from "styled-components";
 import { Team, UpdateTeamCommand, EmployeeMini } from "../../types";
 import VirtualizedSelector from "../ui/VirtualizedSelector";
 import Button from "../../../../ui/Button"; // Design System Button
-import { addMemberToTeam, removeMemberFromTeam } from "../../../../services/planning";
 import TeamMemberPopover from "../popovers/TeamMemberPopover";
 
 import {
@@ -299,6 +298,8 @@ interface OperationalTeamsPanelProps {
   onUpdateTeam: (id: string, data: UpdateTeamCommand) => void;
   onDeleteTeam?: (id: string) => void;
   onAddTeam: () => void;
+  onAddMemberToTeam: (teamId: string, userId: string) => Promise<void>;
+  onRemoveMemberFromTeam: (teamId: string, userId: string) => Promise<void>;
 }
 
 export default function OperationalTeamsPanel({
@@ -308,7 +309,9 @@ export default function OperationalTeamsPanel({
   onToggleSelect,
   onUpdateTeam,
   onDeleteTeam,
-  onAddTeam
+  onAddTeam,
+  onAddMemberToTeam,
+  onRemoveMemberFromTeam
 }: OperationalTeamsPanelProps) {
 
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
@@ -359,7 +362,8 @@ export default function OperationalTeamsPanel({
     onUpdateTeam(editingTeam.id, {
       name: editForm.name,
       color: editForm.color,
-      display_order: Number(editForm.display_order)
+      display_order: Number(editForm.display_order),
+      memberIds: editingTeam.memberIds || []
     });
     setEditingTeam(null);
   };
@@ -383,10 +387,10 @@ export default function OperationalTeamsPanel({
 
     try {
       if (isMember) {
-        await removeMemberFromTeam(editingTeam.id, userId);
+        await onRemoveMemberFromTeam(editingTeam.id, userId);
         newMemberIds = newMemberIds.filter(id => id !== userId);
       } else {
-        await addMemberToTeam(editingTeam.id, userId);
+        await onAddMemberToTeam(editingTeam.id, userId);
         newMemberIds.push(userId);
       }
 
@@ -508,25 +512,41 @@ export default function OperationalTeamsPanel({
 
             <InputGroup>
               <label>Couleur</label>
-              <ColorPickerRow>
-                {PRESET_COLORS.map(c => (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <ColorPickerRow style={{ flex: 1, margin: 0 }}>
+                  {PRESET_COLORS.map(c => (
+                    <ColorDot
+                      key={c}
+                      $color={c}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        cursor: 'pointer',
+                        boxShadow: editForm.color === c
+                          ? `0 0 0 3px var(--color-grey-0), 0 0 0 5px ${c}`
+                          : 'none',
+                        transform: editForm.color === c ? 'scale(1.1)' : 'scale(1)',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={() => setEditForm({ ...editForm, color: c })}
+                    />
+                  ))}
+                </ColorPickerRow>
+                <div style={{ width: '1px', height: '28px', backgroundColor: 'var(--color-border-element)' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginLeft: '4px' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', fontWeight: 500, textTransform: 'uppercase' }}>Actuelle</span>
                   <ColorDot
-                    key={c}
-                    $color={c}
+                    $color={editForm.color || "#ccc"}
                     style={{
-                      width: 28,
-                      height: 28,
-                      cursor: 'pointer',
-                      boxShadow: editForm.color === c
-                        ? `0 0 0 3px var(--color-grey-0), 0 0 0 5px ${c}`
-                        : 'none',
-                      transform: editForm.color === c ? 'scale(1.1)' : 'scale(1)',
-                      transition: 'all 0.15s ease'
+                      width: 24,
+                      height: 24,
+                      border: '2px solid var(--color-grey-0)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                     }}
-                    onClick={() => setEditForm({ ...editForm, color: c })}
+                    title="Couleur actuellement sauvegardée"
                   />
-                ))}
-              </ColorPickerRow>
+                </div>
+              </div>
             </InputGroup>
 
             {/* Members Management Section */}

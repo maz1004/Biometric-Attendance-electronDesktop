@@ -32,7 +32,7 @@ const INIT_DEV_FILTERS: DevicesFilters = {
 const INIT_Q_FILTERS: QueueFilters = {
   device: "all",
   liveness: "all",
-  scoreMin: 0.0,
+  employeeIds: [],
   status: "pending",
 };
 
@@ -85,9 +85,10 @@ export function useDevices() {
 
   // 3. Fetch Attendance Validations (Queue)
   const { data: apiValidations = [] } = useQuery({
-    queryKey: ['validations', 'pending'],
+    queryKey: ['validations', qFilters.status],
     queryFn: async () => {
-      const res = await getPendingValidations();
+      // Map frontend status to backend expected values if necessary (or pass directly)
+      const res = await getPendingValidations(qFilters.status);
       return Array.isArray(res) ? res : (res as any).data || [];
     },
     refetchInterval: 15000,
@@ -110,6 +111,25 @@ export function useDevices() {
     return map;
   }, [apiUsersResponse]);
 
+  const userPhotoMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (apiUsersResponse?.users) {
+      apiUsersResponse.users.forEach((u: any) => {
+        // Store relative path so SecureImage fetches with auth token
+        // SecureImage expects a path starting with /api/ to handle it securely
+        if (u.profile_photo) {
+          // profile_photo may be: "/api/v1/users/:id/photo" or "/uploads/..." etc
+          // Pass it directly; SecureImage will prepend API_BASE_URL if it starts with /
+          map.set(u.id, u.profile_photo);
+        } else if (u.id) {
+          // Fallback: use the standard photo endpoint
+          map.set(u.id, `/api/v1/users/${u.id}/photo`);
+        }
+      });
+    }
+    return map;
+  }, [apiUsersResponse]);
+
   // Map and Merge into Capture[]
   const captures: Capture[] = useMemo(() => {
     const enrolls: Capture[] = Array.isArray(apiEnrollments) ? apiEnrollments.map((e: any) => ({
@@ -117,6 +137,7 @@ export function useDevices() {
       deviceId: e.device_id || "unknown",
       tsISO: e.created_at,
       employeeNameGuess: e.user_name || "Unknown User",
+      employeePhotoUrl: e.user_id ? userPhotoMap.get(e.user_id) : undefined,
       score: e.quality_score || 1.0,
       liveness: "pass",
       status: e.status || "pending",
@@ -148,10 +169,11 @@ export function useDevices() {
         deviceId: deviceIdToUse,
         tsISO: v.submission_timestamp,
         employeeNameGuess: userName || fallbackName,
+        employeePhotoUrl: v.user_id ? userPhotoMap.get(v.user_id) : undefined,
         employeeId: v.user_id,
         score: v.similarity_score,
         liveness: "pass",
-        status: "pending",
+        status: v.status === "approved" ? "accepted" : (v.status || "pending"),
         imageUrl: v.captured_image ? `data:image/jpeg;base64,${v.captured_image}` : PLACEHOLDER,
         source: "attendance"
       };
@@ -199,8 +221,9 @@ export function useDevices() {
         (c.liveness ?? "unknown") !== qFilters.liveness
       )
         return false;
-      if (typeof c.score === "number" && c.score < qFilters.scoreMin)
-        return false;
+      if (qFilters.employeeIds && qFilters.employeeIds.length > 0) {
+        if (!c.employeeId || !qFilters.employeeIds.includes(c.employeeId)) return false;
+      }
       return true;
     });
   }, [captures, qFilters]);

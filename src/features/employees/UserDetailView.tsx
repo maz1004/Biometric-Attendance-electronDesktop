@@ -347,22 +347,13 @@ export default function UserDetailView({ employee }: UserDetailViewProps) {
 
   const { mutate: uploadAvatar } = useMutation({
     mutationFn: async (file: File) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-          const base64String = reader.result?.toString().split(',')[1];
-          if (base64String) {
-            apiClient.post(`/users/${id}/photo`, {
-              photo_data: base64String,
-              file_name: file.name
-            }).then(res => resolve(res.data)).catch(reject);
-          } else {
-            reject(new Error("Failed to encode image"));
-          }
-        };
-        reader.onerror = error => reject(error);
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      const res = await apiClient.post(`/admin/users/${id}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      return res.data;
     },
     onSuccess: () => {
       toast.success("Avatar updated successfully");
@@ -377,22 +368,13 @@ export default function UserDetailView({ employee }: UserDetailViewProps) {
 
   const { mutate: uploadCV } = useMutation({
     mutationFn: async (file: File) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-          const base64String = reader.result?.toString().split(',')[1];
-          if (base64String) {
-            apiClient.post(`/users/${id}/cv`, {
-              cv_data: base64String,
-              file_name: file.name
-            }).then(res => resolve(res.data)).catch(reject);
-          } else {
-            reject(new Error("Failed to encode PDF"));
-          }
-        };
-        reader.onerror = error => reject(error);
+      const formData = new FormData();
+      formData.append('cv', file);
+
+      const res = await apiClient.post(`/admin/users/${id}/cv`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      return res.data;
     },
     onSuccess: () => {
       toast.success("CV uploaded successfully");

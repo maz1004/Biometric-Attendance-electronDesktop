@@ -140,7 +140,7 @@ function Toggle({ id, children }: ToggleProps) {
   }
 
   return (
-    <StyledToggle onClick={handleClick}>
+    <StyledToggle type="button" onClick={handleClick}>
       {children || <HiEllipsisVertical />}
     </StyledToggle>
   );
@@ -197,7 +197,7 @@ function Button({ onClick, children, icon }: ButtonProps) {
 
   return (
     <li>
-      <StyledButton onClick={handleClick}>
+      <StyledButton type="button" onClick={handleClick}>
         {icon}
         <span>{children}</span>
       </StyledButton>

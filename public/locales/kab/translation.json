@@ -245,6 +245,39 @@
     "header": {
       "title": "Ibenkan & Asentem",
       "description": "Sefrek ibenkan n biométrie deg tuddsa."
+    },
+    "validation": {
+      "title": "Taslit ur nettwasentes ara",
+      "card": {
+        "guess": "aɣĢes",
+        "unknown": "Arussin",
+        "score": "asmid",
+        "liveness": "Tamiddint",
+        "status": "Addad",
+        "accept": "Qbel",
+        "reject": "Rnu ara",
+        "values": {
+          "pending": "Yal ayen",
+          "pass": "Iteddu",
+          "fail": "Ur iteddu ara",
+          "accepted": "Yettwaqbel",
+          "approved": "Yettwaqbel",
+          "rejected": "Yettwaref",
+          "unknown": "Arussin"
+        }
+      },
+      "filters": {
+        "all_devices": "Akk ibenkan",
+        "all_liveness": "Akk tamiddint",
+        "liveness_pass": "Tamiddint iteddu",
+        "liveness_fail": "Tamiddint ur iteddu ara",
+        "unknown": "Arussin",
+        "all_statuses": "Akk addaden",
+        "pending": "Yal ayen",
+        "accepted": "Yettwaqbel",
+        "rejected": "Yettwaref",
+        "min_score": "Asmid adday"
+      }
     }
   }
 }

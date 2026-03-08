@@ -82,7 +82,13 @@ export default function SecureImage({
                 }
             })
             .catch((err) => {
-                console.error(`[SecureImage] Error fetching ${fullUrl}:`, err);
+                if (err.response && err.response.status === 404) {
+                    // Valid 404 (user has no photo yet), fallback silently
+                    console.debug(`[SecureImage] No photo found for ${fullUrl}, using fallback`);
+                } else {
+                    console.error(`[SecureImage] Error fetching ${fullUrl}:`, err);
+                }
+
                 if (active) {
                     setHasError(true);
                     setBlobUrl(fallbackSrc);

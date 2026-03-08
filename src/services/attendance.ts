@@ -74,6 +74,9 @@ export const getAttendance = async (params: GetAttendanceParams) => {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.append('page', params.page.toString());
   if (params.limit) queryParams.append('limit', params.limit.toString());
+  if (params.search) queryParams.append('search', params.search);
+  if (params.department && params.department !== 'all') queryParams.append('department', params.department);
+  if (params.status && params.status !== 'all') queryParams.append('status', params.status);
   if (params.startDate) queryParams.append('start_date', params.startDate);
   if (params.endDate) queryParams.append('end_date', params.endDate);
 

@@ -97,9 +97,13 @@ const StatsGrid = styled.div`
 const AvatarImg = styled(SecureImage)`
   width: 4rem;
   height: 4rem;
+  min-width: 4rem;
+  min-height: 4rem;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--color-grey-200);
+  align-self: center;
+  flex-shrink: 0;
 `;
 
 const StyledTableRow = styled(Table.Row)`
@@ -156,7 +160,9 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
               </div>
               <EfficiencyBadge score={efficiency} />
             </div>
-            <div className="empId">{id}</div>
+            <div className="empId">
+              {role === "manager" ? t("employees.role.manager") : t("employees.role.employee")}
+            </div>
             <div
               style={{
                 fontSize: "1.1rem",
@@ -172,10 +178,9 @@ function EmployeeRow({ employee }: EmployeeRowProps): JSX.Element {
           </NameBlock>
 
           <DeptRoleBlock>
-            <span className="dept">{department}</span>
+            <span className="dept">{department || "—"}</span>
             <span className="role">
-              {profession ? `${profession} • ` : ""}
-              {role === "manager" ? t("employees.role.manager") : t("employees.role.employee")}
+              {profession || "—"}
             </span>
           </DeptRoleBlock>
 

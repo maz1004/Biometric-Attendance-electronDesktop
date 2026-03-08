@@ -70,6 +70,9 @@ export default function Reports() {
             start_date: filters.dateRange.start.toISOString().slice(0, 10),
             end_date: filters.dateRange.end.toISOString().slice(0, 10),
             department: filters.department,
+            employee_id: filters.employee_id,
+            team_ids: filters.team_ids,
+            user_ids: filters.user_ids,
         });
     };
 

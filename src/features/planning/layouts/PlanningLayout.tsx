@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import styled from "styled-components";
 import { format, isValid, startOfWeek } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,6 +28,7 @@ import TeamFormModal from "../components/modals/teams/TeamFormModal";
 import ShiftTemplateEditorModal from "../components/modals/ShiftTemplateEditorModal";
 import DayAssignmentsDialog from "../components/modals/DayAssignmentsDialog";
 import DayAssignmentOrchestrator from "../components/scheduling/DayAssignmentOrchestrator"; // New Orchestrator
+import ConfirmRowDeleteModal from "../components/modals/ConfirmRowDeleteModal";
 
 import { ComputedSchedule, UserShift, WeeklySchedule, WeeklyTemplate } from "../types";
 
@@ -73,11 +74,17 @@ export default function PlanningLayout() {
         gotoNextWeek, gotoPrevWeek,
         settings,
         templates,
-
+        createTeam, updateTeam,
+        deleteTeam,
+        addMemberToTeam,
+        removeMemberFromTeam,
     } = usePlanning();
 
     // 2. Local Layout State
     const layout = usePlanningLayoutState();
+
+    // 2.5 Quick Delete Modal State
+    const [rowDeleteModal, setRowDeleteModal] = useState<{ isOpen: boolean, hourFloat: number, timeStr: string } | null>(null);
 
     // 3. Template Manager Logic
     const templateMgr = useTemplateManager(
@@ -175,28 +182,7 @@ export default function PlanningLayout() {
             // OR maybe the "Template Builder" allows creating "Open" slots?
             // Actually, in `ShiftTemplateEditorModal`, we build slots from dots.
             // If we are merely *assigning* a template, it should already be valid?
-            // However, if the template allows "Single Punch" (just start time?), checking for evenness might make sense if they are stored as points.
-
-            // Let's assume the user wants to ensure that for every "Start" there is an "End".
-            // References "Dot 1 = Check-in, Dot 2 = Check-out".
-            // If `scheduleData` is `TimeSlot[]`, then it's already pairs.
-            // UNLESS we are validating the *source* dots which might be raw.
-            // BUT `WeeklySchedule` is `TimeSlot[]`.
-
-            // Let's look at how `TimeSlot` is defined.
-            // It has `start` and `end`.
-            // So if it exists, it's a pair.
-            // UNLESS `end` can be empty? Interface says `string`.
-
-            // PERHAPS the validation is about "Is there at least one slot?" or "No zero duration"?
-            // OR the user is referring to the "Logic" of "Check-in/Check-out" sequence.
-
-            // Backtracking to previous context: "Ghost Assignments" conversation mentioned "Dot 1 = Check-in...".
-            // This suggests the UI *renders* dots.
-            // If the user can create a "hanging" dot in the builder, it might save as a malformed slot?
-            // But here we are *assigning* an already saved template.
-
-            // However, the function signature `validateTemplateCheckouts` was specifically asked for.
+            // However, if the function signature `validateTemplateCheckouts` was specifically asked for.
             // The logic likely checks if the *count* of significant points is even.
             // But `TimeSlot` hides this.
 
@@ -210,32 +196,6 @@ export default function PlanningLayout() {
             // Let's go with a safeguard:
             // Ensure every slot has `start` != `end` (duration > 0).
             // AND ensure no overlaps?
-
-            // Let's implement a check that simply confirms we have valid slots.
-            // "celui qui doit verifier les check in et check out" matches "Pairs".
-
-            // ACTUALLY, checking the `ShiftTemplateEditorModal` (not visible here but usually paired with this),
-            // it constructs slots from sorted points.
-            // If the user saves a template with 3 points, the last point might be ignored or form a partial slot?
-
-            // If we assume `scheduleData` is correct `TimeSlot[]`, then validation is checking if it's empty?
-            // User said: "remet la dans le systeme".
-            // "Modal de assignation dans strategie" -> `handleAssignTemplateToDate`.
-
-            // Let's put back a logic that feels "Validation-like".
-            // If `slots.length > 0`, it's valid?
-
-            // Re-reading prompt: "modele remet et le toggle button... maintenant corrige la modal...".
-            // It implies a specific previous behavior was removed.
-            // The comment says: "Dot 1 = Check-in, Dot 2 = Check-out...".
-            // This implies we are counting *events*?
-            // But `TimeSlot` is an interval.
-            // Maybe they want to forbid "Single Point" shifts if that's possible?
-            // A `TimeSlot` is always 2 points.
-
-            // Let's try to validate that:
-            // 1. Slots don't overlap.
-            // 2. Slots have positive duration.
 
             // Let's start with a generic valid check and logging.
             // If the user previously had a "check pairwise" logic, it was likely checking raw points.
@@ -561,15 +521,11 @@ export default function PlanningLayout() {
                     employees={state.employees}
                     selectedTeamIds={layout.selectedTeamIds}
                     onToggleSelect={(id) => layout.setSelectedTeamIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
-                    onUpdateTeam={(_id, _data) => {
-                        // updateTeam({ id, data })
-                        console.warn("Update team not implemented");
-                    }}
-                    onDeleteTeam={(_id) => {
-                        // deleteTeam(id)
-                        console.warn("Delete team not implemented");
-                    }}
+                    onUpdateTeam={(id, data) => updateTeam({ id, data })}
+                    onDeleteTeam={(id) => deleteTeam(id)}
                     onAddTeam={() => layout.setIsTeamModalOpen(true)}
+                    onAddMemberToTeam={(teamId: string, userId: string) => addMemberToTeam({ teamId, userId })}
+                    onRemoveMemberFromTeam={(teamId: string, userId: string) => removeMemberFromTeam({ teamId, userId })}
                 />
             )}
 
@@ -581,6 +537,20 @@ export default function PlanningLayout() {
                         timeSlot={layout.timeSlot}
                         onCellClick={assignment.handleCellClick}
                         interval={layout.interval}
+                        onDeleteDay={(dayIndex: number) => {
+                            const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+                            if (window.confirm(`Voulez-vous vraiment vider toutes les assignations du ${days[dayIndex]} ?`)) {
+                                templateMgr.handleClearDay(dayIndex);
+                            }
+                        }}
+                        onDeleteTimeSlot={(hourFloat: number) => {
+                            const formatTime = (h: number) => {
+                                const hrs = Math.floor(h);
+                                const mins = Math.round((h - hrs) * 60);
+                                return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+                            };
+                            setRowDeleteModal({ isOpen: true, hourFloat, timeStr: formatTime(hourFloat) });
+                        }}
                     />
                 ) : (
                     <>
@@ -650,9 +620,13 @@ export default function PlanningLayout() {
                 <TeamFormModal
                     employees={state.employees}
                     onCloseModal={() => layout.setIsTeamModalOpen(false)}
-                    onSave={(_data) => {
-                        // createTeam({ name: data.name, department: data.department || "General", manager_id: undefined });
-                        console.warn("Create team not implemented");
+                    onSave={(data) => {
+                        createTeam({
+                            name: data.name,
+                            department: data.department || "General",
+                            manager_id: undefined,
+                            memberIds: data.memberIds
+                        });
                         layout.setIsTeamModalOpen(false);
                     }}
                 />
@@ -693,6 +667,19 @@ export default function PlanningLayout() {
                         layout.setViewAssignmentsDate(null);
                     }}
                 // TODO: wire up onDeleteAssignment
+                />
+            )}
+
+            {rowDeleteModal && (
+                <ConfirmRowDeleteModal
+                    isOpen={rowDeleteModal.isOpen}
+                    timeStr={rowDeleteModal.timeStr}
+                    interval={layout.interval}
+                    onClose={() => setRowDeleteModal(null)}
+                    onConfirm={() => {
+                        templateMgr.handleClearTimeSlot(rowDeleteModal.timeStr);
+                        setRowDeleteModal(null);
+                    }}
                 />
             )}
 

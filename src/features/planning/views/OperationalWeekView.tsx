@@ -370,26 +370,26 @@ export default function OperationalWeekGrid({
                         onMouseLeave={handleSlotMouseLeave}
                         style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', padding: '2px' }}
                       >
-                        {sortedGroups.map(({ id: teamId, team, items }) => {
-                          const isPlaceholdersOnly = items.every(i => i.isPlaceholder);
+                        <SlotDots>
+                          {sortedGroups.map(({ id: teamId, team, items }) => {
+                            const isPlaceholdersOnly = items.every(i => i.isPlaceholder);
 
-                          if (isPlaceholdersOnly) {
-                            // Just show a colored bar for placeholder
+                            if (isPlaceholdersOnly) {
+                              // Just show a colored bar for placeholder
+                              return (
+                                <div key={teamId} style={{ width: '100%', height: '6px', backgroundColor: team?.color || items[0].color, borderRadius: 3, opacity: 0.5, marginBottom: 1 }} title={team?.name || "Placeholder"} />
+                              );
+                            }
+
                             return (
-                              <div key={teamId} style={{ width: '100%', height: '6px', backgroundColor: team?.color || items[0].color, borderRadius: 3, opacity: 0.5, marginBottom: 1 }} title={team?.name || "Placeholder"} />
-                            );
-                          }
-
-                          return (
-                            <div key={teamId} style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '2px',
-                              marginBottom: '2px',
-                              maxWidth: '100%',
-                              flexWrap: 'wrap'
-                            }}>
-                              <SlotDots>
+                              <div key={teamId} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                marginBottom: '2px',
+                                maxWidth: '100%',
+                                flexWrap: 'wrap'
+                              }}>
                                 {items.map(item => {
                                   // Use dot render engine for correct variant
                                   const variant: DotVariant = computeDotVariant(
@@ -419,7 +419,7 @@ export default function OperationalWeekGrid({
                                       }} title={team.name} />}
 
                                       <ShiftDot
-                                        color={item.color || "#ccc"}
+                                        color="#22c55e"
                                         $variant={variant}
                                         $hasWarning={hasIncompleteAssignment && variant === 'filled'}
                                         style={{ position: 'relative', zIndex: 1 }}
@@ -432,10 +432,10 @@ export default function OperationalWeekGrid({
                                     </div>
                                   );
                                 })}
-                              </SlotDots>
-                            </div>
-                          )
-                        })}
+                              </div>
+                            )
+                          })}
+                        </SlotDots>
                       </SlotCell>
                     );
                   })}

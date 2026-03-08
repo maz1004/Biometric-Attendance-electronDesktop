@@ -29,6 +29,7 @@ export type Capture = {
   tsISO: string; // ISO datetime
   employeeId?: string; // if the model guessed
   employeeNameGuess?: string;
+  employeePhotoUrl?: string;
   score?: number; // model score (0..1)
   liveness?: "pass" | "fail" | "unknown";
   status: CaptureStatus; // pending by default here
@@ -45,6 +46,6 @@ export type DevicesFilters = {
 export type QueueFilters = {
   device: "all" | string;
   liveness: "all" | "pass" | "fail" | "unknown";
-  scoreMin: number; // 0..1
+  employeeIds: string[]; // Remplacement de scoreMin
   status: "all" | CaptureStatus;
 };

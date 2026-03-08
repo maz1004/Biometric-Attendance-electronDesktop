@@ -14,15 +14,23 @@ import type { ReportData, UserReportData, ExportReportParams, GetReportsResponse
 export const generateReport = async (params: {
     start_date: string; // ISO 8601
     end_date: string; // ISO 8601
-    type?: 'attendance' | 'performance' | 'planning' | 'summary';
+    type?: 'attendance' | 'planning' | 'summary' | 'personal_employee';
     department?: string;
+    status?: string;
+    employee_id?: string;
+    team_ids?: string[];
+    user_ids?: string[];
 }): Promise<ReportData> => {
     const response = await apiClient.get('/reports/generate', {
         params: {
             start_date: params.start_date,
             end_date: params.end_date,
-            type: params.type === 'summary' ? 'daily' : (params.type || 'daily'),
+            type: params.type === 'summary' ? 'daily' : (params.type === 'personal_employee' ? 'custom' : (params.type || 'daily')),
             department: params.department && params.department !== 'all' ? params.department : undefined,
+            status: params.status && params.status !== 'all' ? params.status : undefined,
+            employee_id: params.employee_id,
+            "team_ids[]": params.team_ids,
+            "user_ids[]": params.user_ids,
         },
     });
 
@@ -30,6 +38,7 @@ export const generateReport = async (params: {
 
     // The backend returns ReportData directly with matching fields
     return {
+        type: data.type || params.type,
         generated_at: data.generated_at || new Date().toISOString(),
         period: data.period || `${params.start_date} → ${params.end_date}`,
         summary: {
@@ -44,6 +53,9 @@ export const generateReport = async (params: {
             user_id: u.user_id,
             user_name: u.user_name,
             department: u.department || '',
+            profession: u.profession || '',
+            email: u.email || '',
+            phone: u.phone || '',
             efficiency_score: u.efficiency_score || 0,
             attendance_rate: u.attendance_rate || 0,
             present_days: u.present_days || 0,
@@ -51,7 +63,9 @@ export const generateReport = async (params: {
             late_arrivals: u.late_arrivals || 0,
             early_departures: u.early_departures || 0,
             total_work_hours: u.total_work_hours || '0h00',
+            daily_records: u.daily_records || [],
         })),
+        attendance_logs: data.attendance_logs || [],
     };
 };
 
@@ -78,8 +92,17 @@ export const getReportsHistory = async (params: {
     type?: string;
     start_date?: string;
     end_date?: string;
+    genre?: string;
+    employee_id?: string;
+    model_ids?: string[];
 }): Promise<GetReportsResponse> => {
-    const response = await apiClient.get('/reports/history', { params });
+    const response = await apiClient.get('/reports/history', {
+        params: {
+            ...params,
+            model_ids: undefined,
+            "model_ids[]": params.model_ids,
+        }
+    });
     return response.data;
 };
 
@@ -165,17 +188,75 @@ export const downloadReport = (blob: Blob, filename: string): void => {
 };
 
 /**
- * Generate filename for report export
+ * Sanitize a string for use in filenames
+ */
+const sanitizeFilename = (str: string): string => {
+    return str.replace(/[\/\\:*?"<>|]/g, '_').replace(/\s+/g, '_').replace(/_+/g, '_').trim();
+};
+
+/**
+ * Generate context-aware filename for report export
  */
 export const generateReportFilename = (
     type: string,
-    format: 'pdf' | 'excel',
+    format: 'pdf' | 'excel' | 'xlsx' | 'docx',
     startDate: string,
-    endDate: string
+    endDate: string,
+    context?: {
+        employeeName?: string;
+        modelNames?: string[];
+        department?: string;
+        genre?: string;
+        companyName?: string;
+    }
 ): string => {
-    const extension = format === 'pdf' ? 'pdf' : 'xlsx';
-    const dateRange = `${startDate}_to_${endDate}`;
-    return `${type}_report_${dateRange}.${extension}`;
+    const extension = format === 'pdf' ? 'pdf' : format === 'docx' ? 'doc' : 'xlsx';
+    const dateStr = startDate === endDate ? startDate : `${startDate}_au_${endDate}`;
+
+    let filename = '';
+
+    switch (type) {
+        case 'personal_employee':
+        case 'custom': {
+            const name = context?.employeeName ? sanitizeFilename(context.employeeName) : 'Employe';
+            filename = `Report_Personal_${name}_${dateStr}`;
+            break;
+        }
+        case 'planning': {
+            const models = context?.modelNames?.length
+                ? sanitizeFilename(context.modelNames.join('-'))
+                : 'Global';
+            filename = `Planning_${models}_${dateStr}`;
+            break;
+        }
+        case 'attendance': {
+            const dept = context?.department && context.department !== 'all'
+                ? sanitizeFilename(context.department)
+                : 'Global';
+            filename = `Presence_${dept}_${dateStr}`;
+            break;
+        }
+        case 'summary':
+        case 'daily':
+        case 'weekly':
+        case 'monthly': {
+            const genreLabel = context?.genre || type;
+            const dept = context?.department && context.department !== 'all'
+                ? sanitizeFilename(context.department)
+                : 'Global';
+            filename = `Resume_${sanitizeFilename(genreLabel)}_${dept}_${dateStr}`;
+            break;
+        }
+        default:
+            filename = `Rapport_${type}_${dateStr}`;
+    }
+
+    // Prepend company name if available
+    if (context?.companyName) {
+        filename = `${sanitizeFilename(context.companyName)}_${filename}`;
+    }
+
+    return `${filename}.${extension}`;
 };
 
 // ============================================================================

@@ -113,6 +113,25 @@ export function useTemplateManager(
         });
     };
 
+    const handleClearDay = (dayIndex: number) => {
+        const dayKey = DAYS_KEY_MAP[dayIndex];
+        if (!dayKey) return;
+        setDraftSchedule(prev => ({ ...prev, [dayKey]: [] }));
+        setIsDirty(true);
+    };
+
+    const handleClearTimeSlot = (targetTimeStr: string) => {
+        setDraftSchedule(prev => {
+            const next = { ...prev };
+            DAYS_KEY_MAP.forEach(day => {
+                const slots = next[day as keyof WeeklySchedule] || [];
+                next[day as keyof WeeklySchedule] = slots.filter(s => s.start !== targetTimeStr);
+            });
+            return next;
+        });
+        setIsDirty(true);
+    };
+
     // Derived Preview
     const weekDates = useMemo(() => getWeekDates(weekDate), [weekDate]);
 
@@ -252,6 +271,8 @@ export function useTemplateManager(
         handleCancelDraft,
         handleSaveDraft,
         handleDeleteTemplate,
+        handleClearDay,
+        handleClearTimeSlot,
         draftPreviewSchedule,
         hasAssignments
     };

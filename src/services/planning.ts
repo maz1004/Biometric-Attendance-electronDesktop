@@ -215,6 +215,7 @@ export async function getTeam(id: string): Promise<Team> {
     name: t.name,
     department: t.department,
     managerId: t.manager_id,
+    color: t.color,
     memberIds: []
   };
 }
@@ -223,28 +224,33 @@ export async function createTeam(data: CreateTeamCommand): Promise<Team> {
   const payload = {
     name: data.name,
     department: data.department,
-    manager_id: data.manager_id
+    manager_id: data.manager_id,
+    color: data.color,
+    memberIds: data.memberIds || []
   };
   const res = await axios.post(`${API_URL}/teams`, payload);
-  const t = res.data;
+  const t = res.data.data ? { id: res.data.data, ...payload } : res.data;
   return {
     id: t.id,
     name: t.name,
     department: t.department,
     managerId: t.manager_id,
-    memberIds: []
+    color: t.color || payload.color,
+    memberIds: data.memberIds || []
   };
 }
 
 export async function updateTeam(id: string, data: UpdateTeamCommand): Promise<Team> {
-  const res = await axios.put(`${API_URL}/teams/${id}`, data);
+  const payload = { ...data };
+  const res = await axios.put(`${API_URL}/teams/${id}`, payload);
   const t = res.data;
   return {
-    id: t.id,
-    name: t.name,
-    department: t.department,
+    id: t.id || id,
+    name: t.name || data.name,
+    department: t.department || data.department,
     managerId: t.manager_id,
-    memberIds: []
+    color: t.color || data.color,
+    memberIds: data.memberIds || []
   };
 }
 
@@ -414,6 +420,8 @@ export const PlanningService = {
   createTeam,
   updateTeam,
   deleteTeam,
+  addMemberToTeam,
+  removeMemberFromTeam,
   getTemplates,
   createTemplate,
   updateTemplate,

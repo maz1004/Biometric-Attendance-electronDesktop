@@ -369,7 +369,11 @@
                 "values": {
                     "pending": "En attente",
                     "pass": "Réussi",
-                    "fail": "Échoué"
+                    "fail": "Échoué",
+                    "accepted": "Accepté",
+                    "approved": "Accepté",
+                    "rejected": "Rejeté",
+                    "unknown": "Inconnu"
                 }
             },
             "filters": {

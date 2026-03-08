@@ -73,19 +73,43 @@ export default async function getCroppedImg(
         pixelCrop.height
     )
 
-    // set canvas width to final desired crop size - this will clear existing context
-    canvas.width = pixelCrop.width
-    canvas.height = pixelCrop.height
+    // Maximum size required by backend is 2048x2048. We'll enforce 800x800 for profile avatars which is optimal.
+    const MAX_DIMENSION = 800;
 
-    // paste generated rotate image at the top left corner
-    ctx.putImageData(data, 0, 0)
+    // Calculate new dimensions while respecting aspect ratio
+    let targetWidth = pixelCrop.width;
+    let targetHeight = pixelCrop.height;
+
+    if (targetWidth > MAX_DIMENSION || targetHeight > MAX_DIMENSION) {
+        if (targetWidth > targetHeight) {
+            targetHeight = Math.round((targetHeight * MAX_DIMENSION) / targetWidth);
+            targetWidth = MAX_DIMENSION;
+        } else {
+            targetWidth = Math.round((targetWidth * MAX_DIMENSION) / targetHeight);
+            targetHeight = MAX_DIMENSION;
+        }
+    }
+
+    // Set canvas width to final desired crop size
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    // Use an intermediate canvas to hold the cropped full-res portion
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = pixelCrop.width;
+    tmpCanvas.height = pixelCrop.height;
+    const tmpCtx = tmpCanvas.getContext('2d');
+    if (tmpCtx) {
+        tmpCtx.putImageData(data, 0, 0);
+        // Draw the cropped area to the final resized canvas
+        ctx.drawImage(tmpCanvas, 0, 0, pixelCrop.width, pixelCrop.height, 0, 0, targetWidth, targetHeight);
+    }
 
     // As a Blob
     return new Promise((resolve) => {
-        // Compression logic: Start high and reduce if needed? 
-        // For now, fixed 0.8 quality jpeg as requested
+        // High quality setting, but guaranteed smaller file size due to max 800x800
         canvas.toBlob((file) => {
             resolve(file)
-        }, 'image/jpeg', 0.8)
+        }, 'image/jpeg', 0.9)
     })
 }

@@ -15,8 +15,11 @@ import toast from "react-hot-toast";
 export interface ReportParams {
     start_date: string; // ISO 8601
     end_date: string; // ISO 8601
-    type?: 'attendance' | 'performance' | 'planning' | 'summary';
+    type?: 'attendance' | 'planning' | 'summary' | 'personal_employee';
     department?: string;
+    employee_id?: string;
+    team_ids?: string[];
+    user_ids?: string[];
 }
 
 export function useReports() {
@@ -58,7 +61,7 @@ export function useReports() {
     };
 }
 
-export function useReportsHistory(page: number, limit: number, filters: { type?: string, start_date?: string, end_date?: string }) {
+export function useReportsHistory(page: number, limit: number, filters: { type?: string, start_date?: string, end_date?: string, genre?: string, employee_id?: string, model_ids?: string[] }) {
     const queryClient = useQueryClient();
 
     const { data, isLoading, isError, error } = useQuery({

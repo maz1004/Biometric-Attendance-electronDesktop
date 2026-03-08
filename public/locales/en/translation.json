@@ -366,7 +366,11 @@
         "values": {
           "pending": "Pending",
           "pass": "Pass",
-          "fail": "Fail"
+          "fail": "Fail",
+          "accepted": "Accepted",
+          "approved": "Accepted",
+          "rejected": "Rejected",
+          "unknown": "Unknown"
         }
       },
       "filters": {

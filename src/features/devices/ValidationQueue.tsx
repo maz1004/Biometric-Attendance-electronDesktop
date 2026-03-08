@@ -2,6 +2,10 @@ import styled from "styled-components";
 import { Capture, Device, QueueFilters } from "./DeviceTypes";
 import CaptureCard from "./CaptureCard";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
+import Pagination from "../../ui/Pagination";
+import MultiSelectMenu from "../../ui/MultiSelectMenu";
+import { useEmployees } from "../employees/useEmployees";
 
 
 const Panel = styled.div`
@@ -28,9 +32,7 @@ const Select = styled.select`
   color: var(--color-text-strong);
   border-radius: var(--border-radius-sm);
 `;
-const Range = styled.input.attrs({ type: "range", min: 0, max: 1, step: 0.01 })`
-  accent-color: var(--color-brand-600);
-`;
+
 
 const Grid = styled.div`
   display: grid;
@@ -47,6 +49,15 @@ export default function ValidationQueue(props: {
   onReject: (id: string) => void;
 }) {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const currentPage = !searchParams.get("page") ? 1 : Number(searchParams.get("page"));
+
+  const { employees } = useEmployees({ limit: 1000, status: 'active' });
+  const employeeOptions = employees ? employees.map((e: any) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })) : [];
+
+  const PAGE_SIZE = 10;
+  const count = props.items.length;
+  const paginatedItems = props.items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <Panel>
@@ -87,25 +98,20 @@ export default function ValidationQueue(props: {
             <option value="rejected">{t("devices.validation.filters.rejected")}</option>
           </Select>
 
-          <label
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
-            <span style={{ opacity: 0.75, fontSize: 12 }}>{t("devices.validation.filters.min_score")}</span>
-            <Range
-              value={props.filters.scoreMin}
-              onChange={(e) =>
-                props.onChange({ scoreMin: Number(e.target.value) })
-              }
+          <div style={{ minWidth: '220px' }}>
+            <MultiSelectMenu
+              options={employeeOptions}
+              values={props.filters.employeeIds || []}
+              onChange={(vals) => props.onChange({ employeeIds: vals })}
+              width="100%"
+              placeholder="Tous les employés"
             />
-            <span style={{ width: 36, textAlign: "right" }}>
-              {props.filters.scoreMin.toFixed(2)}
-            </span>
-          </label>
+          </div>
         </Filters>
       </Head>
 
       <Grid>
-        {props.items.map((c) => (
+        {paginatedItems.map((c) => (
           <CaptureCard
             key={c.id}
             capture={c}
@@ -115,6 +121,12 @@ export default function ValidationQueue(props: {
           />
         ))}
       </Grid>
+
+      {count > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '1.6rem', borderTop: '1px solid var(--color-border-card)', marginTop: '1rem' }}>
+          <Pagination count={count} pageSize={PAGE_SIZE} />
+        </div>
+      )}
     </Panel>
   );
 }

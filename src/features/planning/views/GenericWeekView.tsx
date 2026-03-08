@@ -104,7 +104,7 @@ const SlotDots = styled.div`
   gap: 4px;
 `;
 
-const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $isLinked?: boolean; $isGhost?: boolean }>`
+const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow' | 'line'; $isGhost?: boolean }>`
   width: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
   height: ${p => p.$variant === 'hollow' ? '12px' : '14px'};
   border-radius: 50%;
@@ -130,21 +130,6 @@ const ShiftDot = styled.div<{ $color: string; $variant?: 'filled' | 'hollow'; $i
     }
   `}
 
-  /* Linked Indicator (Left Bar) */
-  ${props => props.$isLinked && !props.$isGhost && css`
-    &::before {
-      content: '';
-      position: absolute;
-      left: -6px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 4px;
-      height: 80%;
-      background-color: ${props.$color};
-      border-radius: 2px;
-      opacity: 0.7;
-    }
-  `}
 `;
 
 const ConnectorLine = styled.div<{ $color: string }>`
@@ -173,12 +158,6 @@ const MissingCheckoutBadge = styled.div`
 
 // ----- HELPERS -----
 
-const TEAM_COLORS = [
-  "#3b82f6", "#ef4444", "#10b981", "#f59e0b",
-  "#8b5cf6", "#ec4899", "#06b6d4", "#84cc16"
-];
-const getTeamColor = (index: number) => TEAM_COLORS[index % TEAM_COLORS.length];
-
 // parseTime still used for filtering
 const parseTime = (t: string) => {
   const [h, m] = t.split(":").map(Number);
@@ -192,7 +171,9 @@ interface GenericWeekGridProps {
   teams: Team[];
   timeSlot: "day" | "night";
   onCellClick: (dayIndex: number, slotHour: number, event: React.MouseEvent<HTMLDivElement>, currentAssignments: ComputedSchedule[]) => void;
-  interval?: 30 | 60; // New Prop
+  interval?: 30 | 60;
+  onDeleteDay?: (dayIndex: number) => void;
+  onDeleteTimeSlot?: (hourFloat: number) => void;
 }
 
 export default function GenericWeekView({
@@ -204,7 +185,7 @@ export default function GenericWeekView({
 }: GenericWeekGridProps) {
 
   const teamColorMap = new Map<string, string>();
-  teams.forEach((t, i) => teamColorMap.set(t.id, getTeamColor(i)));
+  teams.forEach((t) => teamColorMap.set(t.id, t.color || "#ccc"));
 
   // Filter schedule
   const teamIds = new Set(teams.map(t => t.id));
@@ -373,10 +354,21 @@ export default function GenericWeekView({
                                 {/* Connector for continuity */}
                                 {(variant === 'hollow' || variant === 'filled') && <ConnectorLine $color={item.color || "#ccc"} style={{ width: variant === 'filled' ? '50%' : '50%', left: variant === 'filled' ? '50%' : 0, right: 'auto' }} />}
 
+                                {/* Tiny Team Indicator Bar - Behind & Peek Left */}
+                                {item.teamId && <div style={{
+                                  position: 'absolute',
+                                  left: -4,
+                                  top: 1,
+                                  width: 8,
+                                  height: 12,
+                                  backgroundColor: teamColorMap.get(item.teamId || "") || "#ccc",
+                                  borderRadius: 2,
+                                  zIndex: 0
+                                }} title="Équipe" />}
+
                                 <ShiftDot
-                                  $color={item.color || teamColorMap.get(item.teamId || "") || "#ccc"}
+                                  $color="#22c55e"
                                   $variant={variant}
-                                  $isLinked={!!item.teamId}
                                   // @ts-ignore
                                   $isGhost={item.isGhostData}
                                   title={`${item.assigneeName} (${item.startTime} - ${item.endTime})`}
