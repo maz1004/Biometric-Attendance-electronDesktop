@@ -8,6 +8,7 @@ import { useReports } from "./useReports";
 import { useEmployees } from "../employees/useEmployees";
 import { useQuery } from "@tanstack/react-query";
 import { PlanningService } from "../../services/planning";
+import { getSiblingSites } from "../../services/system";
 import MultiSelectMenu from "../../ui/MultiSelectMenu";
 
 const Container = styled.div`
@@ -68,8 +69,10 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
     const [userIds, setUserIds] = useState<string[]>(initialFilters?.user_ids || []);
     const [department, setDepartment] = useState<string>(initialFilters?.department || "all");
     const [status, setStatus] = useState<string>(initialFilters?.status || "all");
+    const [siteId, setSiteId] = useState<string>("local");
 
-    const { employees } = useEmployees({ limit: 1000 });
+    const { data: siblingSites = [] } = useQuery({ queryKey: ['sibling-sites'], queryFn: getSiblingSites });
+    const { employees } = useEmployees({ limit: 1000, site_id: siteId !== 'local' ? siteId : undefined } as any);
     const { data: teamsData } = useQuery({ queryKey: ['planning-teams'], queryFn: PlanningService.getTeams });
     const teams = teamsData?.teams || [];
     const uniqueDepartments = Array.from(new Set(employees.map(t => t.department).filter(Boolean)));
@@ -139,7 +142,8 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
             employee_id: scope === 'employee' ? employeeId : undefined,
             team_ids: scope === 'teams' ? teamIds : undefined,
             user_ids: scope === 'individuals' ? userIds : undefined,
-        });
+            site_id: siteId,
+        } as any);
     };
 
     return (
@@ -158,6 +162,20 @@ export default function ReportGenerator({ onGenerate, isGenerating, reportData, 
                         onChange={(e) => setType(e.target.value as ReportType)}
                     />
                 </FormGroup>
+
+                {siblingSites.length > 0 && (
+                    <FormGroup $flex={2} $minWidth="200px">
+                        <Label>Site Cible</Label>
+                        <SelectUi
+                            options={[
+                                { value: "local", label: "🏢 Usine Actuelle (Local)" },
+                                ...siblingSites.map(s => ({ value: s.id, label: `🌐 ${s.name} ${s.location ? `(${s.location})` : ''}` }))
+                            ]}
+                            value={siteId}
+                            onChange={(e) => setSiteId(e.target.value)}
+                        />
+                    </FormGroup>
+                )}
 
                 {type !== 'attendance' && (
                     <FormGroup $flex={2} $minWidth="180px">

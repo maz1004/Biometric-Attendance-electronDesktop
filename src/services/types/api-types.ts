@@ -741,7 +741,8 @@ export interface Justification {
 }
 
 export interface JustifyAbsenceRequest {
-    date: string; // YYYY-MM-DD
+    date?: string; // Backwards compatibility for single day
+    dates?: string[]; // Enable grouped dates 
     reason: string;
     doc_data?: string; // Base64
     file_name?: string;

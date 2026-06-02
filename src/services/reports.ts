@@ -20,6 +20,7 @@ export const generateReport = async (params: {
     employee_id?: string;
     team_ids?: string[];
     user_ids?: string[];
+    site_id?: string;
 }): Promise<ReportData> => {
     const response = await apiClient.get('/reports/generate', {
         params: {
@@ -31,6 +32,7 @@ export const generateReport = async (params: {
             employee_id: params.employee_id,
             "team_ids[]": params.team_ids,
             "user_ids[]": params.user_ids,
+            site_id: params.site_id && params.site_id !== 'local' ? params.site_id : undefined,
         },
     });
 

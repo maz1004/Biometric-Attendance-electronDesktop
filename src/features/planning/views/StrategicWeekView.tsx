@@ -6,6 +6,9 @@ import { Team, UserShift, EmployeeMini, Shift, ComputedSchedule, ShiftException 
 import { computeScheduleWithValidation } from '../engine/PlanningEngine';
 import MonthHoverPopover from '../components/popovers/MonthHoverPopover';
 import EmployeeScheduleModal from '../components/modals/EmployeeScheduleModal';
+import ExceptionManager from '../components/modals/ExceptionManager';
+import { usePlanning } from '../hooks/usePlanning';
+import { useTranslation } from "react-i18next";
 
 // ----- STYLED COMPONENTS -----
 
@@ -17,6 +20,29 @@ const Container = styled.div`
   border: 1px solid var(--color-border-element);
   border-radius: 8px;
   overflow: hidden;
+`;
+
+const Toolbar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px;
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border-element);
+`;
+
+const ActionButton = styled.button`
+  padding: 6px 16px;
+  background: var(--color-primary-600);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+  
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 const ScrollArea = styled.div`
@@ -164,6 +190,9 @@ export default function StrategicWeekGrid({
     shifts,
     // onSaveAssignment // Unused for now
 }: StrategicWeekGridProps) {
+    const { t } = useTranslation();
+    const { employees: globalEmployees } = usePlanning();
+    const [showExceptionManager, setShowExceptionManager] = useState(false);
 
     // --- EMPLOYEE SCHEDULE MODAL STATE ---
     const [selectedEmployee, setSelectedEmployee] = useState<EmployeeMini | null>(null);
@@ -256,6 +285,11 @@ export default function StrategicWeekGrid({
 
     return (
         <Container>
+            <Toolbar>
+                <ActionButton onClick={() => setShowExceptionManager(true)}>
+                    {t("planning.actions.manage_exceptions", "Manage Exceptions")}
+                </ActionButton>
+            </Toolbar>
             <ScrollArea>
                 <Table>
                     <thead>
@@ -343,6 +377,11 @@ export default function StrategicWeekGrid({
                     onClose={() => setSelectedEmployee(null)}
                 />
             )}
+            <ExceptionManager
+                isOpen={showExceptionManager}
+                onClose={() => setShowExceptionManager(false)}
+                employees={globalEmployees}
+            />
         </Container>
     );
 }

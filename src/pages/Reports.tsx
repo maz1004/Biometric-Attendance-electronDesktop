@@ -73,6 +73,7 @@ export default function Reports() {
             employee_id: filters.employee_id,
             team_ids: filters.team_ids,
             user_ids: filters.user_ids,
+            site_id: (filters as any).site_id,
         });
     };
 

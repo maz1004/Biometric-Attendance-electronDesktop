@@ -166,7 +166,7 @@ export interface ShiftException {
   id: string;
   user_id: string;
   team_id?: string;
-  type: 'LEAVE' | 'SICK' | 'REMOTE' | 'OVERRIDE';
+  type: 'LEAVE' | 'SICK' | 'REMOTE_MISSION' | 'OVERRIDE';
   start_date: string; // ISO Timestamp
   end_date: string;   // ISO Timestamp
   reason?: string;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
@@ -150,7 +150,9 @@ const TimeOptions = Array.from({ length: 48 }).map((_, i) => {
 });
 
 export default function ExceptionManager({ isOpen, onClose, employees }: ExceptionManagerProps) {
-  const { exceptions, createException } = usePlanning();
+  const { exceptions, createException, updateException, deleteException, userShifts, shifts } = usePlanning();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingExceptionPast, setEditingExceptionPast] = useState<boolean>(false);
   const { register, handleSubmit, reset, watch, setValue, formState: { isValid } } = useForm<any>({
     mode: "onChange",
     defaultValues: {
@@ -162,6 +164,23 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
   const endDateDay = watch("end_date_day");
   const startTime = watch("start_time");
   const endTime = watch("end_time");
+  const selectedUserId = watch("user_id");
+
+  // Détection des shifts affectés pour le "Relais"
+  const affectedAssignments = useMemo(() => {
+    if (!selectedUserId || !startDateDay || !endDateDay) return [];
+
+    // Filter active assignments for this user
+    const assignments = userShifts.filter(us => us.userId === selectedUserId && us.isActive);
+
+    const start = new Date(startDateDay + 'T00:00:00');
+    const end = new Date(endDateDay + 'T23:59:59');
+
+    return assignments.filter(us => {
+      const d = new Date(us.assignedAt);
+      return d >= start && d <= end;
+    });
+  }, [selectedUserId, startDateDay, endDateDay, userShifts]);
 
   // Auto-fill End Date when Start Date changes
   useEffect(() => {
@@ -214,14 +233,31 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
     const start = new Date(`${data.start_date_day}T${data.start_time}:00`).toISOString();
     const end = new Date(`${data.end_date_day}T${data.end_time}:00`).toISOString();
 
-    createException({
+    const payload = {
       user_id: data.user_id,
       type: data.type || "LEAVE",
       start_date: start,
       end_date: end,
-      reason: data.reason
-    });
-    reset({ type: "LEAVE" });
+      reason: data.reason,
+      relais_user_id: data.relais_user_id || undefined,
+      relais_shift_ids: data.relais_shift_ids || []
+    };
+
+    if (editingId) {
+      updateException({ id: editingId, data: payload });
+    } else {
+      createException(payload);
+    }
+
+    setEditingId(null);
+    setEditingExceptionPast(false);
+    reset({ type: "LEAVE", user_id: "", start_date_day: "", end_date_day: "", start_time: "", end_time: "", reason: "", relais_user_id: "" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingExceptionPast(false);
+    reset({ type: "LEAVE", user_id: "", start_date_day: "", end_date_day: "", start_time: "", end_time: "", reason: "", relais_user_id: "" });
   };
 
   const getEmployeeName = (id: string) => employees[id]?.name || id;
@@ -237,22 +273,72 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
         <List>
           {exceptions.length === 0 && <div style={{ padding: 10, color: 'var(--color-text-secondary)' }}>No exceptions found for this week.</div>}
           {exceptions.map(ex => (
-            <Item key={ex.id}>
+            <Item
+              key={ex.id}
+              style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                cursor: 'pointer',
+                background: editingId === ex.id ? 'var(--color-grey-100)' : 'transparent',
+                borderLeft: editingId === ex.id ? '3px solid var(--color-primary)' : 'none'
+              }}
+              onClick={() => {
+                const startDate = new Date(ex.start_date);
+                const endDate = new Date(ex.end_date);
+                const now = new Date();
+                setEditingId(ex.id);
+                setEditingExceptionPast(startDate < now);
+                reset({
+                  user_id: ex.user_id,
+                  type: ex.type,
+                  start_date_day: format(startDate, 'yyyy-MM-dd'),
+                  start_time: format(startDate, 'HH:mm'),
+                  end_date_day: format(endDate, 'yyyy-MM-dd'),
+                  end_time: format(endDate, 'HH:mm'),
+                  reason: ex.reason || ""
+                });
+              }}
+            >
               <div>
                 <strong>{getEmployeeName(ex.user_id)}</strong> - <span style={{ color: 'var(--color-primary)' }}>{ex.type}</span>
                 <div style={{ fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>
                   {format(new Date(ex.start_date), "dd MMM HH:mm")} - {format(new Date(ex.end_date), "dd MMM HH:mm")}
                 </div>
               </div>
-              <div style={{ fontSize: '0.8em', fontStyle: 'italic', color: 'var(--color-text-tertiary)' }}>{ex.status}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '0.8em', fontStyle: 'italic', color: 'var(--color-text-tertiary)', marginBottom: 4 }}>{ex.status}</div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette exception ?")) {
+                      deleteException(ex.id);
+                      if (editingId === ex.id) cancelEdit();
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#ef4444',
+                    cursor: 'pointer',
+                    fontSize: '0.85em',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Supprimer
+                </button>
+              </div>
             </Item>
           ))}
         </List>
 
         <Form onSubmit={handleSubmit(onSubmit)}>
-          <h4 style={{ color: 'var(--color-text-main)' }}>Add New Exception</h4>
+          <Header style={{ marginBottom: 8 }}>
+            <h4 style={{ color: 'var(--color-text-main)', margin: 0 }}>{editingId ? "Update Exception" : "Add New Exception"}</h4>
+            {editingId && (
+              <button type="button" onClick={cancelEdit} style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Cancel Edit</button>
+            )}
+          </Header>
           <InputGroup>
-            <Select {...register("user_id", { required: true })} style={{ flex: 1 }}>
+            <Select {...register("user_id", { required: true })} style={{ flex: 1 }} disabled={!!editingId}>
               <option value="">Select Employee</option>
               {Object.values(employees).map(e => (
                 <option key={e.id} value={e.id}>{e.name}</option>
@@ -261,7 +347,7 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
             <Select {...register("type")}>
               <option value="LEAVE">Leave</option>
               <option value="SICK">Sick</option>
-              <option value="REMOTE">Remote</option>
+              <option value="REMOTE_MISSION">Remote/Mission</option>
               <option value="OVERRIDE">Override</option>
             </Select>
           </InputGroup>
@@ -270,8 +356,18 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
             <FieldGroup>
               <Label>Start</Label>
               <div style={{ display: 'flex', gap: 4 }}>
-                <Input type="date" {...register("start_date_day", { required: true })} style={{ flex: 2 }} />
-                <Select {...register("start_time", { required: true })} style={{ flex: 1 }}>
+                <Input
+                  type="date"
+                  {...register("start_date_day", { required: true })}
+                  style={{ flex: 2 }}
+                  disabled={editingExceptionPast}
+                  min={!editingExceptionPast ? format(new Date(), 'yyyy-MM-dd') : undefined}
+                />
+                <Select
+                  {...register("start_time", { required: true })}
+                  style={{ flex: 1 }}
+                  disabled={editingExceptionPast}
+                >
                   {TimeOptions.map(t => <option key={`start-${t}`} value={t}>{t}</option>)}
                 </Select>
               </div>
@@ -283,6 +379,7 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
                   type="date"
                   {...register("end_date_day", { required: true })}
                   style={{ flex: 2, borderColor: dateError ? '#ef4444' : 'var(--color-border-element)' }}
+                  min={format(new Date(), 'yyyy-MM-dd')}
                 />
                 <Select
                   {...register("end_time", { required: true })}
@@ -297,12 +394,52 @@ export default function ExceptionManager({ isOpen, onClose, employees }: Excepti
           {dateError && <ErrorText>{dateError}</ErrorText>}
 
           <Input type="text" placeholder="Reason" {...register("reason", { required: true })} />
+
+          {affectedAssignments.length > 0 && (
+            <div style={{ marginTop: 16, borderTop: '1px solid var(--color-border-element)', paddingTop: 16 }}>
+              <h4 style={{ color: 'var(--color-text-main)', marginBottom: 8, fontSize: '0.9rem' }}>Shifts Affectés & Relais (Optionnel)</h4>
+
+              <List style={{ maxHeight: 150, marginBottom: 12 }}>
+                {affectedAssignments.map(us => {
+                  const shift = shifts[us.shiftId];
+                  const dateStr = format(new Date(us.assignedAt), "dd MMM yyyy");
+                  return (
+                    <Item key={us.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        value={us.id}
+                        {...register("relais_shift_ids")}
+                        defaultChecked
+                      />
+                      <div>
+                        <strong>{dateStr}</strong>
+                        <div style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
+                          {shift?.name || 'Shift Custom'} ({us.startTime || 'Model'} - {us.endTime || 'Model'})
+                        </div>
+                      </div>
+                    </Item>
+                  );
+                })}
+              </List>
+
+              <FieldGroup>
+                <Label>Employé Relais (Remplacement)</Label>
+                <Select {...register("relais_user_id")}>
+                  <option value="">Aucun remplacement</option>
+                  {Object.values(employees).map(e => (
+                    e.id !== selectedUserId ? <option key={`relais-${e.id}`} value={e.id}>{e.name}</option> : null
+                  ))}
+                </Select>
+              </FieldGroup>
+            </div>
+          )}
+
           <Button
             type="submit"
             disabled={!isValid || !!dateError}
             title={!isValid ? "Please fill all required fields" : ""}
           >
-            Add Exception
+            {editingId ? "Update Exception" : "Add Exception"}
           </Button>
         </Form>
       </Dialog>

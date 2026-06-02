@@ -269,7 +269,8 @@ interface AbsenceHistoryViewProps {
 
 export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHistoryViewProps) {
     const queryClient = useQueryClient();
-    const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [selectedDates, setSelectedDates] = useState<string[]>([]);
+    const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
     const [justificationFile, setJustificationFile] = useState<File | null>(null);
     const [justificationReason, setJustificationReason] = useState("");
     const [isJustifyModalOpen, setIsJustifyModalOpen] = useState(false);
@@ -295,7 +296,7 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
 
     const { mutate: submitJustification, isPending: isSubmitting } = useMutation({
         mutationFn: async () => {
-            if (!selectedDate || !justificationFile || !justificationReason) return;
+            if (selectedDates.length === 0 || !justificationFile || !justificationReason) return;
 
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
@@ -303,7 +304,7 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
                     try {
                         const base64 = reader.result?.toString().split(',')[1];
                         await justifyAbsence(employee.id, {
-                            date: selectedDate,
+                            dates: selectedDates,
                             reason: justificationReason,
                             doc_data: base64,
                             file_name: justificationFile.name
@@ -409,13 +410,27 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
         <Container>
             <Header>
                 <h2>Absence History</h2>
-                <Button variation="secondary" size="small" onClick={onCloseModal}>Back</Button>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <Button variation="secondary" size="small" onClick={() => {
+                        setIsMultiSelectMode(!isMultiSelectMode);
+                        setSelectedDates([]);
+                    }}>
+                        {isMultiSelectMode ? "Cancel Selection" : "Multi-Select"}
+                    </Button>
+                    {isMultiSelectMode && selectedDates.length > 0 && (
+                        <Button size="small" onClick={() => setIsJustifyModalOpen(true)}>
+                            Justify Selected ({selectedDates.length})
+                        </Button>
+                    )}
+                    <Button variation="secondary" size="small" onClick={onCloseModal}>Back</Button>
+                </div>
             </Header>
 
             <TableContainer>
                 <Table>
                     <thead>
                         <tr>
+                            {isMultiSelectMode && <th style={{ width: '40px' }}></th>}
                             <th>Date</th>
                             <th>Type</th>
                             <th>Status</th>
@@ -446,6 +461,25 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
                                             if (justif) e.currentTarget.style.backgroundColor = 'transparent';
                                         }}
                                     >
+                                        {isMultiSelectMode && (
+                                            <td onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (justif) return;
+                                                if (selectedDates.includes(dateStr)) {
+                                                    setSelectedDates(selectedDates.filter(d => d !== dateStr));
+                                                } else {
+                                                    setSelectedDates([...selectedDates, dateStr]);
+                                                }
+                                            }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedDates.includes(dateStr)}
+                                                    disabled={!!justif}
+                                                    readOnly
+                                                    style={{ cursor: justif ? 'not-allowed' : 'pointer', width: '16px', height: '16px' }}
+                                                />
+                                            </td>
+                                        )}
                                         <td>{format(new Date(dateStr), 'dd MMM yyyy')}</td>
                                         <td>{record.type}</td>
                                         <td>
@@ -466,7 +500,7 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
                                             ) : (
                                                 <ActionButton type="button" onClick={(e) => {
                                                     e.stopPropagation(); // Prevent row click if we add one later for non-justified
-                                                    setSelectedDate(dateStr);
+                                                    setSelectedDates([dateStr]);
                                                     setIsJustifyModalOpen(true);
                                                 }}>
                                                     <HiArrowUpTray /> Justify
@@ -487,7 +521,7 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
                         <CloseButton onClick={() => setIsJustifyModalOpen(false)}>
                             <HiXMark size={24} />
                         </CloseButton>
-                        <h3>Justify Absence: {selectedDate}</h3>
+                        <h3>Justify Absence{selectedDates.length > 1 ? 's' : ''}: {selectedDates.length > 3 ? `${selectedDates.length} days selected` : selectedDates.join(', ')}</h3>
 
                         <div>
                             <label>Reason</label>
@@ -511,7 +545,7 @@ export default function AbsenceHistoryView({ employee, onCloseModal }: AbsenceHi
                             <Button variation="secondary" onClick={() => setIsJustifyModalOpen(false)}>Cancel</Button>
                             <Button
                                 onClick={() => submitJustification()}
-                                disabled={isSubmitting || !justificationFile || !justificationReason}
+                                disabled={isSubmitting || !justificationReason}
                             >
                                 {isSubmitting ? <SpinnerMini /> : "Submit"}
                             </Button>

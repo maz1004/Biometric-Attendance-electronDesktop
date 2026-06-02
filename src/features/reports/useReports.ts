@@ -20,6 +20,7 @@ export interface ReportParams {
     employee_id?: string;
     team_ids?: string[];
     user_ids?: string[];
+    site_id?: string;
 }
 
 export function useReports() {

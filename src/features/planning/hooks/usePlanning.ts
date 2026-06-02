@@ -427,6 +427,24 @@ export function usePlanning() {
     onError: () => toast.error("Failed to create exception"),
   });
 
+  const { mutate: updateException } = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => PlanningService.updateException(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exceptions"] });
+      toast.success("Exception updated");
+    },
+    onError: () => toast.error("Failed to update exception"),
+  });
+
+  const { mutate: deleteException } = useMutation({
+    mutationFn: PlanningService.deleteException,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exceptions"] });
+      toast.success("Exception deleted");
+    },
+    onError: () => toast.error("Failed to delete exception"),
+  });
+
   return {
     state,
     employees,
@@ -458,6 +476,8 @@ export function usePlanning() {
     createHoliday,
     deleteHoliday,
     createException,
+    updateException,
+    deleteException,
     addMemberToTeam,
     removeMemberFromTeam,
 
